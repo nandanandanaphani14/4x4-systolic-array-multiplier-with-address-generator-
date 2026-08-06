@@ -1,0 +1,168 @@
+﻿Reading pref.tcl
+
+# 2021.1
+
+# vsim -c tb_controller -do "run -all; quit -f" 
+# Start time: 17:36:53 on Jul 30,2026
+# ** Note: (vsim-3812) Design is being optimized...
+# //  Questa Sim-64
+# //  Version 2021.1 win64 Jan 19 2021
+# //
+# //  Copyright 1991-2021 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  QuestaSim and its associated documentation contain trade
+# //  secrets and commercial or financial information that are the property of
+# //  Mentor Graphics Corporation and are privileged, confidential,
+# //  and exempt from disclosure under the Freedom of Information Act,
+# //  5 U.S.C. Section 552. Furthermore, this information
+# //  is prohibited from disclosure under the Trade Secrets Act,
+# //  18 U.S.C. Section 1905.
+# //
+# Loading sv_std.std
+# Loading work.tb_controller(fast)
+# run -all
+# =====================================================================
+#  tb_controller  --  unit test for controller.sv (phase FSM)
+# =====================================================================
+#  Parameters    : ROWS=4  FLUSH_CYCLES=6  STORE_LATENCY=8
+# 
+#  PHASE SEQUENCE AND EXPECTED LENGTHS
+#    IDLE     wait for start, latch num_vectors
+#    WLOAD    4 cycles   shift the weight matrix into the array
+#    FLUSH    6 cycles   drain weight residue from the psum registers
+#    COMPUTE  N cycles   one activation vector per clock
+#    DRAIN    8 cycles   the last result is still in flight
+#    DONE     1 cycle    pulse done, return to IDLE
+#    total    N + 19 cycles from the edge that consumes start
+# 
+#  Phase lengths are measured by COUNTING CLOCKS with each enable high,
+#  not by inspecting the state encoding, so a re-encoded FSM still passes.
+# 
+#  TEST PLAN
+#    T1  reset state: IDLE, not busy, not done, all enables low
+#    T3  a normal 8-vector job, every phase length checked
+#    T2  start hammered throughout a job must change nothing
+#    T6  num_vectors=1, the shortest real job
+#    T7  num_vectors=0 must not hang
+#    T8  back-to-back jobs of different lengths
+#    T9  reset mid-job, then the FSM must accept a fresh job
+#    T4  phase enables mutually exclusive at all times (continuous)
+#    T5  done never overlaps busy (continuous)
+# =====================================================================
+# 
+#   -----------------------------------------------------------------
+#   T1 : reset state
+#   -----------------------------------------------------------------
+#     phase=IDLE busy=0 done=0  enables wl=0 fl=0 cp=0 dr=0
+#     reset released, still IDLE
+#     T1 ends: 8 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T3 : normal 8-vector job, full phase trace
+#   -----------------------------------------------------------------
+#     starting a job with num_vectors=8
+#        cycle | phase    | enables wl/fl/cp/dr  busy done
+#       -------+----------+----------------------------------
+#            0 | WLOAD    |    1  0  0  0      1    0
+#            4 | FLUSH    |    0  1  0  0      1    0   (WLOAD lasted 4 cycles)
+#           10 | COMPUTE  |    0  0  1  0      1    0   (FLUSH lasted 6 cycles)
+#           18 | DRAIN    |    0  0  0  1      1    0   (COMPUTE lasted 8 cycles)
+#           26 | DONE     |    0  0  0  0      0    1   (DRAIN lasted 8 cycles)
+#       measured: WLOAD=4  FLUSH=6  COMPUTE=8  DRAIN=8  total=27 cycles
+#       expected: WLOAD=4  FLUSH=6  COMPUTE=8  DRAIN=8  total=27 cycles
+#     T3 ends: 11 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T2 : start is ignored while busy
+#   -----------------------------------------------------------------
+#     driving start=1 on EVERY cycle of a 6-vector job.
+#     Phase lengths must be unchanged and only one done may fire.
+#     measured with start hammered: WLOAD=4 FLUSH=6 COMPUTE=6 DRAIN=8
+#     done pulses seen: 1 (must be exactly 1)
+#     T2 ends: 6 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T6 : shortest real job, num_vectors=1
+#   -----------------------------------------------------------------
+#     starting a job with num_vectors=1
+#        cycle | phase    | enables wl/fl/cp/dr  busy done
+#       -------+----------+----------------------------------
+#            0 | WLOAD    |    1  0  0  0      1    0
+#            4 | FLUSH    |    0  1  0  0      1    0   (WLOAD lasted 4 cycles)
+#           10 | COMPUTE  |    0  0  1  0      1    0   (FLUSH lasted 6 cycles)
+#           11 | DRAIN    |    0  0  0  1      1    0   (COMPUTE lasted 1 cycles)
+#           19 | DONE     |    0  0  0  0      0    1   (DRAIN lasted 8 cycles)
+#       measured: WLOAD=4  FLUSH=6  COMPUTE=1  DRAIN=8  total=20 cycles
+#       expected: WLOAD=4  FLUSH=6  COMPUTE=1  DRAIN=8  total=20 cycles
+#     T6 ends: 11 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T7 : empty job must not hang, num_vectors=0
+#   -----------------------------------------------------------------
+#     COMPUTE exits on cnt == vec_n-1; with vec_n=0 that would be
+#     a comparison against 0xFF, so FLUSH jumps straight to DRAIN.
+#     starting a job with num_vectors=0
+#        cycle | phase    | enables wl/fl/cp/dr  busy done
+#       -------+----------+----------------------------------
+#            0 | WLOAD    |    1  0  0  0      1    0
+#            4 | FLUSH    |    0  1  0  0      1    0   (WLOAD lasted 4 cycles)
+#           10 | DRAIN    |    0  0  0  1      1    0   (FLUSH lasted 6 cycles)
+#           18 | DONE     |    0  0  0  0      0    1   (DRAIN lasted 8 cycles)
+#       measured: WLOAD=4  FLUSH=6  COMPUTE=0  DRAIN=8  total=19 cycles
+#       expected: WLOAD=4  FLUSH=6  COMPUTE=0  DRAIN=8  total=19 cycles
+#     T7 ends: 11 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T8 : back-to-back jobs of different lengths
+#   -----------------------------------------------------------------
+#     starting a job with num_vectors=3
+#       measured: WLOAD=4  FLUSH=6  COMPUTE=3  DRAIN=8  total=22 cycles
+#       expected: WLOAD=4  FLUSH=6  COMPUTE=3  DRAIN=8  total=22 cycles
+#     starting a job with num_vectors=16
+#       measured: WLOAD=4  FLUSH=6  COMPUTE=16  DRAIN=8  total=35 cycles
+#       expected: WLOAD=4  FLUSH=6  COMPUTE=16  DRAIN=8  total=35 cycles
+#     T8 ends: 22 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T9 : reset mid-job, then restart
+#   -----------------------------------------------------------------
+#     7 cycles into a 20-vector job: phase=FLUSH busy=1
+#     rst_n asserted -> phase=IDLE busy=0
+#     reset released; the FSM must accept a fresh job immediately:
+#     starting a job with num_vectors=4
+#       measured: WLOAD=4  FLUSH=6  COMPUTE=4  DRAIN=8  total=23 cycles
+#       expected: WLOAD=4  FLUSH=6  COMPUTE=4  DRAIN=8  total=23 cycles
+#     T9 ends: 14 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T4/T5 : continuous assertions over the whole run
+#   -----------------------------------------------------------------
+#     cycles where more than one phase enable was high : 0
+#     cycles where done overlapped busy                : 0
+#     T4/T5 ends: 2 checks, 0 errors  [PASS]
+# 
+#   =================================================================
+#    SECTION SUMMARY : tb_controller
+#   =================================================================
+#    SEC    DESCRIPTION                                     CHECKS  ERRORS  STATUS
+#    ------ ---------------------------------------------- ------- -------  ------
+#    T1     reset state                                          8       0  PASS
+#    T3     normal 8-vector job, full phase trace               11       0  PASS
+#    T2     start is ignored while busy                          6       0  PASS
+#    T6     shortest real job, num_vectors=1                    11       0  PASS
+#    T7     empty job must not hang, num_vectors=0              11       0  PASS
+#    T8     back-to-back jobs of different lengths              22       0  PASS
+#    T9     reset mid-job, then restart                         14       0  PASS
+#    T4/T5  continuous assertions over the whole run             2       0  PASS
+#    ------ ---------------------------------------------- ------- -------
+#    TOTAL                                                      85       0
+#   =================================================================
+#    TOTALS: 85 checks, 0 errors
+#    simulated time : 1916 ns
+#    RESULT: PASS - tb_controller
+#   =================================================================
+# ** Note: $finish    : C:/Users/nanda/Desktop/verification_individual/test_benches/tb_controller.sv(377)
+#    Time: 1916 ns  Iteration: 0  Instance: /tb_controller
+# End time: 17:36:59 on Jul 30,2026, Elapsed time: 0:00:06
+# Errors: 0, Warnings: 0

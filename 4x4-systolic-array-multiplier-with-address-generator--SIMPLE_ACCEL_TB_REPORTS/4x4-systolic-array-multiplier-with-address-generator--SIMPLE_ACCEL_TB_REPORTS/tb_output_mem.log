@@ -1,0 +1,182 @@
+﻿Reading pref.tcl
+
+# 2021.1
+
+# vsim -c tb_output_mem -do "run -all; quit -f" 
+# Start time: 17:35:40 on Jul 30,2026
+# ** Note: (vsim-3812) Design is being optimized...
+# //  Questa Sim-64
+# //  Version 2021.1 win64 Jan 19 2021
+# //
+# //  Copyright 1991-2021 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  QuestaSim and its associated documentation contain trade
+# //  secrets and commercial or financial information that are the property of
+# //  Mentor Graphics Corporation and are privileged, confidential,
+# //  and exempt from disclosure under the Freedom of Information Act,
+# //  5 U.S.C. Section 552. Furthermore, this information
+# //  is prohibited from disclosure under the Trade Secrets Act,
+# //  18 U.S.C. Section 1905.
+# //
+# Loading sv_std.std
+# Loading work.tb_output_mem(fast)
+# run -all
+# =====================================================================
+#  tb_output_mem  --  unit test for outmem.sv (module output_mem)
+# =====================================================================
+#  Geometry      : 256 words x 128 bits  (ADDR_W=8)
+#  Word format   : 4 x int32, lane c = result of array COLUMN c
+#  Primitive     : single-port sync RAM, 1-clock read latency,
+#                  read-before-write on a same-address collision
+#  Convention    : A - drive, next posedge consumes, then sample
+# 
+#  TEST PLAN
+#    T1  full-array random write then read back
+#    T2  we=0 leaves memory untouched
+#    T3  read-during-write returns pre-write data
+#    T4  32-bit lane integrity - one lane per array column
+#    T5  wide data patterns across all 128 bits
+#    T6  300 randomly interleaved reads and writes
+# 
+#  NOTE: bulk sweeps print the first 6, every 48th, and the last 2
+#        transactions.  Every transaction is checked regardless.
+# =====================================================================
+# 
+#   -----------------------------------------------------------------
+#   T1 : full-array random write then read back
+#   -----------------------------------------------------------------
+#     writing all 256 locations with random 128-bit data...
+#     w addr   0 <- 0x12f837e78eb74a7c4682679c3030ba1c
+#     w addr   1 <- 0x519afde8c73523a761604716456ee1c4
+#     w addr   2 <- 0x4879f30003d23d5958b64df840c04bfb
+#     w addr   3 <- 0x1fc6b311f9bd74a23b8f4ffc68c470a5
+#     w addr   4 <- 0x31ed88de840d119637575c906bf09d17
+#     w addr   5 <- 0x49c4b7de24b5be83c3b8598623dca814
+#     w addr  48 <- 0xcf453bcbc5adae05cead7755669aede0
+#     w addr  96 <- 0xb33614f311c61e9ac925f17e8ae7c21a
+#     w addr 144 <- 0x7dcabcbee873823bcb57180a48642722
+#     w addr 192 <- 0xc94aef5b54d659496afdf2c0d54fac0c
+#     w addr 240 <- 0x168004b84995c70205027f7f9150dd82
+#     w addr 254 <- 0x928eb0b9c79e5d3d8f7f939dcb30845a
+#     w addr 255 <- 0xc70b5b123d4e94db4e6fb38251284adb
+# 
+#     reading all 256 locations back...
+#     r addr   0 -> 0x12f837e78eb74a7c4682679c3030ba1c        ok
+#     r addr   1 -> 0x519afde8c73523a761604716456ee1c4        ok
+#     r addr   2 -> 0x4879f30003d23d5958b64df840c04bfb        ok
+#     r addr   3 -> 0x1fc6b311f9bd74a23b8f4ffc68c470a5        ok
+#     r addr   4 -> 0x31ed88de840d119637575c906bf09d17        ok
+#     r addr   5 -> 0x49c4b7de24b5be83c3b8598623dca814        ok
+#     r addr  48 -> 0xcf453bcbc5adae05cead7755669aede0        ok
+#     r addr  96 -> 0xb33614f311c61e9ac925f17e8ae7c21a        ok
+#     r addr 144 -> 0x7dcabcbee873823bcb57180a48642722        ok
+#     r addr 192 -> 0xc94aef5b54d659496afdf2c0d54fac0c        ok
+#     r addr 240 -> 0x168004b84995c70205027f7f9150dd82        ok
+#     r addr 254 -> 0x928eb0b9c79e5d3d8f7f939dcb30845a        ok
+#     r addr 255 -> 0xc70b5b123d4e94db4e6fb38251284adb        ok
+#     all 256 locations verified against the reference array
+#     T1 ends: 256 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T2 : we=0 must not modify memory
+#   -----------------------------------------------------------------
+#     wrote addr 5 <- 0x00112233445566778899aabbccddeeff
+#     now driving addr=5, wdata=all-ones, we=0 for one clock
+#     addr 5 still reads 0x00112233445566778899aabbccddeeff
+#     T2 ends: 1 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T3 : read-during-write returns pre-write data
+#   -----------------------------------------------------------------
+#     writing a new value to addr 5; rdata that cycle:
+#       0x00112233445566778899aabbccddeeff  (the OLD value)
+#     next read returns:
+#       0xffff0000ffff0000ffff0000ffff0000  (the new value)
+#     T3 ends: 2 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T4 : 32-bit lane integrity, one lane per column
+#   -----------------------------------------------------------------
+#     walking 0xDEADBEEF through each lane; others must stay zero.
+#     lane 0 : 0x000000000000000000000000deadbeef
+#     lane 1 : 0x0000000000000000deadbeef00000000
+#     lane 2 : 0x00000000deadbeef0000000000000000
+#     lane 3 : 0xdeadbeef000000000000000000000000
+#     a full packed result row {0, -1, 1024, -7}:
+#       rdata = 0xfffffff900000400ffffffff00000000
+#       -> c0=          0 c1=         -1 c2=       1024 c3=         -7
+#       this is exactly the packing accelerator_top's pack_output produces.
+#     T4 ends: 12 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T5 : wide data patterns
+#   -----------------------------------------------------------------
+#     all zeros -> 0x00000000000000000000000000000000
+#     all ones  -> 0xffffffffffffffffffffffffffffffff
+#     walking one, sampled every 7th bit across 128 bits:
+#       bit   0 -> 0x00000000000000000000000000000001
+#       bit   7 -> 0x00000000000000000000000000000080
+#       bit  14 -> 0x00000000000000000000000000004000
+#       bit  21 -> 0x00000000000000000000000000200000
+#       bit  28 -> 0x00000000000000000000000010000000
+#       bit  35 -> 0x00000000000000000000000800000000
+#       bit  42 -> 0x00000000000000000000040000000000
+#       bit  49 -> 0x00000000000000000002000000000000
+#       bit  56 -> 0x00000000000000000100000000000000
+#       bit  63 -> 0x00000000000000008000000000000000
+#       bit  70 -> 0x00000000000000400000000000000000
+#       bit  77 -> 0x00000000000020000000000000000000
+#       bit  84 -> 0x00000000001000000000000000000000
+#       bit  91 -> 0x00000000080000000000000000000000
+#       bit  98 -> 0x00000004000000000000000000000000
+#       bit 105 -> 0x00000200000000000000000000000000
+#       bit 112 -> 0x00010000000000000000000000000000
+#       bit 119 -> 0x00800000000000000000000000000000
+#       bit 126 -> 0x40000000000000000000000000000000
+#     T5 ends: 21 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T6 : random interleaved read/write traffic
+#   -----------------------------------------------------------------
+#        0 r addr 223 -> 0xa83dd0750567a24eaa31407d8a518da3        ok
+#        1 r addr 229 -> 0x846f19e43921b9a0699e2cacebb00a0f        ok
+#        2 w addr   4 <- 0x7d9957d81929b6294ff53c226ac6e9e9
+#        3 r addr  73 -> 0x7551395fba1c3cc8ac1b3f0305530f33        ok
+#        4 r addr 222 -> 0x37e0be1b4ebc42a9ae28e7761d4f920c        ok
+#        5 r addr 153 -> 0x9fc0c9f285c1997f64c045d361f8a197        ok
+#       48 r addr 106 -> 0xb82f38732e917cb7ddeea217ff0b50bf        ok
+#       96 w addr  77 <- 0xe4649c9317edf57bc0626f3c97f358bc
+#      144 w addr 225 <- 0x2560b44fb8d2568d60e055daf5b91cbb
+#      192 r addr  83 -> 0x31fa81f030d24bb4079fcae5eef8a760        ok
+#      240 r addr  47 -> 0xe64cb43d15b8b8383d311159089b7a80        ok
+#      288 w addr 204 <- 0xb5e43aa5788eb95140b3c6f32c52c88e
+#      298 r addr   6 -> 0xfbafb27fa861a88bf9b5a2169369fbe1        ok
+#      299 w addr  87 <- 0x3140d69067de48531fc83a53193dc84a
+#     ---- T6 statistics ----------------------------------------
+#       random writes : 137
+#       random reads  : 163  (each compared against the model)
+#     T6 ends: 163 checks, 0 errors  [PASS]
+# 
+#   =================================================================
+#    SECTION SUMMARY : tb_output_mem
+#   =================================================================
+#    SEC    DESCRIPTION                                     CHECKS  ERRORS  STATUS
+#    ------ ---------------------------------------------- ------- -------  ------
+#    T1     full-array random write then read back             256       0  PASS
+#    T2     we=0 must not modify memory                          1       0  PASS
+#    T3     read-during-write returns pre-write data             2       0  PASS
+#    T4     32-bit lane integrity, one lane per column          12       0  PASS
+#    T5     wide data patterns                                  21       0  PASS
+#    T6     random interleaved read/write traffic              163       0  PASS
+#    ------ ---------------------------------------------- ------- -------
+#    TOTAL                                                     455       0
+#   =================================================================
+#    TOTALS: 455 checks, 0 errors
+#    simulated time : 8696 ns
+#    RESULT: PASS - tb_output_mem
+#   =================================================================
+# ** Note: $finish    : C:/Users/nanda/Desktop/verification_individual/test_benches/tb_output_mem.sv(298)
+#    Time: 8696 ns  Iteration: 0  Instance: /tb_output_mem
+# End time: 17:35:46 on Jul 30,2026, Elapsed time: 0:00:06
+# Errors: 0, Warnings: 0

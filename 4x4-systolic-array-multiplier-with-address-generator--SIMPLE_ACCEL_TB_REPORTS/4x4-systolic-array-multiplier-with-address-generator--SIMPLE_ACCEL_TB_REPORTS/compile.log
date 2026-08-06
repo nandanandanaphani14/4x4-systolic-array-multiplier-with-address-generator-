@@ -1,0 +1,55 @@
+﻿QuestaSim-64 vlog 2021.1 Compiler 2021.01 Jan 19 2021
+Start time: 17:34:34 on Jul 30,2026
+vlog -sv C:\Users\nanda\Desktop\verification_individual\design_rtl\MAC.sv C:\Users\nanda\Desktop\verification_individual\design_rtl\delay_pipe.sv C:\Users\nanda\Desktop\verification_individual\design_rtl\input_buf.sv C:\Users\nanda\Desktop\verification_individual\design_rtl\output_skewbuf.sv C:\Users\nanda\Desktop\verification_individual\design_rtl\array.sv C:\Users\nanda\Desktop\verification_individual\design_rtl\a_mem.sv C:\Users\nanda\Desktop\verification_individual\design_rtl\weight_mem.sv C:\Users\nanda\Desktop\verification_individual\design_rtl\outmem.sv C:\Users\nanda\Desktop\verification_individual\design_rtl\controller.sv C:\Users\nanda\Desktop\verification_individual\design_rtl\agu.sv C:\Users\nanda\Desktop\verification_individual\design_rtl\wrapper_array_buf.sv C:\Users\nanda\Desktop\verification_individual\design_rtl\wrapper_mem_arr_buf.sv C:\Users\nanda\Desktop\verification_individual\design_rtl\wrapper_full_system.sv C:\Users\nanda\Desktop\verification_individual\test_benches\tb_delay_pipe.sv C:\Users\nanda\Desktop\verification_individual\test_benches\tb_processing_element.sv C:\Users\nanda\Desktop\verification_individual\test_benches\tb_a_mem.sv C:\Users\nanda\Desktop\verification_individual\test_benches\tb_weight_mem.sv C:\Users\nanda\Desktop\verification_individual\test_benches\tb_output_mem.sv C:\Users\nanda\Desktop\verification_individual\test_benches\tb_input_skew_buffer.sv C:\Users\nanda\Desktop\verification_individual\test_benches\tb_output_deskew_buffer.sv C:\Users\nanda\Desktop\verification_individual\test_benches\tb_systolic_array.sv C:\Users\nanda\Desktop\verification_individual\test_benches\tb_array_buf_top.sv C:\Users\nanda\Desktop\verification_individual\test_benches\tb_controller.sv C:\Users\nanda\Desktop\verification_individual\test_benches\tb_agu.sv C:\Users\nanda\Desktop\verification_individual\test_benches\tb_accelerator_top.sv C:\Users\nanda\Desktop\verification_individual\test_benches\tb_accelerator_system_top.sv 
+-- Compiling module processing_element
+-- Compiling module delay_pipe
+-- Compiling module input_skew_buffer
+** Warning: C:\Users\nanda\Desktop\verification_individual\design_rtl\input_buf.sv(7): (vlog-13314) Defaulting port 'dense_a_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+** Warning: C:\Users\nanda\Desktop\verification_individual\design_rtl\input_buf.sv(8): (vlog-13314) Defaulting port 'dense_valid_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+-- Compiling module output_deskew_buffer
+** Warning: C:\Users\nanda\Desktop\verification_individual\design_rtl\output_skewbuf.sv(7): (vlog-13314) Defaulting port 'psum_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+-- Compiling module systolic_array
+** Warning: C:\Users\nanda\Desktop\verification_individual\design_rtl\array.sv(14): (vlog-13314) Defaulting port 'a_in_left' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+** Warning: C:\Users\nanda\Desktop\verification_individual\design_rtl\array.sv(15): (vlog-13314) Defaulting port 'valid_in_left' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+** Warning: C:\Users\nanda\Desktop\verification_individual\design_rtl\array.sv(18): (vlog-13314) Defaulting port 'psum_in_top' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+-- Compiling module a_mem
+-- Compiling module weight_mem
+-- Compiling module output_mem
+-- Compiling module controller
+-- Compiling module agu
+-- Compiling module array_buf_top
+** Warning: C:\Users\nanda\Desktop\verification_individual\design_rtl\wrapper_array_buf.sv(48): (vlog-13314) Defaulting port 'dense_a_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+** Warning: C:\Users\nanda\Desktop\verification_individual\design_rtl\wrapper_array_buf.sv(49): (vlog-13314) Defaulting port 'dense_valid_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+** Warning: C:\Users\nanda\Desktop\verification_individual\design_rtl\wrapper_array_buf.sv(52): (vlog-13314) Defaulting port 'psum_in_top' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+-- Compiling module accelerator_top
+-- Compiling module accelerator_system_top
+-- Compiling module tb_delay_pipe
+-- Compiling module tb_processing_element
+-- Compiling module tb_a_mem
+-- Compiling module tb_weight_mem
+-- Compiling module tb_output_mem
+-- Compiling module tb_input_skew_buffer
+-- Compiling module tb_output_deskew_buffer
+-- Compiling module tb_systolic_array
+-- Compiling module tb_array_buf_top
+-- Compiling module tb_controller
+-- Compiling module tb_agu
+-- Compiling module tb_accelerator_top
+-- Compiling module tb_accelerator_system_top
+
+Top level modules:
+	tb_delay_pipe
+	tb_processing_element
+	tb_a_mem
+	tb_weight_mem
+	tb_output_mem
+	tb_input_skew_buffer
+	tb_output_deskew_buffer
+	tb_systolic_array
+	tb_array_buf_top
+	tb_controller
+	tb_agu
+	tb_accelerator_top
+	tb_accelerator_system_top
+End time: 17:34:34 on Jul 30,2026, Elapsed time: 0:00:00
+Errors: 0, Warnings: 9

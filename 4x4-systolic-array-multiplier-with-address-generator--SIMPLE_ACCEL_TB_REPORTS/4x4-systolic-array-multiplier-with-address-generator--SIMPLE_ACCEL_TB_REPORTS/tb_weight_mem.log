@@ -1,0 +1,142 @@
+﻿Reading pref.tcl
+
+# 2021.1
+
+# vsim -c tb_weight_mem -do "run -all; quit -f" 
+# Start time: 17:35:25 on Jul 30,2026
+# ** Note: (vsim-3812) Design is being optimized...
+# //  Questa Sim-64
+# //  Version 2021.1 win64 Jan 19 2021
+# //
+# //  Copyright 1991-2021 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  QuestaSim and its associated documentation contain trade
+# //  secrets and commercial or financial information that are the property of
+# //  Mentor Graphics Corporation and are privileged, confidential,
+# //  and exempt from disclosure under the Freedom of Information Act,
+# //  5 U.S.C. Section 552. Furthermore, this information
+# //  is prohibited from disclosure under the Trade Secrets Act,
+# //  18 U.S.C. Section 1905.
+# //
+# Loading sv_std.std
+# Loading work.tb_weight_mem(fast)
+# run -all
+# =====================================================================
+#  tb_weight_mem  --  unit test for weight_mem.sv
+# =====================================================================
+#  Geometry      : 4 words x 32 bits  (ADDR_W=2)
+#  Word format   : 4 x int8, lane c = weight for array COLUMN c;
+#                  address r holds weight row r
+#  Primitive     : single-port sync RAM, 1-clock read latency,
+#                  read-before-write on a same-address collision
+#  Convention    : A - drive, next posedge consumes, then sample
+# 
+#  TEST PLAN
+#    T1  write all 4 words, read them all back
+#    T2  2-bit address wraps: 'address 4' aliases to address 0
+#    T3  we=0 leaves memory untouched
+#    T4  read-during-write returns pre-write data
+#    T5  byte-lane integrity - lanes must not bleed into each other
+#    T6  200 random transactions over the tiny address space
+# =====================================================================
+# 
+#   -----------------------------------------------------------------
+#   T1 : write all four words, read them back
+#   -----------------------------------------------------------------
+#       addr | rdata      | decoded as column weights
+#     -------+------------+--------------------------------------
+#          0 | 0x01020304 | c0=   4 c1=   3 c2=   2 c3=   1
+#          1 | 0x11121314 | c0=  20 c1=  19 c2=  18 c3=  17
+#          2 | 0x21222324 | c0=  36 c1=  35 c2=  34 c3=  33
+#          3 | 0x31323334 | c0=  52 c1=  51 c2=  50 c3=  49
+#     T1 ends: 4 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T2 : 2-bit address aliasing
+#   -----------------------------------------------------------------
+#     writing 0xCAFEBABE to 'address 4' - only 2 address bits exist,
+#     so it must land at address 0.
+#     addr 0 -> 0xcafebabe  (aliased write landed here)
+#     addr 1 -> 0x11121314  (untouched)
+#     T2 ends: 2 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T3 : we=0 must not modify memory
+#   -----------------------------------------------------------------
+#     driving addr=1, wdata=0xDEADBEEF, we=0 for one clock
+#     addr 1 still reads 0x11121314
+#     T3 ends: 1 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T4 : read-during-write returns pre-write data
+#   -----------------------------------------------------------------
+#     addr 2 currently holds 0x21222324
+#     writing 0x99998888 there; rdata that cycle = 0x21222324 (the OLD value)
+#     next read returns 0x99998888 (the new value)
+#     T4 ends: 2 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T5 : byte-lane integrity, one lane per column
+#   -----------------------------------------------------------------
+#     walking 0xA5 through each lane; the other three must stay zero.
+#      lane | rdata      | decoded
+#     ------+------------+--------------------------------------
+#         0 | 0x000000a5 | c0= -91 c1=   0 c2=   0 c3=   0
+#         1 | 0x0000a500 | c0=   0 c1= -91 c2=   0 c3=   0
+#         2 | 0x00a50000 | c0=   0 c1=   0 c2= -91 c3=   0
+#         3 | 0xa5000000 | c0=   0 c1=   0 c2=   0 c3= -91
+#     a full packed weight row {-128, 127, -1, 1}:
+#       rdata = 0x807fff01 -> c0=   1 c1=  -1 c2= 127 c3=-128
+#       this is exactly the packing accelerator_top relies on.
+#     T5 ends: 12 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T6 : random traffic over the 4-word space
+#   -----------------------------------------------------------------
+#       op# | op    | addr | data       | result
+#     ------+-------+------+------------+-------
+#         0 | read  |    3 | 0x807fff01 |       ok
+#         1 | read  |    0 | 0xcafebabe |       ok
+#         2 | write |    0 | 0x61604716 |
+#         3 | read  |    0 | 0x61604716 |       ok
+#         4 | read  |    1 | 0x11121314 |       ok
+#         5 | write |    3 | 0xf9bd74a2 |
+#         6 | write |    0 | 0x31ed88de |
+#         7 | read  |    2 | 0x99998888 |       ok
+#        25 | read  |    2 | 0x99998888 |       ok
+#        50 | read  |    1 | 0x58d36d81 |       ok
+#        75 | read  |    1 | 0x1520ba4f |       ok
+#       100 | write |    3 | 0x90e82db8 |
+#       125 | write |    1 | 0xf1de5fa6 |
+#       150 | write |    0 | 0x991c0e67 |
+#       175 | read  |    0 | 0x2e917cb7 |       ok
+#       198 | read  |    3 | 0x889e705b |       ok
+#       199 | read  |    3 | 0x889e705b |       ok
+#     ---- T6 statistics ----------------------------------------
+#       random writes : 96
+#       random reads  : 104  (each compared against the model)
+#     T6 ends: 104 checks, 0 errors  [PASS]
+# 
+#   =================================================================
+#    SECTION SUMMARY : tb_weight_mem
+#   =================================================================
+#    SEC    DESCRIPTION                                     CHECKS  ERRORS  STATUS
+#    ------ ---------------------------------------------- ------- -------  ------
+#    T1     write all four words, read them back                 4       0  PASS
+#    T2     2-bit address aliasing                               2       0  PASS
+#    T3     we=0 must not modify memory                          1       0  PASS
+#    T4     read-during-write returns pre-write data             2       0  PASS
+#    T5     byte-lane integrity, one lane per column            12       0  PASS
+#    T6     random traffic over the 4-word space               104       0  PASS
+#    ------ ---------------------------------------------- ------- -------
+#    TOTAL                                                     125       0
+#   =================================================================
+#    TOTALS: 125 checks, 0 errors
+#    simulated time : 2256 ns
+#    RESULT: PASS - tb_weight_mem
+#   =================================================================
+# ** Note: $finish    : C:/Users/nanda/Desktop/verification_individual/test_benches/tb_weight_mem.sv(266)
+#    Time: 2256 ns  Iteration: 0  Instance: /tb_weight_mem
+# End time: 17:35:31 on Jul 30,2026, Elapsed time: 0:00:06
+# Errors: 0, Warnings: 0

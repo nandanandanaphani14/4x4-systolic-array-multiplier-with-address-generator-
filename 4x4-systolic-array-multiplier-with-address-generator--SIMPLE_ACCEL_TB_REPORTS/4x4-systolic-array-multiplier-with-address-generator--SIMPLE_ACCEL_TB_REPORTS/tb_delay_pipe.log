@@ -1,0 +1,124 @@
+﻿Reading pref.tcl
+
+# 2021.1
+
+# vsim -c tb_delay_pipe -do "run -all; quit -f" 
+# Start time: 17:34:41 on Jul 30,2026
+# ** Note: (vsim-3812) Design is being optimized...
+# //  Questa Sim-64
+# //  Version 2021.1 win64 Jan 19 2021
+# //
+# //  Copyright 1991-2021 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  QuestaSim and its associated documentation contain trade
+# //  secrets and commercial or financial information that are the property of
+# //  Mentor Graphics Corporation and are privileged, confidential,
+# //  and exempt from disclosure under the Freedom of Information Act,
+# //  5 U.S.C. Section 552. Furthermore, this information
+# //  is prohibited from disclosure under the Trade Secrets Act,
+# //  18 U.S.C. Section 1905.
+# //
+# Loading sv_std.std
+# Loading work.tb_delay_pipe(fast)
+# run -all
+# =====================================================================
+#  tb_delay_pipe  --  unit test for delay_pipe.sv
+# =====================================================================
+#  DUT instances : DELAY=0 (wire), DELAY=1, DELAY=3
+#  WIDTH         : 8 bits
+#  Stimulus      : 40 random values, then reset, then a single pulse
+#  Convention    : B - drive after posedge, sample at negedge
+# 
+#  TEST PLAN
+#    T1  delay accuracy over a random stream, all three instances
+#    T2  synchronous reset flushes DELAY>0, DELAY=0 unaffected
+#    T3  a single pulse walks the pipe stage by stage after reset
+# =====================================================================
+# 
+#   -----------------------------------------------------------------
+#   T1 : delay accuracy, random stream
+#   -----------------------------------------------------------------
+#      iter |   din | dout  (d0    d1    d3)   | expected (d0    d1    d3)
+#     ------+-------+--------------------------+--------------------------
+#         0 | 0xe7  |   0xe7  0x00  0x00        |   0xe7  0x00  0x00
+#         1 | 0x7c  |   0x7c  0xe7  0x00        |   0x7c  0xe7  0x00
+#         2 | 0x9c  |   0x9c  0x7c  0x00        |   0x9c  0x7c  0x00
+#         3 | 0x1c  |   0x1c  0x9c  0xe7        |   0x1c  0x9c  0xe7
+#         4 | 0xe8  |   0xe8  0x1c  0x7c        |   0xe8  0x1c  0x7c
+#         5 | 0xa7  |   0xa7  0xe8  0x9c        |   0xa7  0xe8  0x9c
+#         6 | 0x16  |   0x16  0xa7  0x1c        |   0x16  0xa7  0x1c
+#         7 | 0xc4  |   0xc4  0x16  0xe8        |   0xc4  0x16  0xe8
+#         8 | 0x00  |   0x00  0xc4  0xa7        |   0x00  0xc4  0xa7
+#         9 | 0x59  |   0x59  0x00  0x16        |   0x59  0x00  0x16
+#        10 | 0xf8  |   0xf8  0x59  0xc4        |   0xf8  0x59  0xc4
+#        11 | 0xfb  |   0xfb  0xf8  0x00        |   0xfb  0xf8  0x00
+#        12 | 0x11  |   0x11  0xfb  0x59        |   0x11  0xfb  0x59
+#        13 | 0xa2  |   0xa2  0x11  0xf8        |   0xa2  0x11  0xf8
+#        14 | 0xfc  |   0xfc  0xa2  0xfb        |   0xfc  0xa2  0xfb
+#        15 | 0xa5  |   0xa5  0xfc  0x11        |   0xa5  0xfc  0x11
+#        16 | 0xde  |   0xde  0xa5  0xa2        |   0xde  0xa5  0xa2
+#        17 | 0x96  |   0x96  0xde  0xfc        |   0x96  0xde  0xfc
+#        18 | 0x90  |   0x90  0x96  0xa5        |   0x90  0x96  0xa5
+#        19 | 0x17  |   0x17  0x90  0xde        |   0x17  0x90  0xde
+#        20 | 0xde  |   0xde  0x17  0x96        |   0xde  0x17  0x96
+#        21 | 0x83  |   0x83  0xde  0x90        |   0x83  0xde  0x90
+#        22 | 0x86  |   0x86  0x83  0x17        |   0x86  0x83  0x17
+#        23 | 0x14  |   0x14  0x86  0xde        |   0x14  0x86  0xde
+#        24 | 0xcd  |   0xcd  0x14  0x83        |   0xcd  0x14  0x83
+#        25 | 0x5c  |   0x5c  0xcd  0x86        |   0x5c  0xcd  0x86
+#        26 | 0x4f  |   0x4f  0x5c  0x14        |   0x4f  0x5c  0x14
+#        27 | 0xb2  |   0xb2  0x4f  0xcd        |   0xb2  0x4f  0xcd
+#        28 | 0x97  |   0x97  0xb2  0x5c        |   0x97  0xb2  0x5c
+#        29 | 0xff  |   0xff  0x97  0x4f        |   0xff  0x97  0x4f
+#        30 | 0x1e  |   0x1e  0xff  0xb2        |   0x1e  0xff  0xb2
+#        31 | 0xac  |   0xac  0x1e  0x97        |   0xac  0x1e  0x97
+#        32 | 0x2c  |   0x2c  0xac  0xff        |   0x2c  0xac  0xff
+#        33 | 0xe4  |   0xe4  0x2c  0x1e        |   0xe4  0x2c  0x1e
+#        34 | 0x9e  |   0x9e  0xe4  0xac        |   0x9e  0xe4  0xac
+#        35 | 0x85  |   0x85  0x9e  0x2c        |   0x85  0x9e  0x2c
+#        36 | 0xb2  |   0xb2  0x85  0xe4        |   0xb2  0x85  0xe4
+#        37 | 0x9b  |   0x9b  0xb2  0x9e        |   0x9b  0xb2  0x9e
+#        38 | 0x52  |   0x52  0x9b  0x85        |   0x52  0x9b  0x85
+#        39 | 0xad  |   0xad  0x52  0xb2        |   0xad  0x52  0xb2
+#     note: DELAY=0 tracks din in the same iteration (it is a wire);
+#           DELAY=1 lags by one iteration; DELAY=3 lags by three.
+#     T1 ends: 120 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T2 : synchronous reset flushes the pipe
+#   -----------------------------------------------------------------
+#     driving din=0xFF and holding rst_n low for 4 clocks
+#     after reset: dout_d0=0xff  dout_d1=0x00  dout_d3=0x00
+#     DELAY=0 still shows 0xFF, as a wire must - it has no state to clear.
+#     T2 ends: 3 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T3 : refill after reset: a pulse walks the pipe
+#   -----------------------------------------------------------------
+#     offset 0 : din=0xa5  d0=0xa5  d1=0xff  d3=0x00
+#     offset 1 : din=0x00  d0=0x00  d1=0xa5  d3=0x00
+#     offset 2 : din=0x00  d0=0x00  d1=0x00  d3=0xff
+#     offset 3 : din=0x00  d0=0x00  d1=0x00  d3=0xa5
+#     the 0xA5 pulse reached DELAY=3 exactly 3 offsets after it was driven.
+#     T3 ends: 4 checks, 0 errors  [PASS]
+# 
+#   =================================================================
+#    SECTION SUMMARY : tb_delay_pipe
+#   =================================================================
+#    SEC    DESCRIPTION                                     CHECKS  ERRORS  STATUS
+#    ------ ---------------------------------------------- ------- -------  ------
+#    T1     delay accuracy, random stream                      120       0  PASS
+#    T2     synchronous reset flushes the pipe                   3       0  PASS
+#    T3     refill after reset: a pulse walks the pipe           4       0  PASS
+#    ------ ---------------------------------------------- ------- -------
+#    TOTAL                                                     127       0
+#   =================================================================
+#    TOTALS: 127 checks, 0 errors
+#    simulated time : 540 ns
+#    RESULT: PASS - tb_delay_pipe
+#   =================================================================
+# ** Note: $finish    : C:/Users/nanda/Desktop/verification_individual/test_benches/tb_delay_pipe.sv(226)
+#    Time: 540 ns  Iteration: 1  Instance: /tb_delay_pipe
+# End time: 17:34:47 on Jul 30,2026, Elapsed time: 0:00:06
+# Errors: 0, Warnings: 0

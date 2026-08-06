@@ -1,0 +1,211 @@
+﻿Reading pref.tcl
+
+# 2021.1
+
+# vsim -c tb_array_buf_top -do "run -all; quit -f" 
+# Start time: 17:36:39 on Jul 30,2026
+# ** Note: (vsim-3812) Design is being optimized...
+# ** Warning: C:\Users\nanda\Desktop\verification_individual\design_rtl\input_buf.sv(7): (vopt-13314) Defaulting port 'dense_a_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\nanda\Desktop\verification_individual\design_rtl\input_buf.sv(8): (vopt-13314) Defaulting port 'dense_valid_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\nanda\Desktop\verification_individual\design_rtl\array.sv(14): (vopt-13314) Defaulting port 'a_in_left' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\nanda\Desktop\verification_individual\design_rtl\array.sv(15): (vopt-13314) Defaulting port 'valid_in_left' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\nanda\Desktop\verification_individual\design_rtl\array.sv(18): (vopt-13314) Defaulting port 'psum_in_top' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\nanda\Desktop\verification_individual\design_rtl\output_skewbuf.sv(7): (vopt-13314) Defaulting port 'psum_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\nanda\Desktop\verification_individual\design_rtl\wrapper_array_buf.sv(48): (vopt-13314) Defaulting port 'dense_a_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\nanda\Desktop\verification_individual\design_rtl\wrapper_array_buf.sv(49): (vopt-13314) Defaulting port 'dense_valid_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\nanda\Desktop\verification_individual\design_rtl\wrapper_array_buf.sv(52): (vopt-13314) Defaulting port 'psum_in_top' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Note: (vsim-12126) Error and warning message counts have been restored: Errors=0, Warnings=9.
+# //  Questa Sim-64
+# //  Version 2021.1 win64 Jan 19 2021
+# //
+# //  Copyright 1991-2021 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  QuestaSim and its associated documentation contain trade
+# //  secrets and commercial or financial information that are the property of
+# //  Mentor Graphics Corporation and are privileged, confidential,
+# //  and exempt from disclosure under the Freedom of Information Act,
+# //  5 U.S.C. Section 552. Furthermore, this information
+# //  is prohibited from disclosure under the Trade Secrets Act,
+# //  18 U.S.C. Section 1905.
+# //
+# Loading sv_std.std
+# Loading work.tb_array_buf_top(fast)
+# run -all
+# =====================================================================
+#  tb_array_buf_top  --  LEVEL 1 wrapper (skew + array + de-skew)
+# =====================================================================
+#  DUT           : array_buf_top  (wrapper_array_buf.sv)
+#  Contains      : input_skew_buffer -> systolic_array -> output_deskew
+#  Golden model  : C = A x W by nested loops
+# 
+#  LATENCY UNDER TEST
+#    raw   (psum_raw, pre-de-skew) : n + (ROWS-1) + c = n+3+c
+#    final (result, de-skewed)     : n + ROWS+COLS-2  = n+6, all columns
+#    The de-skew delay COLS-1-c exactly cancels the +c, which is why
+#    the whole result vector lands on ONE cycle.
+# 
+#  TEST PLAN
+#    T4  fabric quiet after the weight-load flush
+#    T1  back-to-back burst: aligned result == C = A x W
+#    T2  gapped burst: same, after drain and refill
+#    T3  the RAW bus still shows the staircase (proves de-skew aligns)
+#    T5  the aligned vector is not present one cycle early
+# =====================================================================
+# 
+#  STIMULUS
+#    weight matrix W:
+#      W[0] =    -25    124   -100     28
+#      W[1] =    -24    -89     22    -60
+#      W[2] =      0     89     -8     -5
+#      W[3] =     17    -94     -4    -91
+#    activation vectors A:
+#        vec |   row0   row1   row2   row3 | issued at cycle
+#      ------+--------------------------------+----------------
+#          0 |    -34   -106   -112     23 | 16
+#          1 |    -34   -125   -122     20 | 17
+#          2 |    -51     92     79    -78 | 18
+#          3 |   -105     -1     30    -84 | 19
+#          4 |     44    -28    -98   -123 | 20
+#          5 |    -78   -101     82    -83 | 29
+#          6 |     49     24   -103    -64 | 30
+#          7 |      2   -116    -31   -120 | 31
+# 
+#   -----------------------------------------------------------------
+#   CYCLE-BY-CYCLE CAPTURE : raw (pre-de-skew) vs result (aligned)
+#   -----------------------------------------------------------------
+#     cycle | stimulus     | psum_raw [c0 c1 c2 c3]          | result [c0 c1 c2 c3]           
+#     ------+--------------+---------------------------------+--------------------------------
+#         4 | WLOAD W[3]   |       0       0       0       0 |       0       0       0       0
+#         5 | WLOAD W[2]   |       0       0       0       0 |       0       0       0       0
+#         6 | WLOAD W[1]   |       0       0       0       0 |       0       0       0       0
+#         7 | WLOAD W[0]   |      17     -94      -4     -91 |       0       0       0     -91
+#         8 | idle         |       0      89      -8      -5 |       0       0      -4      -5
+#         9 | idle         |     -24     -89      22     -60 |       0     -94      -8     -60
+#        10 | idle         |     -25     124    -100      28 |      17      89      22      28
+#        11 | idle         |       0       0       0       0 |       0     -89    -100       0
+#        12 | idle         |       0       0       0       0 |     -24     124       0       0
+#        13 | idle         |       0       0       0       0 |     -25       0       0       0
+#        14 | idle         |       0       0       0       0 |       0       0       0       0
+#        15 | idle         |       0       0       0       0 |       0       0       0       0
+#        16 | vec 0 in     |       0       0       0       0 |       0       0       0       0
+#        17 | vec 1 in     |       0       0       0       0 |       0       0       0       0
+#        18 | vec 2 in     |       0       0       0       0 |       0       0       0       0
+#        19 | vec 3 in     |    3785       0       0       0 |       0       0       0       0
+#        20 | vec 4 in     |    4190   -6912       0       0 |       0       0       0       0
+#        21 | idle         |   -2259   -5829    1872       0 |       0       0       0       0
+#        22 | idle         |    1221    -149    1546    3875 |    3785   -6912    1872    3875
+#        23 | idle         |   -2519   -2365    6804    5338 |    4190   -5829    1546    5338
+#        24 | idle         |       0   10788   10574    -245 |   -2259    -149    6804    -245
+#        25 | idle         |       0       0   -3740    4614 |    1221   -2365   10574    4614
+#        26 | idle         |       0       0       0   14595 |   -2519   10788   -3740   14595
+#        27 | idle         |       0       0       0       0 |       0       0       0       0
+#        28 | idle         |       0       0       0       0 |       0       0       0       0
+#        29 | vec 5 in     |       0       0       0       0 |       0       0       0       0
+#        30 | vec 6 in     |       0       0       0       0 |       0       0       0       0
+#        31 | vec 7 in     |       0       0       0       0 |       0       0       0       0
+#        32 | idle         |    2963       0       0       0 |       0       0       0       0
+#        33 | idle         |   -2889   14417       0       0 |       0       0       0       0
+#        34 | idle         |     694     789    5254       0 |       0       0       0       0
+#        35 | idle         |       0   19093   -3292   11019 |    2963   14417    5254   11019
+#        36 | idle         |       0       0   -2024    6271 |   -2889     789   -3292    6271
+#        37 | idle         |       0       0       0   18091 |     694   19093   -2024   18091
+#        38 | idle         |       0       0       0       0 |       0       0       0       0
+#        39 | idle         |       0       0       0       0 |       0       0       0       0
+#        40 | idle         |       0       0       0       0 |       0       0       0       0
+#        41 | idle         |       0       0       0       0 |       0       0       0       0
+#        42 | idle         |       0       0       0       0 |       0       0       0       0
+#        43 | idle         |       0       0       0       0 |       0       0       0       0
+#        44 | idle         |       0       0       0       0 |       0       0       0       0
+#     the raw columns light up on a diagonal; the result columns light
+#     up together, one row per cycle.
+# 
+#   -----------------------------------------------------------------
+#   T4 : fabric quiet before compute begins
+#   -----------------------------------------------------------------
+#     cycle 15  raw    = 0 0 0 0
+#     cycle 15  result = 0 0 0 0
+#     T4 ends: 8 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T1/T2/T3 : aligned result and raw staircase vs golden
+#   -----------------------------------------------------------------
+#       vec   col |    cyc     aligned |    cyc         raw |      golden | result
+#     ------------+--------------------+--------------------+-------------+-------
+#         0     0 |     22        3785 |     19        3785 |        3785 |       ok
+#         0     1 |     22       -6912 |     20       -6912 |       -6912 |       ok
+#         0     2 |     22        1872 |     21        1872 |        1872 |       ok
+#         0     3 |     22        3875 |     22        3875 |        3875 |       ok
+#         1     0 |     23        4190 |     20        4190 |        4190 |       ok
+#         1     1 |     23       -5829 |     21       -5829 |       -5829 |       ok
+#         1     2 |     23        1546 |     22        1546 |        1546 |       ok
+#         1     3 |     23        5338 |     23        5338 |        5338 |       ok
+#         2     0 |     24       -2259 |     21       -2259 |       -2259 |       ok
+#         2     1 |     24        -149 |     22        -149 |        -149 |       ok
+#         2     2 |     24        6804 |     23        6804 |        6804 |       ok
+#         2     3 |     24        -245 |     24        -245 |        -245 |       ok
+#         3     0 |     25        1221 |     22        1221 |        1221 |       ok
+#         3     1 |     25       -2365 |     23       -2365 |       -2365 |       ok
+#         3     2 |     25       10574 |     24       10574 |       10574 |       ok
+#         3     3 |     25        4614 |     25        4614 |        4614 |       ok
+#         4     0 |     26       -2519 |     23       -2519 |       -2519 |       ok
+#         4     1 |     26       10788 |     24       10788 |       10788 |       ok
+#         4     2 |     26       -3740 |     25       -3740 |       -3740 |       ok
+#         4     3 |     26       14595 |     26       14595 |       14595 |       ok
+#         5     0 |     35        2963 |     32        2963 |        2963 |       ok
+#         5     1 |     35       14417 |     33       14417 |       14417 |       ok
+#         5     2 |     35        5254 |     34        5254 |        5254 |       ok
+#         5     3 |     35       11019 |     35       11019 |       11019 |       ok
+#         6     0 |     36       -2889 |     33       -2889 |       -2889 |       ok
+#         6     1 |     36         789 |     34         789 |         789 |       ok
+#         6     2 |     36       -3292 |     35       -3292 |       -3292 |       ok
+#         6     3 |     36        6271 |     36        6271 |        6271 |       ok
+#         7     0 |     37         694 |     34         694 |         694 |       ok
+#         7     1 |     37       19093 |     35       19093 |       19093 |       ok
+#         7     2 |     37       -2024 |     36       -2024 |       -2024 |       ok
+#         7     3 |     37       18091 |     37       18091 |       18091 |       ok
+#     aligned cycle is the SAME for all four columns of a vector;
+#     raw cycle advances by one per column.  That difference is the
+#     de-skew buffer doing its job.
+#     T1/T2/T3 ends: 64 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T5 : aligned vector not present one cycle early
+#   -----------------------------------------------------------------
+#     col0 at cycle 21 holds 0, golden is 3785 - correctly absent
+#     col1 at cycle 21 holds 0, golden is -6912 - correctly absent
+#     col2 at cycle 21 holds 0, golden is 1872 - correctly absent
+#     col3 at cycle 21 holds 0, golden is 3875 - correctly absent
+# 
+#   GOLDEN REFERENCE  C = A x W
+#       vec |        col0        col1        col2        col3
+#     ------+-------------------------------------------------
+#         0 |        3785       -6912        1872        3875
+#         1 |        4190       -5829        1546        5338
+#         2 |       -2259        -149        6804        -245
+#         3 |        1221       -2365       10574        4614
+#         4 |       -2519       10788       -3740       14595
+#         5 |        2963       14417        5254       11019
+#         6 |       -2889         789       -3292        6271
+#         7 |         694       19093       -2024       18091
+#     T5 ends: 4 checks, 0 errors  [PASS]
+# 
+#   =================================================================
+#    SECTION SUMMARY : tb_array_buf_top
+#   =================================================================
+#    SEC    DESCRIPTION                                     CHECKS  ERRORS  STATUS
+#    ------ ---------------------------------------------- ------- -------  ------
+#    T4     fabric quiet before compute begins                   8       0  PASS
+#    T1/T2/T3 aligned result and raw staircase vs golden          64       0  PASS
+#    T5     aligned vector not present one cycle early           4       0  PASS
+#    ------ ---------------------------------------------- ------- -------
+#    TOTAL                                                      76       0
+#   =================================================================
+#    TOTALS: 76 checks, 0 errors
+#    simulated time : 486 ns
+#    RESULT: PASS - tb_array_buf_top
+#   =================================================================
+# ** Note: $finish    : C:/Users/nanda/Desktop/verification_individual/test_benches/tb_array_buf_top.sv(331)
+#    Time: 486 ns  Iteration: 0  Instance: /tb_array_buf_top
+# End time: 17:36:44 on Jul 30,2026, Elapsed time: 0:00:05
+# Errors: 0, Warnings: 9

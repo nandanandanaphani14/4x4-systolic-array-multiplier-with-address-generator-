@@ -1,0 +1,130 @@
+﻿Compile transcript - 2026-08-06 16:55:13
+QuestaSim-64 vlog 2021.1 Compiler 2021.01 Jan 19 2021
+Start time: 16:55:13 on Aug 06,2026
+vlog -sv "+incdir+C:\Users\VLSI\Desktop\systolic_array_multiplier\verification_recheck\testbenches" C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\delay_pipe.sv C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\MAC.sv C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\array.sv C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\input_buf.sv C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\output_skewbuf.sv C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\a_mem.sv C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\weight_mem.sv C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\outmem.sv C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\controller.sv C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\agu.sv C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\wrapper_array_buf.sv C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\wrapper_mem_arr_buf.sv C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\wrapper_full_system.sv 
+-- Compiling module delay_pipe
+-- Compiling module processing_element
+-- Compiling module systolic_array
+** Warning: C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\array.sv(14): (vlog-13314) Defaulting port 'a_in_left' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+** Warning: C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\array.sv(15): (vlog-13314) Defaulting port 'valid_in_left' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+** Warning: C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\array.sv(18): (vlog-13314) Defaulting port 'psum_in_top' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+-- Compiling module input_skew_buffer
+** Warning: C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\input_buf.sv(7): (vlog-13314) Defaulting port 'dense_a_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+** Warning: C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\input_buf.sv(8): (vlog-13314) Defaulting port 'dense_valid_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+-- Compiling module output_deskew_buffer
+** Warning: C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\output_skewbuf.sv(7): (vlog-13314) Defaulting port 'psum_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+-- Compiling module a_mem
+-- Compiling module weight_mem
+-- Compiling module output_mem
+-- Compiling module controller
+-- Compiling module agu
+-- Compiling module array_buf_top
+** Warning: C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\wrapper_array_buf.sv(48): (vlog-13314) Defaulting port 'dense_a_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+** Warning: C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\wrapper_array_buf.sv(49): (vlog-13314) Defaulting port 'dense_valid_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+** Warning: C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\wrapper_array_buf.sv(52): (vlog-13314) Defaulting port 'psum_in_top' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+-- Compiling module accelerator_top
+-- Compiling module accelerator_system_top
+
+Top level modules:
+	accelerator_system_top
+End time: 16:55:13 on Aug 06,2026, Elapsed time: 0:00:00
+Errors: 0, Warnings: 9
+QuestaSim-64 vlog 2021.1 Compiler 2021.01 Jan 19 2021
+Start time: 16:55:13 on Aug 06,2026
+vlog -sv "+incdir+C:\Users\VLSI\Desktop\systolic_array_multiplier\verification_recheck\testbenches" C:\Users\VLSI\Desktop\systolic_array_multiplier\verification_recheck\testbenches\tb_delay_pipe.sv 
+-- Compiling module tb_delay_pipe
+
+Top level modules:
+	tb_delay_pipe
+End time: 16:55:13 on Aug 06,2026, Elapsed time: 0:00:00
+Errors: 0, Warnings: 0
+QuestaSim-64 vlog 2021.1 Compiler 2021.01 Jan 19 2021
+Start time: 16:55:14 on Aug 06,2026
+vlog -sv "+incdir+C:\Users\VLSI\Desktop\systolic_array_multiplier\verification_recheck\testbenches" C:\Users\VLSI\Desktop\systolic_array_multiplier\verification_recheck\testbenches\tb_processing_element.sv 
+-- Compiling module tb_processing_element
+
+Top level modules:
+	tb_processing_element
+End time: 16:55:14 on Aug 06,2026, Elapsed time: 0:00:00
+Errors: 0, Warnings: 0
+QuestaSim-64 vlog 2021.1 Compiler 2021.01 Jan 19 2021
+Start time: 16:55:14 on Aug 06,2026
+vlog -sv "+incdir+C:\Users\VLSI\Desktop\systolic_array_multiplier\verification_recheck\testbenches" C:\Users\VLSI\Desktop\systolic_array_multiplier\verification_recheck\testbenches\tb_memories.sv 
+-- Compiling module tb_memories
+
+Top level modules:
+	tb_memories
+End time: 16:55:14 on Aug 06,2026, Elapsed time: 0:00:00
+Errors: 0, Warnings: 0
+QuestaSim-64 vlog 2021.1 Compiler 2021.01 Jan 19 2021
+Start time: 16:55:14 on Aug 06,2026
+vlog -sv "+incdir+C:\Users\VLSI\Desktop\systolic_array_multiplier\verification_recheck\testbenches" C:\Users\VLSI\Desktop\systolic_array_multiplier\verification_recheck\testbenches\tb_input_skew_buffer.sv 
+-- Compiling module tb_input_skew_buffer
+
+Top level modules:
+	tb_input_skew_buffer
+End time: 16:55:14 on Aug 06,2026, Elapsed time: 0:00:00
+Errors: 0, Warnings: 0
+QuestaSim-64 vlog 2021.1 Compiler 2021.01 Jan 19 2021
+Start time: 16:55:14 on Aug 06,2026
+vlog -sv "+incdir+C:\Users\VLSI\Desktop\systolic_array_multiplier\verification_recheck\testbenches" C:\Users\VLSI\Desktop\systolic_array_multiplier\verification_recheck\testbenches\tb_output_deskew_buffer.sv 
+-- Compiling module tb_output_deskew_buffer
+
+Top level modules:
+	tb_output_deskew_buffer
+End time: 16:55:14 on Aug 06,2026, Elapsed time: 0:00:00
+Errors: 0, Warnings: 0
+QuestaSim-64 vlog 2021.1 Compiler 2021.01 Jan 19 2021
+Start time: 16:55:14 on Aug 06,2026
+vlog -sv "+incdir+C:\Users\VLSI\Desktop\systolic_array_multiplier\verification_recheck\testbenches" C:\Users\VLSI\Desktop\systolic_array_multiplier\verification_recheck\testbenches\tb_systolic_array.sv 
+-- Compiling module tb_systolic_array
+
+Top level modules:
+	tb_systolic_array
+End time: 16:55:14 on Aug 06,2026, Elapsed time: 0:00:00
+Errors: 0, Warnings: 0
+QuestaSim-64 vlog 2021.1 Compiler 2021.01 Jan 19 2021
+Start time: 16:55:14 on Aug 06,2026
+vlog -sv "+incdir+C:\Users\VLSI\Desktop\systolic_array_multiplier\verification_recheck\testbenches" C:\Users\VLSI\Desktop\systolic_array_multiplier\verification_recheck\testbenches\tb_array_buf_top.sv 
+-- Compiling module tb_array_buf_top
+
+Top level modules:
+	tb_array_buf_top
+End time: 16:55:15 on Aug 06,2026, Elapsed time: 0:00:01
+Errors: 0, Warnings: 0
+QuestaSim-64 vlog 2021.1 Compiler 2021.01 Jan 19 2021
+Start time: 16:55:15 on Aug 06,2026
+vlog -sv "+incdir+C:\Users\VLSI\Desktop\systolic_array_multiplier\verification_recheck\testbenches" C:\Users\VLSI\Desktop\systolic_array_multiplier\verification_recheck\testbenches\tb_controller.sv 
+-- Compiling module tb_controller
+
+Top level modules:
+	tb_controller
+End time: 16:55:15 on Aug 06,2026, Elapsed time: 0:00:00
+Errors: 0, Warnings: 0
+QuestaSim-64 vlog 2021.1 Compiler 2021.01 Jan 19 2021
+Start time: 16:55:15 on Aug 06,2026
+vlog -sv "+incdir+C:\Users\VLSI\Desktop\systolic_array_multiplier\verification_recheck\testbenches" C:\Users\VLSI\Desktop\systolic_array_multiplier\verification_recheck\testbenches\tb_agu.sv 
+-- Compiling module tb_agu
+
+Top level modules:
+	tb_agu
+End time: 16:55:15 on Aug 06,2026, Elapsed time: 0:00:00
+Errors: 0, Warnings: 0
+QuestaSim-64 vlog 2021.1 Compiler 2021.01 Jan 19 2021
+Start time: 16:55:15 on Aug 06,2026
+vlog -sv "+incdir+C:\Users\VLSI\Desktop\systolic_array_multiplier\verification_recheck\testbenches" C:\Users\VLSI\Desktop\systolic_array_multiplier\verification_recheck\testbenches\tb_accelerator_top.sv 
+-- Compiling module tb_accelerator_top
+
+Top level modules:
+	tb_accelerator_top
+End time: 16:55:15 on Aug 06,2026, Elapsed time: 0:00:00
+Errors: 0, Warnings: 0
+QuestaSim-64 vlog 2021.1 Compiler 2021.01 Jan 19 2021
+Start time: 16:55:15 on Aug 06,2026
+vlog -sv "+incdir+C:\Users\VLSI\Desktop\systolic_array_multiplier\verification_recheck\testbenches" C:\Users\VLSI\Desktop\systolic_array_multiplier\verification_recheck\testbenches\tb_accelerator_system_top.sv 
+-- Compiling module tb_accelerator_system_top
+
+Top level modules:
+	tb_accelerator_system_top
+End time: 16:55:15 on Aug 06,2026, Elapsed time: 0:00:00
+Errors: 0, Warnings: 0

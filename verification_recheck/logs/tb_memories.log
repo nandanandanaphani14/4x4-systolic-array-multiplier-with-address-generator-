@@ -1,0 +1,78 @@
+﻿Reading pref.tcl
+
+# 2021.1
+
+# vsim -c -do "run -all; quit -f" tb_memories 
+# Start time: 16:56:37 on Aug 06,2026
+# ** Note: (vsim-3812) Design is being optimized...
+# //  Questa Sim-64
+# //  Version 2021.1 win64 Jan 19 2021
+# //
+# //  Copyright 1991-2021 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  QuestaSim and its associated documentation contain trade
+# //  secrets and commercial or financial information that are the property of
+# //  Mentor Graphics Corporation and are privileged, confidential,
+# //  and exempt from disclosure under the Freedom of Information Act,
+# //  5 U.S.C. Section 552. Furthermore, this information
+# //  is prohibited from disclosure under the Trade Secrets Act,
+# //  18 U.S.C. Section 1905.
+# //
+# Loading sv_std.std
+# Loading work.tb_memories(fast)
+# run -all
+# =====================================================================
+#  tb_memories  --  DUTs: a_mem (256x32), weight_mem (4x32), output_mem (256x128)
+# =====================================================================
+#  Convention    : registered read - rdata valid one cycle after addr
+# 
+#  TEST PLAN
+#    T1  a_mem  write/read-back sweep + we=0 hold + read-before-write
+#    T2  weight_mem per-lane integrity + 2-bit address wrap
+#    T3  output_mem 128-bit per-lane integrity, extreme signed values
+# =====================================================================
+# 
+#   -----------------------------------------------------------------
+#   T1 : a_mem write/read-back, we=0 hold, read-before-write
+#   -----------------------------------------------------------------
+#     swept 64 addresses; read-back one cycle after address, all matched
+#     we=0 with wdata=0xFFFFFFFF on addr5: memory untouched (0xc73523a7)
+#     read-during-write addr7: rdata=0x456ee1c4 == OLD 0x456ee1c4 (read-before-write)
+#     T1 ends: 67 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T2 : weight_mem per-lane integrity + address wrap
+#   -----------------------------------------------------------------
+#     weight_mem[0] = 0x03020100  lanes = 0 1 2 3
+#     weight_mem[1] = 0x13121110  lanes = 16 17 18 19
+#     weight_mem[2] = 0x23222120  lanes = 32 33 34 35
+#     weight_mem[3] = 0x33323130  lanes = 48 49 50 51
+#     2-bit address 4 aliases 0: read back 0x03020100
+#     T2 ends: 17 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T3 : output_mem 128-bit lane integrity, extreme signed
+#   -----------------------------------------------------------------
+#     output_mem[0x20] = 0x7fffffffffffffff8000000000000001
+#     T3 ends: 4 checks, 0 errors  [PASS]
+# 
+#   =================================================================
+#    SECTION SUMMARY : tb_memories
+#   =================================================================
+#    SEC    DESCRIPTION                                     CHECKS  ERRORS  STATUS
+#    ------ ---------------------------------------------- ------- -------  ------
+#    T1     a_mem write/read-back, we=0 hold, read-before-write      67       0  PASS
+#    T2     weight_mem per-lane integrity + address wrap      17       0  PASS
+#    T3     output_mem 128-bit lane integrity, extreme signed       4       0  PASS
+#    ------ ---------------------------------------------- ------- -------
+#    TOTAL                                                      88       0
+#   =================================================================
+#    TOTALS: 88 checks, 0 errors
+#    simulated time : 1440 ns
+#    RESULT: PASS - tb_memories
+#   =================================================================
+# ** Note: $finish    : C:/Users/VLSI/Desktop/systolic_array_multiplier/verification_recheck/testbenches/tb_memories.sv(96)
+#    Time: 1440 ns  Iteration: 1  Instance: /tb_memories
+# End time: 16:56:49 on Aug 06,2026, Elapsed time: 0:00:12
+# Errors: 0, Warnings: 0

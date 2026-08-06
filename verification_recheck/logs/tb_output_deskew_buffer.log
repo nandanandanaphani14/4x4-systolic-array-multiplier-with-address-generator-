@@ -1,0 +1,68 @@
+﻿Reading pref.tcl
+
+# 2021.1
+
+# vsim -c -do "run -all; quit -f" tb_output_deskew_buffer 
+# Start time: 16:57:41 on Aug 06,2026
+# ** Note: (vsim-3812) Design is being optimized...
+# ** Warning: C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\output_skewbuf.sv(7): (vopt-13314) Defaulting port 'psum_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Note: (vsim-12126) Error and warning message counts have been restored: Errors=0, Warnings=1.
+# //  Questa Sim-64
+# //  Version 2021.1 win64 Jan 19 2021
+# //
+# //  Copyright 1991-2021 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  QuestaSim and its associated documentation contain trade
+# //  secrets and commercial or financial information that are the property of
+# //  Mentor Graphics Corporation and are privileged, confidential,
+# //  and exempt from disclosure under the Freedom of Information Act,
+# //  5 U.S.C. Section 552. Furthermore, this information
+# //  is prohibited from disclosure under the Trade Secrets Act,
+# //  18 U.S.C. Section 1905.
+# //
+# Loading sv_std.std
+# Loading work.tb_output_deskew_buffer(fast)
+# run -all
+# =====================================================================
+#  tb_output_deskew_buffer  --  DUT: output_deskew_buffer (output_skewbuf.sv)
+# =====================================================================
+#  COLS=4 WIDTH=32  column c delayed by COLS-1-c  (Convention B)
+# 
+#  TEST PLAN
+#    T1  random per-column stream: column c delayed by COLS-1-c
+#    T2  staircase in -> single-cycle aligned out; empty before that
+# =====================================================================
+# 
+#   -----------------------------------------------------------------
+#   T1 : random stream, per-column delay = COLS-1-c
+#   -----------------------------------------------------------------
+#     120 cycles: aligned_out[c] equals psum_in[c] delayed by COLS-1-c
+#     T1 ends: 474 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T2 : staircase alignment + empty-before check
+#   -----------------------------------------------------------------
+#     aligned_out = 0x00000001 0x80000000 0xffffffff 0x7fffffff
+#     all four columns (incl. extreme signed values) aligned on ONE cycle
+#     the cycle after alignment the bus is empty again
+#     T2 ends: 8 checks, 0 errors  [PASS]
+# 
+#   =================================================================
+#    SECTION SUMMARY : tb_output_deskew_buffer
+#   =================================================================
+#    SEC    DESCRIPTION                                     CHECKS  ERRORS  STATUS
+#    ------ ---------------------------------------------- ------- -------  ------
+#    T1     random stream, per-column delay = COLS-1-c       474       0  PASS
+#    T2     staircase alignment + empty-before check           8       0  PASS
+#    ------ ---------------------------------------------- ------- -------
+#    TOTAL                                                     482       0
+#   =================================================================
+#    TOTALS: 482 checks, 0 errors
+#    simulated time : 1291 ns
+#    RESULT: PASS - tb_output_deskew_buffer
+#   =================================================================
+# ** Note: $finish    : C:/Users/VLSI/Desktop/systolic_array_multiplier/verification_recheck/testbenches/tb_output_deskew_buffer.sv(74)
+#    Time: 1291 ns  Iteration: 0  Instance: /tb_output_deskew_buffer
+# End time: 16:57:54 on Aug 06,2026, Elapsed time: 0:00:13
+# Errors: 0, Warnings: 1

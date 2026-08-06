@@ -1,0 +1,1056 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Implementation Methodology — VIO/ILA Strategy, Data Entry, Result Observation and Sign-off Reports</title>
+<style>
+@page { size: A4; margin: 16mm 15mm 16mm 15mm; }
+* { box-sizing: border-box; }
+body {
+  font-family: "Segoe UI", "Calibri", "Helvetica Neue", Arial, sans-serif;
+  font-size: 10pt; line-height: 1.45; color: #16181d; margin: 0;
+}
+h1 { font-size: 21pt; line-height: 1.15; margin: 0 0 6px 0; color: #0b3d5c; letter-spacing: -0.3px; }
+h2 {
+  font-size: 14pt; margin: 22px 0 8px 0; color: #0b3d5c;
+  border-bottom: 2px solid #0b3d5c; padding-bottom: 3px;
+  page-break-after: avoid; break-after: avoid;
+}
+h3 { font-size: 11.5pt; margin: 15px 0 5px 0; color: #124a6b; page-break-after: avoid; break-after: avoid; }
+h4 { font-size: 10pt; margin: 12px 0 4px 0; color: #2c3540; page-break-after: avoid; break-after: avoid; }
+p { margin: 6px 0; }
+ul, ol { margin: 6px 0 6px 0; padding-left: 22px; }
+li { margin: 3px 0; }
+code {
+  font-family: "Consolas", "DejaVu Sans Mono", monospace; font-size: 8.8pt;
+  background: #eef2f6; padding: 0.5px 3px; border-radius: 2px; color: #123;
+}
+pre {
+  font-family: "Consolas", "DejaVu Sans Mono", monospace; font-size: 7.9pt;
+  line-height: 1.35; background: #f6f8fa; border: 1px solid #d4dde5;
+  border-left: 3px solid #0b3d5c; border-radius: 3px;
+  padding: 7px 9px; margin: 8px 0; white-space: pre-wrap; overflow-wrap: anywhere;
+  page-break-inside: avoid; break-inside: avoid;
+}
+pre code { background: none; padding: 0; font-size: inherit; }
+table {
+  width: 100%; border-collapse: collapse; margin: 9px 0; font-size: 8.6pt;
+  page-break-inside: avoid; break-inside: avoid;
+}
+th {
+  background: #0b3d5c; color: #fff; text-align: left; padding: 4px 6px;
+  font-weight: 600; border: 1px solid #0b3d5c; vertical-align: top;
+}
+td { border: 1px solid #c6d2dc; padding: 3.5px 6px; vertical-align: top; }
+tbody tr:nth-child(even) { background: #f4f7fa; }
+.mono td:first-child, .mono th:first-child { font-family: "Consolas", monospace; }
+.title-block { border-bottom: 3px solid #0b3d5c; padding-bottom: 12px; margin-bottom: 16px; }
+.subtitle { font-size: 12pt; color: #4a5764; margin: 2px 0 8px 0; }
+.meta { font-size: 8.5pt; color: #6b7885; }
+.note, .warn, .tip {
+  padding: 7px 10px; margin: 9px 0; border-radius: 3px; font-size: 9.2pt;
+  page-break-inside: avoid; break-inside: avoid;
+}
+.note { background: #eaf3fa; border-left: 4px solid #2b7cb8; }
+.warn { background: #fdf1e8; border-left: 4px solid #d2691e; }
+.tip  { background: #edf7ee; border-left: 4px solid #3d8b45; }
+.note b, .warn b, .tip b { display: block; margin-bottom: 2px; font-size: 8.8pt;
+  text-transform: uppercase; letter-spacing: 0.5px; }
+.note b { color: #1c5c8c; } .warn b { color: #a2500f; } .tip b { color: #2c6b33; }
+.note b.inl, .warn b.inl, .tip b.inl { display:inline; text-transform:none; letter-spacing:0;
+  font-size: inherit; color: inherit; }
+.toc { background: #f6f8fa; border: 1px solid #d4dde5; border-radius: 4px; padding: 10px 14px; margin: 14px 0; }
+.toc ol { margin: 0; padding-left: 20px; column-count: 2; column-gap: 26px; font-size: 9.2pt; }
+.toc li { margin: 2px 0; break-inside: avoid; }
+.pb { page-break-before: always; break-before: page; }
+.ascii {
+  font-family: "Consolas", "DejaVu Sans Mono", monospace; font-size: 7.4pt; line-height: 1.25;
+  background: #fbfcfd; border: 1px solid #d4dde5; border-radius: 3px;
+  padding: 8px 10px; margin: 9px 0; white-space: pre; overflow-x: auto;
+  page-break-inside: avoid; break-inside: avoid;
+}
+.tag { display: inline-block; background: #0b3d5c; color: #fff; font-size: 7.5pt;
+  padding: 1px 6px; border-radius: 8px; letter-spacing: 0.4px; vertical-align: 1px; }
+.tag.alt { background: #3d8b45; } .tag.warn2 { background: #b5651d; }
+.small { font-size: 8.5pt; color: #55606c; }
+hr { border: none; border-top: 1px solid #d4dde5; margin: 16px 0; }
+.kbd { font-family: Consolas, monospace; font-size: 8.4pt; background:#2c3540; color:#fff;
+  padding: 1px 5px; border-radius: 3px; }
+.eq { background:#f6f8fa; border:1px solid #d4dde5; border-left:3px solid #3d8b45; border-radius:3px;
+  padding:8px 11px; margin:9px 0; font-family:"Consolas",monospace; font-size:8.6pt;
+  page-break-inside: avoid; break-inside: avoid; }
+.pos { color: #2c6b33; font-weight: 600; }
+.neg { color: #b3261e; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="title-block">
+  <div class="tag">IMPLEMENTATION METHODOLOGY &nbsp;·&nbsp; VIO + ILA &nbsp;·&nbsp; BRING-UP STRATEGY</div>
+  <h1>Implementation methodology and bring-up strategy</h1>
+  <div class="subtitle">How the 4×4 weight-stationary systolic-array multiplier is taken from RTL to
+  running silicon on a ZedBoard — with the VIO/ILA method as the primary path, the exact protocol used
+  to inject data, the exact way results are read back, and every report checked before sign-off</div>
+  <div class="meta">
+    Target part <code>xc7z020clg484-1</code> &nbsp;·&nbsp; Vivado 2019.1 or later (measurements from 2020.1)
+    &nbsp;·&nbsp; Design under test <code>accelerator_system_top</code> — <b>never modified</b><br>
+    Harness <code>rtl/vio_debug_top.sv</code> &nbsp;·&nbsp; Constraints <code>vio_debug.xdc</code>
+    &nbsp;·&nbsp; Automation <code>vio_demo.tcl</code> &nbsp;·&nbsp;
+    Companion document: <code>timing.pdf</code>
+  </div>
+</div>
+
+<div class="toc">
+<b style="font-size:9.5pt;color:#0b3d5c;">Contents</b>
+<ol>
+  <li>Methodology in one page</li>
+  <li>The governing constraint: the RTL is frozen</li>
+  <li>The four candidate methods and why VIO + ILA was chosen</li>
+  <li>The two impedance mismatches the harness must solve</li>
+  <li>Harness architecture — <code>vio_debug_top.sv</code></li>
+  <li>The VIO core — exact configuration</li>
+  <li>The ILA core — exact configuration</li>
+  <li>Non-invasive internal probing via XDC</li>
+  <li>The build flow, step by step</li>
+  <li>Strategy for inputting data</li>
+  <li>Data packing — the lane and address rules</li>
+  <li>Strategy for watching results</li>
+  <li>Scripted operation — <code>vio_demo.tcl</code> dissected</li>
+  <li>The expected ILA cycle map</li>
+  <li>Trigger recipes — what to look at and when</li>
+  <li>Parameters and reports checked at each stage</li>
+  <li>The pass/fail criteria we actually apply</li>
+  <li>Failure modes and what each report says</li>
+  <li>Alternative methods 1, 3 and 4 — when to use them</li>
+  <li>Sign-off checklist</li>
+</ol>
+</div>
+
+<h2>1. Methodology in one page</h2>
+
+<p>The project is verified in simulation first and only then moved to hardware, and the hardware run is
+deliberately made <b>comparable</b> to the simulation run rather than being a new, separate experiment.
+That is the whole strategy, and everything else follows from it:</p>
+
+<div class="ascii">
+  ┌───────────────────────────────────────────────────────────────────────────────────┐
+  │  1. RTL FROZEN            13 SystemVerilog files. Never edited by any method.      │
+  ├───────────────────────────────────────────────────────────────────────────────────┤
+  │  2. SIMULATION BASELINE   QuestaSim regression: 11/11 testbenches, 3 680 checks,   │
+  │                           0 mismatches. T5 golden case established as the vector   │
+  │                           that will be replayed on hardware.                       │
+  ├───────────────────────────────────────────────────────────────────────────────────┤
+  │  3. HARNESS, NOT SURGERY  A wrapper (vio_debug_top) is added AROUND the design.    │
+  │                           It drives the same host_* ports the testbench drove.     │
+  ├───────────────────────────────────────────────────────────────────────────────────┤
+  │  4. BUILD + STATIC CHECKS synth → utilization → impl → TIMING (WNS/WHS/WPWS) →     │
+  │                           DRC → methodology → bitstream. See timing.pdf.           │
+  ├───────────────────────────────────────────────────────────────────────────────────┤
+  │  5. INJECT OVER JTAG      VIO probe_out drives weights, activations, control.      │
+  │                           No board switches, no serial port, no external pins.     │
+  ├───────────────────────────────────────────────────────────────────────────────────┤
+  │  6. OBSERVE TWO WAYS      VIO probe_in  = the ANSWER  (did it compute correctly?)  │
+  │                           ILA waveform  = the PROCESS (did it compute correctly    │
+  │                                          for the right reason, cycle by cycle?)    │
+  ├───────────────────────────────────────────────────────────────────────────────────┤
+  │  7. COMPARE TO GOLDEN     Same T5 matrices as simulation → same expected numbers.  │
+  │                           Automated by vio_demo.tcl, which prints PASS / MISMATCH. │
+  └───────────────────────────────────────────────────────────────────────────────────┘
+</div>
+
+<p>Step 6 is the part that makes this methodology worth writing down. Reading a correct answer out of a
+VIO proves the design produced the right numbers. It does <b>not</b> prove the design produced them the
+way the specification says it should — a design could produce <code>28 32 36 40</code> by accident, or
+by a path that will break on the next input. The ILA closes that gap by capturing the actual 17-cycle
+execution and letting you check it against a cycle map derived from the RTL: weight load at cycles 1–4,
+one activation per clock in compute, results landing at a fixed 8-cycle store latency.
+<b>Answer plus process. Neither alone is sufficient.</b></p>
+
+<h2 class="pb">2. The governing constraint: the RTL is frozen</h2>
+
+<p>The 13 design files in <code>…SIMPLE_ACCEL_RTL/</code> are the verified artefact. They carry a
+regression result — 11/11 testbenches, 3 680 checks, 0 mismatches — and that result is only meaningful
+if the thing running on the board is bit-identical to the thing that was simulated. So:</p>
+
+<table>
+<thead><tr><th style="width:34%">Rule</th><th>Consequence for the methodology</th></tr></thead>
+<tbody>
+<tr><td><b>No edits to the 13 RTL files</b></td>
+    <td>Every method <i>adds a wrapper</i>. <code>vio_debug_top</code>, <code>fpga_top</code> and
+    <code>accel_axi</code> all instantiate <code>accelerator_system_top</code> unmodified and drive its
+    existing <code>host_*</code> ports.</td></tr>
+<tr><td><b>No <code>(* mark_debug *)</code> attributes in the source</b></td>
+    <td>Internal nets are marked for the ILA <b>from the XDC</b> instead — <code>set_property MARK_DEBUG
+    true [get_nets …]</code>. Same effect, zero source changes. See §8.</td></tr>
+<tr><td><b>No debug-only ports added to the design</b></td>
+    <td>Anything the harness needs that the accelerator does not expose is derived <i>outside</i> it:
+    <code>done_sticky</code> and <code>done_count</code> are built in the wrapper from the existing
+    <code>done</code> pulse.</td></tr>
+<tr><td><b>The host protocol is honoured, not worked around</b></td>
+    <td>Fixed latency, no back-pressure, weight rows in natural order, <code>start</code> only when
+    <code>busy</code> is low. The harness respects the same contract the testbench did.</td></tr>
+</tbody>
+</table>
+
+<div class="note"><b>Why this matters more than it looks</b>
+If the hardware build differed from the simulated build, then a hardware mismatch would have two
+possible causes — a real hardware problem, or the edit — and you could not tell them apart. Freezing the
+RTL means <b>any mismatch on the board is unambiguously a hardware or setup problem</b>. That is what
+makes the bring-up debuggable.</div>
+
+<h2>3. The four candidate methods and why VIO + ILA was chosen</h2>
+
+<table>
+<thead><tr><th style="width:8%">#</th><th style="width:18%">Method</th><th style="width:16%">Top module</th>
+<th style="width:18%">You interact via</th><th>Verdict</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Switches + LEDs</td><td><code>fpga_top</code></td><td>On-board SW / BTN / LED</td>
+    <td>Fully self-contained demo — no PC needed once programmed. But 8 switches and 8 LEDs cannot hold a
+    4×4 int8 matrix, so it needs a console FSM and <b>32 button presses</b> to enter one job. Tedious,
+    error-prone, and shows you <i>nothing</i> about the pipeline.</td></tr>
+<tr><td>2</td><td><b>VIO + ILA over JTAG</b></td><td><code>vio_debug_top</code></td>
+    <td>Vivado Hardware Manager</td>
+    <td><b>Chosen.</b> One physical pin. Data injection and result readback from the PC. Scriptable in
+    Tcl. <b>The only method that can watch the pipeline cycle-by-cycle on real silicon.</b></td></tr>
+<tr><td>3</td><td>USB-UART console</td><td>BD wrapper (<code>accel_axi</code> + PS7)</td>
+    <td>Typed text in a terminal</td>
+    <td>Excellent ergonomics, but on the ZedBoard the USB-UART is a <b>PS</b> resource (UART1,
+    MIO48/49), so it drags in a Zynq PS, an AXI interconnect, Vitis, a BSP and a C application.
+    Large tooling cost for a PL-only accelerator, and still no cycle-level visibility.</td></tr>
+<tr><td>4</td><td>Full PS/AXI integration</td><td>BD wrapper + DMA/IRQ</td><td>Driver or Linux app</td>
+    <td>The right answer for a <i>product</i> — DMA streaming, done-interrupt, UIO driver. Overkill for
+    bring-up, and it hides the pipeline behind a software stack.</td></tr>
+</tbody>
+</table>
+
+<h3>The decision, stated as criteria</h3>
+
+<table>
+<thead><tr><th style="width:34%">Criterion</th><th style="width:14%">M1</th><th style="width:14%">M2 (VIO/ILA)</th>
+<th style="width:14%">M3</th><th>Why it mattered</th></tr></thead>
+<tbody>
+<tr><td>Physical pins required</td><td>~22</td><td><b>1</b> (clk)</td><td>0 (PS pins)</td>
+    <td>Fewer pins = fewer XDC mistakes = fewer board-revision hazards.</td></tr>
+<tr><td>Can enter a full 4×4 × 4×4 job quickly</td><td>32 button presses</td><td><b>8 Tcl calls</b></td><td>Typed text</td>
+    <td>Human error during data entry is the dominant bring-up failure mode.</td></tr>
+<tr><td>Repeatable / scriptable</td><td>No</td><td><b>Yes — Tcl</b></td><td>Partly</td>
+    <td>A regression you can re-run in one command is a regression you will actually re-run.</td></tr>
+<tr><td>Cycle-accurate hardware visibility</td><td>None</td><td><b>Yes — ILA</b></td><td>None</td>
+    <td>The whole point. A 170 ns job is invisible to any human-rate interface.</td></tr>
+<tr><td>Extra tooling needed</td><td>None</td><td><b>Vivado only</b></td><td>Vivado + Vitis</td>
+    <td>Vitis, a platform project and a BSP are a lot of moving parts to debug alongside the accelerator.</td></tr>
+<tr><td>Cost</td><td>Free</td><td><b>~0.565 ns of WNS, ~8 BRAM36</b></td><td>PS + interconnect</td>
+    <td>Observability is not free — see <code>timing.pdf</code> §15.</td></tr>
+</tbody>
+</table>
+
+<h2 class="pb">4. The two impedance mismatches the harness must solve</h2>
+
+<p>A VIO dashboard is driven by a human clicking a mouse. The accelerator is a 100 MHz pipeline that
+finishes a job in <b>17 clocks = 170 ns</b>. Those two worlds are about six orders of magnitude apart in
+time, and connecting them naively fails in two specific ways. Understanding these two problems <i>is</i>
+understanding the harness.</p>
+
+<h3>Mismatch 1 — VIO drives LEVELS; the accelerator wants PULSES</h3>
+
+<p>A VIO <code>probe_out</code> holds whatever value you set until you set it again — typically
+milliseconds later. But <code>start</code>, <code>host_w_we</code> and <code>host_a_we</code> are
+<b>single-cycle strobes</b>. If <code>start</code> were simply tied to a VIO output held high:</p>
+
+<div class="eq">
+1 ms held high ÷ 10 ns per clock = <b>100 000 clocks</b> of continuous <code>start</code><br>
+→ the FSM relaunches the 17-cycle job roughly <b>4 000 times</b> per click<br>
+→ <code>done_count</code> jumps by thousands, the ILA retriggers forever, nothing is observable
+</div>
+
+<p><b>Solution:</b> a <code>oneshot</code> edge detector converts every 0→1 transition on a VIO level
+into exactly one clock of pulse:</p>
+
+<pre><code>module oneshot (input logic clk, input logic rst_n, input logic lvl, output logic pulse);
+    logic lvl_q;
+    always_ff @(posedge clk) begin
+        if (!rst_n) begin lvl_q &lt;= 1'b0; pulse &lt;= 1'b0; end
+        else        begin lvl_q &lt;= lvl;  pulse &lt;= lvl &amp; ~lvl_q; end
+    end
+endmodule</code></pre>
+
+<p>Three instances exist — <code>u_os_start</code>, <code>u_os_wwe</code>, <code>u_os_awe</code>. Note
+the operating consequence: <b>every write is a 0→1→0 sequence, not a single set.</b> You must drive the
+level back to 0 to re-arm the edge detector for the next write. This is why every write helper in the
+Tcl script ends with a <code>… 0</code> call.</p>
+
+<h3>Mismatch 2 — <code>done</code> is a 10 ns pulse; VIO samples at human rate</h3>
+
+<p><code>done</code> is asserted for exactly one clock in the <code>PH_DONE</code> state. A VIO reads
+the fabric only when you click <i>Refresh</i> or when Vivado polls — hundreds of milliseconds apart. The
+probability of a refresh landing on that single 10 ns window is essentially zero. <b>You will never see
+<code>done</code> on a VIO.</b></p>
+
+<p><b>Solution:</b> latch it in the wrapper, and add a counter:</p>
+
+<pre><code>always_ff @(posedge clk) begin
+    if (!rst_n) begin done_sticky &lt;= 1'b0; done_count &lt;= '0; end
+    else begin
+        if      (start_p) done_sticky &lt;= 1'b0;   // arm for the new job
+        else if (done)    done_sticky &lt;= 1'b1;   // latch the 10 ns pulse
+        if (done) done_count &lt;= done_count + 1'b1;
+    end
+end</code></pre>
+
+<table>
+<thead><tr><th style="width:22%">Signal</th><th style="width:26%">What it answers</th><th>Why it is designed this way</th></tr></thead>
+<tbody>
+<tr><td><code>done_sticky</code></td><td>"Has the job I just launched finished?"</td>
+    <td>Set by <code>done</code>, <b>cleared by the next <code>start_p</code></b> — so it is
+    self-arming. You never have to remember to reset it manually, which removes an entire class of
+    "stale sticky bit" confusion.</td></tr>
+<tr><td><code>done_count</code></td><td>"How many jobs have <i>ever</i> completed?"</td>
+    <td>The cheapest possible health probe. <b>If it increments by exactly 1 per start click, the
+    one-shot works and the FSM is healthy.</b> If it jumps by thousands, the one-shot was optimised away
+    or bypassed. If it does not move at all, the job never launched.</td></tr>
+</tbody>
+</table>
+
+<div class="tip"><b>The general lesson</b>
+Whenever you bridge a slow observer to a fast machine, you need two pieces of glue in opposite
+directions: <b>edge-detect the slow side's levels</b> so the fast side sees events, and <b>latch the fast
+side's events</b> so the slow side can see them. Every VIO harness you ever build will need both.</div>
+
+<h2 class="pb">5. Harness architecture — <code>vio_debug_top.sv</code></h2>
+
+<div class="ascii">
+   ┌─ PC ──────────────────────┐         JTAG          ┌─ xc7z020 PL ─────────────────────────────┐
+   │  Vivado Hardware Manager  │  (USB programming     │                                          │
+   │   · hw_vio_1 dashboard    │◄────── cable ────────►│  ┌──────────┐   ┌──────────┐             │
+   │   · hw_ila_1 waveform     │       J17 / JP7-11    │  │ dbg_hub  │──►│  vio_0   │             │
+   │   · Tcl console           │        = JTAG         │  │(auto-ins)│   │ 6 in     │             │
+   │     source vio_demo.tcl   │                       │  └──────────┘   │ 11 out   │             │
+   └───────────────────────────┘                       │        │        └────┬─────┘             │
+                                                       │        │             │ levels            │
+                                                       │        ▼             ▼                   │
+                                                       │   ┌────────┐   ┌───────────┐             │
+                                                       │   │ ila_0  │   │ oneshot×3 │ start_p     │
+                                                       │   │10 probe│   │           │ w_we_p      │
+                                                       │   └───▲────┘   └─────┬─────┘ a_we_p      │
+                                                       │       │              │                   │
+                                                       │       │        ┌─────▼──────────────┐    │
+                                                       │       └────────┤ accelerator_system │    │
+                                                       │  probes        │      _top          │    │
+                                                       │                │   ** UNMODIFIED ** │    │
+                                                       │                └─────┬──────────────┘    │
+                                                       │                      │ done (1 clk)      │
+                                                       │                ┌─────▼──────────────┐    │
+                                                       │                │ done_sticky        │    │
+                                                       │                │ done_count[15:0]   │────┘
+                                                       │                └────────────────────┘
+                                                       │   por[15:0] ──► rst_n   (65 536 clocks ≈ 655 µs)
+                                                       │            clk ◄── pin Y9, 100 MHz PL oscillator
+                                                       └──────────────────────────────────────────┘
+        ONE physical pin in the whole design: clk.  Everything else travels over the programming cable.
+</div>
+
+<table>
+<thead><tr><th style="width:24%">Harness element</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td><b>Power-on reset counter</b></td>
+    <td>A 16-bit counter holds <code>rst_n</code> low for 65 536 clocks (≈ 655 µs) after configuration,
+    then releases synchronously. The declaration initialiser is a synthesisable power-up value on
+    7-series — flip-flops configure to a known state at bitstream load, so no external reset pin is
+    needed. 655 µs is long past by the time your first JTAG transaction lands.</td></tr>
+<tr><td><b>3 × <code>oneshot</code></b></td><td>Level → single-clock pulse. See §4.</td></tr>
+<tr><td><b><code>accelerator_system_top</code></b></td><td>The frozen DUT. Ports driven exactly as the testbench drove them.</td></tr>
+<tr><td><b><code>done_sticky</code> / <code>done_count</code></b></td><td>Fast event → observable state. See §4.</td></tr>
+<tr><td><b><code>result_flat</code></b></td>
+    <td><code>result</code> is an unpacked SystemVerilog array <code>[0:3]</code> of int32. VIO and ILA
+    probes take packed vectors, so it is flattened:
+    <code>{result[3], result[2], result[1], result[0]}</code> → 128 bits.</td></tr>
+<tr><td><b><code>vio_0</code></b></td><td>Injection and readback. §6.</td></tr>
+<tr><td><b><code>ila_0</code></b></td><td>Cycle-by-cycle capture. §7.</td></tr>
+</tbody>
+</table>
+
+<h2>6. The VIO core — exact configuration</h2>
+
+<p>Generate from the IP catalog as <b><code>vio_0</code></b>, VIO (Virtual Input/Output) v3.0, with
+<b>6 input probes and 11 output probes</b>, and <i>Enable Input Probe Activity Detectors</i> ticked.</p>
+
+<h3>6.1 <code>probe_in</code> — what the dashboard shows you</h3>
+<table class="mono">
+<thead><tr><th style="width:14%">Port</th><th style="width:20%">Signal</th><th style="width:8%">Width</th><th>What you learn from it</th></tr></thead>
+<tbody>
+<tr><td>probe_in0</td><td><code>busy</code></td><td>1</td><td><b>Read this before every start.</b> Must be 0 or the start pulse is ignored.</td></tr>
+<tr><td>probe_in1</td><td><code>done_sticky</code></td><td>1</td><td>Job complete. Auto-cleared by the next start.</td></tr>
+<tr><td>probe_in2</td><td><code>phase</code></td><td>3</td><td>FSM state: 0 IDLE / 1 WLOAD / 2 COMPUTE / 3 DRAIN / 4 DONE. At human rate you will essentially always see 0.</td></tr>
+<tr><td>probe_in3</td><td><code>o_rdata</code></td><td>128</td><td><b>The result readback path.</b> Four int32 lanes = one output row.</td></tr>
+<tr><td>probe_in4</td><td><code>result_flat</code></td><td>128</td><td>The array's live result bus — the last row that came out of the de-skew buffer, before it was stored.</td></tr>
+<tr><td>probe_in5</td><td><code>done_count</code></td><td>16</td><td>Health probe. +1 per start click, exactly.</td></tr>
+</tbody>
+</table>
+
+<h3>6.2 <code>probe_out</code> — what you drive</h3>
+<table class="mono">
+<thead><tr><th style="width:14%">Port</th><th style="width:22%">Signal</th><th style="width:8%">Width</th><th>Role</th></tr></thead>
+<tbody>
+<tr><td>probe_out0</td><td><code>vio_start_lvl</code></td><td>1</td><td>→ oneshot → <code>start</code>. Launch a job.</td></tr>
+<tr><td>probe_out1</td><td><code>vio_num_vectors</code></td><td>8</td><td>How many activation vectors this job processes. Set initial value <code>0x04</code>.</td></tr>
+<tr><td>probe_out2</td><td><code>vio_act_base</code></td><td>8</td><td>Base address in <code>a_mem</code> to stream from.</td></tr>
+<tr><td>probe_out3</td><td><code>vio_out_base</code></td><td>8</td><td>Base address in <code>output_mem</code> to write to.</td></tr>
+<tr><td>probe_out4</td><td><code>vio_w_wdata</code></td><td>32</td><td>One packed weight row (4 × int8).</td></tr>
+<tr><td>probe_out5</td><td><code>vio_w_addr</code></td><td><b>2</b></td><td>Weight row index 0–3. <b>2 bits because <code>weight_mem</code> is only 4 deep.</b></td></tr>
+<tr><td>probe_out6</td><td><code>vio_w_we_lvl</code></td><td>1</td><td>→ oneshot → <code>host_w_we</code>. Commit the weight word.</td></tr>
+<tr><td>probe_out7</td><td><code>vio_a_wdata</code></td><td>32</td><td>One packed activation vector (4 × int8).</td></tr>
+<tr><td>probe_out8</td><td><code>vio_a_addr</code></td><td><b>8</b></td><td>Activation index 0–255. <b>8 bits because <code>a_mem</code> is 256 deep.</b></td></tr>
+<tr><td>probe_out9</td><td><code>vio_a_we_lvl</code></td><td>1</td><td>→ oneshot → <code>host_a_we</code>. Commit the activation word.</td></tr>
+<tr><td>probe_out10</td><td><code>vio_o_addr</code></td><td>8</td><td>Which <code>output_mem</code> row to present on <code>o_rdata</code>.</td></tr>
+</tbody>
+</table>
+
+<div class="note"><b>The asymmetric address widths are deliberate, and they encode the architecture</b>
+<code>vio_w_addr</code> is <b>2 bits</b> and <code>vio_a_addr</code> is <b>8 bits</b>. That is not an
+oversight — it is the weight-stationary dataflow made visible in the interface. The weight matrix is
+loaded <b>once</b> and held stationary in the array (4 rows, hence 2 bits), while activations are a
+<b>stream</b> of up to 256 vectors reused against that one weight load. Both take 4 writes for this 4×4
+demo, but the activation bus is sized for the real workload.</div>
+
+<h2 class="pb">7. The ILA core — exact configuration</h2>
+
+<p>Generate as <b><code>ila_0</code></b> with <b>10 probes</b>, native (not AXI) interface, clocked by
+<code>clk</code>.</p>
+
+<table class="mono">
+<thead><tr><th style="width:11%">Probe</th><th style="width:20%">Signal</th><th style="width:8%">Width</th><th>Why it is captured</th></tr></thead>
+<tbody>
+<tr><td>probe0</td><td><code>start_p</code></td><td>1</td><td><b>The trigger.</b> Condition <code>probe0 == 1</code> catches the whole job.</td></tr>
+<tr><td>probe1</td><td><code>busy</code></td><td>1</td><td>Job window: high from WLOAD through DRAIN.</td></tr>
+<tr><td>probe2</td><td><code>done</code></td><td>1</td><td>The real 1-cycle pulse — the ILA <i>can</i> see it, unlike the VIO.</td></tr>
+<tr><td>probe3</td><td><code>phase</code></td><td>3</td><td><b>The most valuable trace in the capture.</b> Lets you measure every phase length directly.</td></tr>
+<tr><td>probe4</td><td><code>w_we_p</code></td><td>1</td><td>Confirms exactly four 1-clock weight-write spikes.</td></tr>
+<tr><td>probe5</td><td><code>a_we_p</code></td><td>1</td><td>Confirms exactly four 1-clock activation-write spikes.</td></tr>
+<tr><td>probe6</td><td><code>vio_a_addr</code></td><td>8</td><td>Which activation slot each write landed in.</td></tr>
+<tr><td>probe7</td><td><code>o_rdata</code></td><td>128</td><td>Result readback bus.</td></tr>
+<tr><td>probe8</td><td><code>result_flat</code></td><td>128</td><td><b>Watch the wavefront emerge here</b> — results appear column by column.</td></tr>
+<tr><td>probe9</td><td><code>done_count</code></td><td>16</td><td>Distinguishes "this job" from "a previous job" in the capture.</td></tr>
+</tbody>
+</table>
+
+<h3>7.1 Core settings and the depth trade-off</h3>
+
+<table>
+<thead><tr><th style="width:26%">Setting</th><th style="width:14%">Value</th><th>Reasoning</th></tr></thead>
+<tbody>
+<tr><td>Sample Data Depth</td><td><b>1024</b> or <b>256</b></td>
+    <td>1024 gives 10.24 µs of trace at 100 MHz — generous pre/post-trigger context for a 17-cycle job.
+    But 288 probe bits × 1024 = 294 912 bits ≈ <b>8 BRAM36</b>, which is more than three times the
+    accelerator's own memory footprint. <b>256 is recommended</b>: still ample for a 17-cycle job, and it
+    saves ≈ 6 BRAM36 and the routing pressure that comes with them.</td></tr>
+<tr><td>Number of Comparators</td><td>1 per probe</td><td>Enough for the single-condition triggers in §15.</td></tr>
+<tr><td>Trigger Out / In</td><td>Off</td><td>No cross-triggering with a processor here.</td></tr>
+<tr><td>Input Pipe Stages</td><td>0</td><td>Extra pipe stages shift probes <i>relative to each other</i> and would corrupt the cycle map in §14 — the one thing you are trying to read.</td></tr>
+<tr><td>Capture Control</td><td>Off (or basic)</td><td>The job is short and dense; there is nothing worth filtering out.</td></tr>
+<tr><td>Clock domain</td><td><code>clk</code></td><td>Must match the fabric clock. Confirm in <i>Set Up Debug</i>.</td></tr>
+</tbody>
+</table>
+
+<h2>8. Non-invasive internal probing via XDC</h2>
+
+<p>To see <i>inside</i> the accelerator — the AGU strobes, the array's partial sums — you need
+<code>MARK_DEBUG</code> on internal nets. Since the RTL cannot be edited, this is done from the
+constraint file:</p>
+
+<pre><code># 1. Synthesize once, open the Synthesized Design, find the REAL net names:
+get_nets -hierarchical *agu_wload*
+get_nets -hierarchical *agu_valid_in*
+get_nets -hierarchical *psum*
+
+# 2. Then mark them from the XDC and re-run synthesis:
+set_property MARK_DEBUG true [get_nets u_acc/agu_wload]
+set_property MARK_DEBUG true [get_nets u_acc/agu_valid_in]
+set_property MARK_DEBUG true [get_nets u_acc/agu_out_we]
+set_property MARK_DEBUG true [get_nets {u_acc/agu_w_addr[*]}]
+set_property MARK_DEBUG true [get_nets {u_acc/agu_act_addr[*]}]
+set_property MARK_DEBUG true [get_nets {u_acc/agu_out_addr[*]}]</code></pre>
+
+<table>
+<thead><tr><th style="width:28%">Net</th><th>What it proves when you see it</th></tr></thead>
+<tbody>
+<tr><td><code>agu_wload</code></td><td>The weight-load enable — exactly 4 cycles wide.</td></tr>
+<tr><td><code>agu_w_addr</code></td><td><b>Counts DOWN 3, 2, 1, 0.</b> This is the bottom-first weight rule made visible. The host writes rows in natural order; the AGU reverses them.</td></tr>
+<tr><td><code>agu_valid_in</code></td><td>One cycle per activation vector during COMPUTE.</td></tr>
+<tr><td><code>agu_out_we</code> / <code>agu_out_addr</code></td><td>Four write strobes arriving <b>8 cycles</b> (STORE_LATENCY) after each activation address was issued — the latency derivation, confirmed on silicon.</td></tr>
+</tbody>
+</table>
+
+<div class="warn"><b>Prerequisite and its cost</b>
+Hierarchical net names only survive if synthesis is run with <code>-flatten_hierarchy none</code>. That
+disables cross-boundary optimisation and genuinely costs QoR. With a measured baseline of WNS +0.714 ns
+on the debug build there is room for it, but <b>re-check timing after changing it rather than assuming</b>
+— see <code>timing.pdf</code> §15. Use it while debugging; drop it for a final build.</div>
+
+<h2 class="pb">9. The build flow, step by step</h2>
+
+<table>
+<thead><tr><th style="width:5%">#</th><th style="width:26%">Step</th><th>Detail and what to verify</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><b>Create project</b></td><td>RTL Project, part <code>xc7z020clg484-1</code> (or the ZedBoard board file).</td></tr>
+<tr><td>2</td><td><b>Add sources</b></td><td>The 13 <code>.sv</code> files from <code>…SIMPLE_ACCEL_RTL/</code> <b>plus</b> <code>FPGA_IMPL/rtl/vio_debug_top.sv</code>.</td></tr>
+<tr><td>3</td><td><b>Generate <code>vio_0</code></b></td><td>IP catalog → VIO. 6 probe_in / 11 probe_out with the widths in §6. Set <code>vio_num_vectors</code> initial value to <code>0x04</code>.</td></tr>
+<tr><td>4</td><td><b>Generate <code>ila_0</code></b></td><td>IP catalog → ILA. 10 probes with the widths in §7. Depth 1024 (or 256).</td></tr>
+<tr><td>5</td><td><b>Set top</b></td><td><code>vio_debug_top</code> → <i>Set as Top</i>. It should go bold with no missing-module errors — if <code>vio_0</code>/<code>ila_0</code> are black boxes, the IP was not generated.</td></tr>
+<tr><td>6</td><td><b>Add constraints</b></td><td><code>FPGA_IMPL/vio_debug.xdc</code>. <b>Verify pin Y9 against the Digilent master XDC for your board revision.</b></td></tr>
+<tr><td>7</td><td><b>Run Synthesis</b></td><td>Then check: <b>utilization</b>, <b>synthesis warnings</b> (target: 0 errors / 0 critical warnings), and that the <code>oneshot</code> instances survived (search the netlist for <code>u_os_start</code>).</td></tr>
+<tr><td>8</td><td><b>Run Implementation</b></td><td>Then check: <b>Design Timing Summary — WNS, WHS, WPWS all positive, 0 failing endpoints</b>, plus DRC and Methodology. Full detail in <code>timing.pdf</code>.</td></tr>
+<tr><td>9</td><td><b>Generate Bitstream</b></td><td>The XDC's <code>UNCONSTRAINEDPINS {Allow}</code> lets a PL-only Zynq build complete. Note the <code>.ltx</code> probes file path.</td></tr>
+<tr><td>10</td><td><b>Program</b></td><td><i>Open Hardware Manager → Open Target → Auto Connect</i> → right-click the <b><code>xc7z020_1</code></b> device (not <code>arm_dap_0</code>) → <i>Program Device</i>. <b>Set the Debug probes file to the <code>.ltx</code></b> or no dashboards will appear.</td></tr>
+<tr><td>11</td><td><b>Verify dashboards</b></td><td><code>hw_vio_1</code> and <code>hw_ila_1</code> must both appear under the device. If not, see §18.</td></tr>
+<tr><td>12</td><td><b>Run the demo</b></td><td>Tcl console: <code>cd &lt;path&gt;/FPGA_IMPL</code>, <code>source vio_demo.tcl</code>, <code>accel_demo</code>.</td></tr>
+</tbody>
+</table>
+
+<h3>Board setup — the physical prerequisites</h3>
+<table>
+<thead><tr><th style="width:26%">Item</th><th>Setting</th></tr></thead>
+<tbody>
+<tr><td>USB cable</td><td><b>J17</b> (the PROG/JTAG port) — <b>not</b> J14 (UART).</td></tr>
+<tr><td>Boot-mode jumpers</td><td><b>JP7–JP11 all to GND</b> = JTAG mode.</td></tr>
+<tr><td>JP2</td><td>JTAG mode.</td></tr>
+<tr><td>Power</td><td><code>PGOOD</code> LED lit.</td></tr>
+<tr><td>Drivers</td><td>Vivado cable drivers installed; the device must enumerate under <i>Auto Connect</i>.</td></tr>
+</tbody>
+</table>
+
+<h2 class="pb">10. Strategy for inputting data</h2>
+
+<p>All data enters through the <b><code>host_*</code> write ports</b> of
+<code>accelerator_system_top</code> — the same ports the simulation testbench used. There are two
+memories to fill and one job to launch.</p>
+
+<h3>10.1 The write protocol — three steps per word, always in this order</h3>
+
+<div class="ascii">
+   For each word to write:
+   ┌────────────────────────────────────────────────────────────────────────────────┐
+   │  1.  set   vio_?_wdata  = the packed 32-bit word     (data first)              │
+   │  2.  set   vio_?_addr   = the destination index      (then address)            │
+   │  3.  set   vio_?_we_lvl = 1   →  oneshot emits ONE clock of host_?_we          │
+   │      set   vio_?_we_lvl = 0   →  re-arm the edge detector for the next write   │
+   └────────────────────────────────────────────────────────────────────────────────┘
+   Data and address are LEVELS and are already stable when the strobe fires.
+   The strobe is an EDGE. Order matters; the 1→0 return is mandatory, not cosmetic.
+</div>
+
+<h3>10.2 The four preconditions</h3>
+<table>
+<thead><tr><th style="width:30%">Precondition</th><th>Why, and what happens if you ignore it</th></tr></thead>
+<tbody>
+<tr><td><b><code>busy</code> must be 0</b></td>
+    <td>Host writes are masked while the accelerator is running, and a <code>start</code> arriving while
+    <code>busy</code> is high is <b>silently ignored</b>. This is the single most common cause of "all
+    results read 0". <b>Read <code>busy</code> before every write and every start.</b></td></tr>
+<tr><td><b><code>rst_n</code> must have released</b></td>
+    <td>The POR is 65 536 clocks ≈ 655 µs. A JTAG round trip is milliseconds, so in practice this is
+    always satisfied — but it is why "busy reads 1 forever" is never a "wait longer" problem.</td></tr>
+<tr><td><b>Weight rows in NATURAL order 0,1,2,3</b></td>
+    <td>The design loads weights bottom-first, but <b>that is the AGU's job</b> — it counts
+    <code>w_addr</code> down 3,2,1,0 during WLOAD. Do <b>not</b> pre-reverse them in the host. If you do,
+    rows 0–2 come out wrong while row 3 still looks right (the all-ones activation row produces column
+    sums, which are insensitive to row permutation) — which is exactly why this bug hides.</td></tr>
+<tr><td><b>Every address you intend to read must be written</b></td>
+    <td>The memories have no reset. Unwritten addresses return X in simulation and undefined data on
+    hardware.</td></tr>
+</tbody>
+</table>
+
+<h3>10.3 Launching the job</h3>
+<pre><code>set vio_num_vectors = N        ;# how many activation vectors  (4 for the T5 demo)
+set vio_act_base    = 0        ;# where in a_mem to start reading
+set vio_out_base    = 0        ;# where in output_mem to start writing
+pulse vio_start_lvl 1 then 0   ;# oneshot → one clock of `start`</code></pre>
+
+<p>The job then runs to completion with <b>no handshaking of any kind</b>: <code>num_vectors + 13</code>
+clocks — 17 clocks = 170 ns for N = 4. There is no ready/valid, no back-pressure, and nothing will stall
+to wait for you. By the time the <i>next</i> JTAG transaction arrives, the job finished long ago. That is
+precisely why <code>done_sticky</code> exists and why you poll it rather than <code>done</code>.</p>
+
+<div class="tip"><b><code>num_vectors = 0</code> is safe</b>
+The FSM guards it: both WLOAD and IDLE exit to <code>(vec_n == 0) ? PH_DRAIN : PH_COMPUTE</code>. Without the guard,
+COMPUTE would compare against <code>8'hFF</code> and sit for 256 cycles issuing garbage writes. It is
+worth knowing this is handled, because a VIO probe left at its default is an easy way to launch a
+zero-vector job by accident.</div>
+
+<h2>11. Data packing — the lane and address rules</h2>
+
+<p>Every word is 32 bits carrying four signed int8 lanes, <b>lane 0 in the LOW byte</b>.</p>
+
+<table>
+<thead><tr><th style="width:20%">Memory</th><th style="width:14%">Depth × width</th><th style="width:26%">Word content</th><th>Address meaning</th></tr></thead>
+<tbody>
+<tr><td><code>weight_mem</code></td><td>4 × 32 (LUTRAM)</td>
+    <td>Word <i>r</i>, lane <i>c</i> = <b>W[r][c]</b></td><td>Weight matrix <b>row</b> index, 0–3 (2-bit bus).</td></tr>
+<tr><td><code>a_mem</code></td><td>256 × 32 (BRAM)</td>
+    <td>Word <i>i</i>, lane <i>r</i> = <b>A[i][r]</b></td><td>Activation <b>vector</b> index, 0–255 (8-bit bus).</td></tr>
+<tr><td><code>output_mem</code></td><td>N × 128 (BRAM)</td>
+    <td>Word <i>i</i>, lane <i>c</i> = <b>C[i][c]</b> as int32</td><td>Result <b>row</b> index.</td></tr>
+</tbody>
+</table>
+
+<h3>11.1 Worked packing — the T5 golden case</h3>
+
+<div class="ascii">
+       A (4×4)                W (4×4)                    C = A × W  (expected)
+   [ 1  0  0  0 ]        [  1   2   3   4 ]          [  1   2   3   4 ]   ← A row0 selects W row0
+   [ 0  1  0  0 ]   ×    [  5   6   7   8 ]     =    [  5   6   7   8 ]   ← A row1 selects W row1
+   [ 0  0  1  0 ]        [  9  10  11  12 ]          [  9  10  11  12 ]   ← A row2 selects W row2
+   [ 1  1  1  1 ]        [ 13  14  15  16 ]          [ 28  32  36  40 ]   ← A row3 = column sums
+
+   weight_mem                              a_mem
+   addr 0 ← 0x04030201   (W row0 = 1 2 3 4)    addr 0 ← 0x00000001  (A row0 = 1 0 0 0)
+   addr 1 ← 0x08070605   (W row1 = 5 6 7 8)    addr 1 ← 0x00000100  (A row1 = 0 1 0 0)
+   addr 2 ← 0x0C0B0A09   (W row2 = 9..12)      addr 2 ← 0x00010000  (A row2 = 0 0 1 0)
+   addr 3 ← 0x100F0E0D   (W row3 = 13..16)     addr 3 ← 0x01010101  (A row3 = 1 1 1 1)
+                ▲                                              ▲
+       lane0 = LOW byte = 0x01 = W[0][0]               lane0 = LOW byte = A[i][0]
+</div>
+
+<div class="note"><b>Why T5 is the right vector to replay on hardware</b>
+It is chosen so that <b>every failure mode announces itself distinctly</b>. The identity rows mean rows
+0–2 of the result should literally reproduce the weight rows — so a transposed or lane-swapped read is
+obvious at a glance. The all-ones row 3 produces column sums <code>28 32 36 40</code>, which are
+hand-checkable and are the one row insensitive to weight-row ordering. And it is the <b>same</b> vector
+that section T5 of <code>tb_accelerator_system_top</code> checks in simulation, so a hardware match is a
+direct simulation-to-silicon equivalence result, not a new claim.</div>
+
+<h2 class="pb">12. Strategy for watching results</h2>
+
+<p>There are three independent observation channels, each answering a different question. Using all
+three is the methodology; using only the first is guesswork.</p>
+
+<table>
+<thead><tr><th style="width:20%">Channel</th><th style="width:24%">Question it answers</th><th>How it works</th></tr></thead>
+<tbody>
+<tr><td><b>VIO probe_in — <code>o_rdata</code></b></td><td>"Is the answer correct?"</td>
+    <td>Set <code>vio_o_addr</code> to a result row; read the 128-bit <code>o_rdata</code>; unpack four
+    int32 lanes. There is <b>1 clock of SRAM read latency</b> between address and data — irrelevant here,
+    because a JTAG round trip is about six orders of magnitude longer, so no wait is needed.</td></tr>
+<tr><td><b>VIO probe_in — status</b></td><td>"Did it run at all, and is it ready?"</td>
+    <td><code>busy</code>, <code>done_sticky</code>, <code>done_count</code>. <code>done_count</code>
+    incrementing by exactly 1 per start is the health check; <code>busy</code> is the interlock.</td></tr>
+<tr><td><b>ILA waveform</b></td><td>"Did it run <i>correctly</i>, cycle by cycle?"</td>
+    <td>Arm on <code>start_p == 1</code>, cause a run, and read the captured 17 cycles against the
+    expected cycle map in §14. This is the only channel that can see <code>done</code> (a 10 ns pulse),
+    the phase transitions, and the diagonal wavefront emerging.</td></tr>
+</tbody>
+</table>
+
+<h3>12.1 Unpacking a result word correctly</h3>
+
+<p>The 128-bit word is MSB-first, so hex character positions map to lanes in <b>reverse</b>:</p>
+
+<div class="ascii">
+   o_rdata[127:96] = chars  0..7   = column 3
+   o_rdata[ 95:64] = chars  8..15  = column 2
+   o_rdata[ 63:32] = chars 16..23  = column 1
+   o_rdata[ 31: 0] = chars 24..31  = column 0     ← lane 0 lives at the END of the string
+
+   Two traps:
+     · Vivado DROPS LEADING ZEROS, so a small result comes back as a short string.
+       You must LEFT-PAD to 32 hex characters before slicing, or every lane shifts.
+     · Each lane is a SIGNED int32. Values ≥ 0x80000000 must be sign-extended
+       (subtract 0x1_0000_0000), or negative results read as ~4 billion.
+</div>
+
+<h3>12.2 The Tcl semantics that catch everyone</h3>
+
+<table>
+<thead><tr><th style="width:26%">Call</th><th>What it really does</th></tr></thead>
+<tbody>
+<tr><td><code>set_property OUTPUT_VALUE …</code></td>
+    <td>Stages the value <b>locally in Vivado's memory only</b>. Nothing has reached the FPGA yet.</td></tr>
+<tr><td><code>commit_hw_vio &lt;probe&gt;</code></td>
+    <td><b>Pushes the staged values over JTAG.</b> Forgetting this is the number-one VIO scripting bug —
+    your script "works" and the hardware never sees a thing.</td></tr>
+<tr><td><code>refresh_hw_vio &lt;vio&gt;</code></td>
+    <td><b>Pulls current values from the device.</b> Reading <code>INPUT_VALUE</code> without a preceding
+    refresh returns a stale cached snapshot from whenever the last refresh happened.</td></tr>
+<tr><td><code>get_property INPUT_VALUE …</code></td><td>Reads the cached snapshot. Only as fresh as your last refresh.</td></tr>
+<tr><td><code>OUTPUT_VALUE_RADIX</code> / <code>INPUT_VALUE_RADIX</code></td>
+    <td>Set the radix <b>before</b> the value, or a hex string will be interpreted as binary and silently
+    truncated.</td></tr>
+</tbody>
+</table>
+
+<h2>13. Scripted operation — <code>vio_demo.tcl</code> dissected</h2>
+
+<p>Manual dashboard clicking is fine once. For a repeatable result the run is scripted. The script is
+structured defensively because Hardware Manager state is easy to get wrong:</p>
+
+<table>
+<thead><tr><th style="width:24%">Procedure</th><th>What it does and the failure it prevents</th></tr></thead>
+<tbody>
+<tr><td><code>accel_vio</code></td>
+    <td>Connects and caches the VIO object. <b>Explicitly selects the <code>xc7z020*</code> device</b>
+    rather than relying on one being current — a bare <code>get_hw_vios</code> silently returns nothing
+    if you clicked elsewhere in the GUI, or if <code>arm_dap_0</code> is the current device. On failure it
+    prints a four-point checklist rather than an opaque error.</td></tr>
+<tr><td><code>accel_probe {name dir}</code></td>
+    <td>Resolves a probe by name. Vivado names probes after the attached net, but the exact string varies
+    by version — <code>vio_w_wdata</code> in some, a hierarchical
+    <code>vio_debug_top_i/vio_w_wdata</code> in others. So: exact tail match first, substring match as
+    fallback, <b>always filtered by direction</b> so a value call can never land on the wrong probe, and
+    on ambiguity it <b>lists the candidates rather than silently picking one</b>.</td></tr>
+<tr><td><code>accel_probes</code></td><td>Prints every probe with direction and width — the first thing to run when a name lookup fails.</td></tr>
+<tr><td><code>accel_set</code> / <code>accel_get</code></td><td>Set-radix → set-value → <b>commit</b>, and <b>refresh</b> → read. The two halves of §12.2, encapsulated so they cannot be forgotten.</td></tr>
+<tr><td><code>accel_write_w &lt;addr&gt; &lt;hex&gt;</code></td><td>One weight word: wdata → addr → we 1 → we 0.</td></tr>
+<tr><td><code>accel_write_a &lt;addr&gt; &lt;hex&gt;</code></td><td>One activation word, same pattern on the 8-bit address bus.</td></tr>
+<tr><td><code>accel_run &lt;nvec&gt;</code></td>
+    <td>Sets <code>num_vectors</code>/<code>act_base</code>/<code>out_base</code>, <b>records
+    <code>done_count</code> before</b>, pulses start, then polls <code>done_sticky</code> up to 20 times.
+    Times out with a diagnostic naming the two real causes (POR not released, <code>num_vectors</code>
+    = 0) instead of hanging.</td></tr>
+<tr><td><code>accel_read &lt;addr&gt;</code></td><td>Sets <code>o_addr</code>, reads <code>o_rdata</code>, strips separators, <b>left-pads to 32 hex chars</b>, slices from the end backwards, and <b>sign-extends each int32</b>. Returns col0-first.</td></tr>
+<tr><td><b><code>accel_demo</code></b></td>
+    <td>The whole regression: load 4 weight words, load 4 activation words, run, read all 4 result rows,
+    <b>compare against the golden matrix</b>, and print <code>PASS</code> or a per-row
+    <code>MISMATCH exp=…</code>.</td></tr>
+</tbody>
+</table>
+
+<h3>13.1 The output you are looking for</h3>
+<pre><code>=== 4x4 systolic accelerator :: VIO demo (T5 golden case) ===
+  loading weights...
+  loading activations...
+  running (num_vectors = 4, 17 clocks = 170 ns)...
+  job done  (done_count 1 , was 0)
+
+  C = A x W :
+    [      1      2      3      4 ]   OK
+    [      5      6      7      8 ]   OK
+    [      9     10     11     12 ]   OK
+    [     28     32     36     40 ]   OK
+
+  PASS -- hardware matches the simulation golden model.</code></pre>
+
+<h2 class="pb">14. The expected ILA cycle map</h2>
+
+<p>This is the reference the captured waveform is checked against. Cycle 0 is the clock on which
+<code>start_p</code> is high; every number is a hard constant derived from the RTL, not an
+approximation — which is exactly what makes the capture <b>checkable</b>.</p>
+
+<table>
+<thead><tr><th style="width:12%">Cycle</th><th style="width:14%"><code>phase</code></th><th style="width:14%">Phase name</th>
+<th style="width:12%">Length</th><th>What you should see on the probes</th></tr></thead>
+<tbody>
+<tr><td>0</td><td>0 → 1</td><td>IDLE → WLOAD</td><td>1</td><td><code>start_p</code> high for exactly one clock; <code>busy</code> rises.</td></tr>
+<tr><td>1–4</td><td>1</td><td><b>WLOAD</b></td><td><b>ROWS = 4</b></td>
+    <td>Weight rows driven into the array's north edge <b>bottom-first</b>: W[3], W[2], W[1], W[0]. If
+    <code>agu_w_addr</code> is marked, it counts <b>down 3,2,1,0</b>.</td></tr>
+<tr><td>5–8</td><td>2</td><td><b>COMPUTE</b></td><td><b>N = 4</b></td>
+    <td>One dense activation vector per clock, <code>valid = 1</code>. A0@5, A1@6, A2@7, A3@8. This
+    is the throughput claim — once the pipe is full it is <b>one vector per clock</b>. COMPUTE follows
+    WLOAD <b>directly</b>: there is no FLUSH phase.</td></tr>
+<tr><td>9–16</td><td>3</td><td><b>DRAIN</b></td><td><b>STORE_LATENCY = 8</b></td>
+    <td>The last vector is still in flight. Results land here: watch <code>result_flat</code> populate
+    and, if marked, four <code>agu_out_we</code> strobes at cycles 13–16. The weight residue left in
+    <code>psum_q</code> by WLOAD leaves the de-skewed result bus on cycle 12, one clock before the
+    first strobe.</td></tr>
+<tr><td>17</td><td>4</td><td><b>DONE</b></td><td>1</td>
+    <td><code>done</code> pulses for exactly one clock. <b><code>busy</code> is already low.</b>
+    <code>done_count</code> increments by 1.</td></tr>
+</tbody>
+</table>
+
+<div class="eq">
+Total job length = ROWS + N + STORE_LATENCY + 1 = 4 + N + 8 + 1 = <b>N + 13</b><br>
+Reusing the loaded weights (WLOAD skipped) = N + STORE_LATENCY + 1 = <b>N + 9</b><br>
+For N = 4:  <b>17 clocks = 170 ns</b>, or <b>13 clocks = 130 ns</b> reusing weights, at 100 MHz
+</div>
+
+<div class="tip"><b>Two changes from earlier revisions — both visible on the ILA</b>
+<b class="inl">1. There is no FLUSH phase.</b> The FSM used to insert <code>ROWS + 2 = 6</code> cycles
+between WLOAD and COMPUTE to push weight residue out of the <code>psum_q</code> registers. It was
+margin, not function — the residue clears the de-skewed result bus a full cycle before the first
+<code>out_we</code> fires — so it was removed, cutting 6 clocks from every job. Phase encodings
+shifted with it: <b>0 IDLE, 1 WLOAD, 2 COMPUTE, 3 DRAIN, 4 DONE</b>.<br><br>
+<b class="inl">2. WLOAD is skipped when the weights have not changed.</b>
+<code>accelerator_system_top</code> keeps an internal <code>weights_dirty</code> flag — set by reset
+and by any host write to <code>weight_mem</code> that reaches the SRAM, cleared on the last WLOAD
+cycle — and drives <code>controller.load_weights</code> with it. Run the same weights twice and the
+second job takes <b>13 clocks instead of 17</b>. <b>This is the easiest thing to confirm on the
+ILA:</b> arm on <code>start_p</code>, run a job, then run it again without touching the weight
+probes — on the second capture the <code>phase</code> probe steps <b>0 → 2 directly, with no 1 in
+between</b>. Nothing in the host protocol changes and the module's port list is unchanged, so
+<code>fpga_top</code>, <code>vio_debug_top</code> and <code>accel_axi</code> all benefit untouched.</div>
+
+<h3>14.1 The latency chain, and where to see each term</h3>
+<table>
+<thead><tr><th style="width:8%">#</th><th style="width:34%">Step</th><th style="width:12%">Adds</th><th style="width:12%">Running total</th><th>Visible as</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Down a PE column (one register per row)</td><td>ROWS−1 = 3</td><td>3</td><td>Bottom-row psum appears 3 cycles after the vector enters.</td></tr>
+<tr><td>2</td><td>East to column <i>c</i></td><td>+c</td><td>3+c</td><td>Column <i>c</i>'s value is ready at <code>n+3+c</code> — the diagonal wavefront.</td></tr>
+<tr><td>3</td><td>De-skew pipe (COLS−1−c)</td><td>+(3−c)</td><td><b>6</b> — independent of <i>c</i></td><td>All four lanes of <code>result_flat</code> align on the same clock.</td></tr>
+<tr><td>4</td><td><code>a_mem</code> read latency</td><td>+1</td><td><b>7</b> = RESULT_LATENCY</td><td>Result valid relative to the address issued.</td></tr>
+<tr><td>5</td><td>Write strobe, one cycle after data is observable</td><td>+1</td><td><b>8</b> = STORE_LATENCY</td><td><code>agu_out_we</code> pulses, and DRAIN is exactly this long.</td></tr>
+</tbody>
+</table>
+
+<div class="note"><b>Step 3 is the elegant part, and it is worth pointing at in a review</b>
+Column <i>c</i>'s result is ready at <code>3+c</code> — a diagonal wavefront, four different arrival
+times. The de-skew buffer delays column <i>c</i> by <code>3−c</code>. The two cancel exactly, so the sum
+is <b>6 for every column</b> and the whole result row emerges aligned on one clock. Seeing that alignment
+on the ILA is direct confirmation that the output skew buffer is doing its job.</div>
+
+<h2>15. Trigger recipes — what to look at and when</h2>
+
+<table>
+<thead><tr><th style="width:26%">Goal</th><th style="width:30%">Trigger setup</th><th>What to read from the capture</th></tr></thead>
+<tbody>
+<tr><td><b>Capture a whole job</b> (the default)</td><td><code>probe0 (start_p) == 1</code></td>
+    <td>Everything in §14. Set the trigger position early in the window so you get pre-trigger context.</td></tr>
+<tr><td>Confirm weight writes actually happened</td><td><code>probe4 (w_we_p) == 1</code></td>
+    <td>You should see <b>exactly four 1-clock spikes</b>, one per <code>accel_write_w</code>. More means
+    the one-shot is broken; fewer means a write never committed.</td></tr>
+<tr><td>Confirm activation writes</td><td><code>probe5 (a_we_p) == 1</code></td><td>Four spikes, with <code>probe6 (vio_a_addr)</code> stepping 0,1,2,3.</td></tr>
+<tr><td>Catch the completion instant</td><td><code>probe2 (done) == 1</code></td>
+    <td>The 10 ns pulse the VIO can never see. Confirm <code>busy</code> is <b>already low</b> on that clock.</td></tr>
+<tr><td>Measure phase lengths directly</td><td><code>probe3 (phase)</code> transitions</td>
+    <td>Count clocks in each phase and compare to 4 / N / 8 / 1. This is the cheapest possible
+    validation of the controller on real silicon.</td></tr>
+<tr><td>Watch the wavefront emerge</td><td><code>probe0 == 1</code>, then scroll to DRAIN</td>
+    <td><code>probe8 (result_flat)</code> — the four int32 lanes filling in and aligning.</td></tr>
+<tr><td>Catch an intermittent failure across many runs</td><td><code>probe9 (done_count)</code> at a specific value</td>
+    <td>Lets you trigger on the <i>n</i>-th job rather than the first — the way to find a failure that
+    only appears after a sweep.</td></tr>
+<tr><td>Prove the bottom-first weight rule</td><td><code>probe3 (phase) == 1</code> with <code>agu_w_addr</code> marked</td>
+    <td><code>agu_w_addr</code> counting <b>3,2,1,0</b> while the host wrote 0,1,2,3.</td></tr>
+</tbody>
+</table>
+
+<h2 class="pb">16. Parameters and reports checked at each stage</h2>
+
+<p>This is the audit trail. Each stage has specific artefacts, specific numbers, and a specific
+pass criterion.</p>
+
+<h3>16.1 Stage A — simulation (before any hardware)</h3>
+<table>
+<thead><tr><th style="width:30%">What we check</th><th style="width:22%">Where</th><th>Pass criterion / achieved</th></tr></thead>
+<tbody>
+<tr><td>Functional regression</td><td>QuestaSim, <code>verification_recheck/</code></td>
+    <td><b>11/11 testbenches, 3 680 checks, 0 mismatches</b> ✔</td></tr>
+<tr><td>Golden vector T5</td><td><code>tb_accelerator_system_top</code></td><td>C = <code>[1 2 3 4 / 5 6 7 8 / 9 10 11 12 / 28 32 36 40]</code> ✔</td></tr>
+<tr><td>Phase durations</td><td><code>tb_controller</code></td><td>WLOAD 4, COMPUTE N, DRAIN 8, DONE 1; total N+13 ✔</td></tr>
+<tr><td>Wrapper elaboration</td><td>QuestaSim <code>vopt</code></td><td><code>fpga_top.sv</code> and <code>accel_axi.sv</code> elaborate clean ✔</td></tr>
+</tbody>
+</table>
+
+<h3>16.2 Stage B — synthesis</h3>
+<table>
+<thead><tr><th style="width:30%">Report / parameter</th><th style="width:22%">Command or GUI path</th><th>Pass criterion / measured</th></tr></thead>
+<tbody>
+<tr><td><b>Messages</b> — errors, critical warnings</td><td><i>Messages</i> pane</td>
+    <td><b>0 errors, 0 warnings, 0 critical warnings</b> for the accelerator OOC build ✔</td></tr>
+<tr><td><b>Utilization</b></td><td><code>report_utilization</code></td>
+    <td>LUT <b>1 564 / 53 200 = 2.94 %</b>; FF <b>792 / 106 400 = 0.74 %</b>;
+    BRAM <b>2.5 / 140 = 1.79 %</b>; DSP <b>0 / 220</b>; LUTRAM 40 ✔</td></tr>
+<tr><td>DSP inference</td><td>Same report</td>
+    <td>0 DSPs — the sixteen 8×8 multipliers went to LUT fabric. Expected, and the first lever if the clock is ever raised.</td></tr>
+<tr><td>Memory inference</td><td>Same report</td>
+    <td><code>a_mem</code>/<code>output_mem</code> → BRAM; <code>weight_mem</code> 4×32 → distributed LUTRAM (a deeper weight memory would be dead silicon) ✔</td></tr>
+<tr><td><b>Harness survival</b></td><td>Netlist search for <code>u_os_start</code></td>
+    <td>The three <code>oneshot</code> instances must exist and <code>start_p</code> must be driven by a <b>flop</b>, not directly by the VIO.</td></tr>
+<tr><td>Clock definition</td><td><code>report_clocks</code></td><td>Exactly <b>1</b> clock, <code>sys_clk</code>, period 10.000 ns ✔</td></tr>
+<tr><td>Constraint completeness</td><td><code>check_timing</code></td><td>Understand every category before proceeding.</td></tr>
+</tbody>
+</table>
+
+<h3>16.3 Stage C — implementation <span style="font-weight:400;font-size:9pt;">(the sign-off stage — see <code>timing.pdf</code>)</span></h3>
+<table>
+<thead><tr><th style="width:30%">Report / parameter</th><th style="width:22%">Command</th><th>Pass criterion / measured</th></tr></thead>
+<tbody>
+<tr><td><b>WNS</b> — Worst Negative Slack</td><td rowspan="3"><code>report_timing_summary</code> on the implemented design</td>
+    <td><b>Must be &gt; 0.</b> Measured <b class="pos">+0.714 ns</b> (debug build) / <b class="pos">+1.279 ns</b> (accelerator alone) ✔</td></tr>
+<tr><td><b>WHS</b> — Worst Hold Slack</td><td><b>Must be &gt; 0.</b> Measured <b class="pos">+0.045 ns</b> / <b class="pos">+0.263 ns</b> ✔</td></tr>
+<tr><td><b>WPWS</b> — Worst Pulse Width Slack</td><td><b>Must be &gt; 0.</b> Measured <b class="pos">+3.750 ns</b> in both ✔</td></tr>
+<tr><td><b>TNS / THS / TPWS</b></td><td>Same</td><td><b>All must be 0.000 ns.</b> Measured 0.000 / 0.000 / 0.000 ✔</td></tr>
+<tr><td><b>Failing endpoints</b></td><td>Same</td><td><b>Must be 0.</b> Measured <b>0 of 5 181</b> (setup and hold), <b>0 of 2 950</b> (pulse width) ✔</td></tr>
+<tr><td><b>The verdict sentence</b></td><td>Same</td><td><b>“All user specified timing constraints are met.”</b> ✔</td></tr>
+<tr><td>Worst-path detail</td><td><code>report_timing -delay_type max -nworst 10</code></td>
+    <td>Confirm the critical path is the expected one — the PE multiply-accumulate — and read the logic/route split.</td></tr>
+<tr><td>Unconstrained paths</td><td><code>report_timing_summary</code> / <code>check_timing</code></td>
+    <td>Understand every entry. An unconstrained path is <b>not analysed</b> and is invisible in WNS.</td></tr>
+<tr><td><b>DRC</b></td><td><code>report_drc</code></td><td>No blocking violations. The PL-only unconstrained-PS DRC is allowed explicitly in the XDC.</td></tr>
+<tr><td><b>Methodology</b></td><td><code>report_methodology</code></td><td>Review all <code>TIMING-*</code> rules.</td></tr>
+<tr><td>Post-implementation utilization</td><td><code>report_utilization</code></td><td>Includes the debug cores; confirms the ILA BRAM cost you chose.</td></tr>
+<tr><td>Endpoint count as a sanity check</td><td>Timing summary</td>
+    <td>1 305 (no debug) → <b>5 181</b> (with VIO+ILA). The increase confirms the debug logic really is in the netlist.</td></tr>
+</tbody>
+</table>
+
+<h3>16.4 Stage D — on hardware</h3>
+<table>
+<thead><tr><th style="width:30%">What we check</th><th style="width:22%">Channel</th><th>Pass criterion</th></tr></thead>
+<tbody>
+<tr><td>Device enumerates</td><td>Hardware Manager</td><td><code>xc7z020_1</code> and <code>arm_dap_0</code> both visible under Auto Connect.</td></tr>
+<tr><td>Debug cores present</td><td>Hardware pane</td><td><code>hw_vio_1</code> and <code>hw_ila_1</code> under the device; no "debug hub not detected".</td></tr>
+<tr><td>Probe inventory</td><td><code>accel_probes</code></td><td>17 probes with the widths of §6 — 6 IN, 11 OUT.</td></tr>
+<tr><td><b>Reset released</b></td><td><code>busy</code></td><td>Reads <b>0</b> at rest. If it reads 1 forever, see §18.</td></tr>
+<tr><td><b>Job launched</b></td><td><code>done_count</code></td><td><b>Increments by exactly 1</b> per start click.</td></tr>
+<tr><td><b>Job completed</b></td><td><code>done_sticky</code></td><td>Reads 1 after the run, and is auto-cleared by the next start.</td></tr>
+<tr><td><b>Numerical result</b></td><td><code>o_rdata</code> rows 0–3</td><td><b>Exact match</b> to the golden T5 matrix. <code>accel_demo</code> prints PASS.</td></tr>
+<tr><td><b>Execution shape</b></td><td>ILA capture</td><td>Phase lengths 4 / 4 / 8 / 1; total 17 clocks; four <code>w_we_p</code> and four <code>a_we_p</code> spikes; <code>done</code> one clock wide with <code>busy</code> already low.</td></tr>
+<tr><td><b>Bottom-first rule</b></td><td>ILA + <code>MARK_DEBUG</code></td><td><code>agu_w_addr</code> counts down 3,2,1,0 while the host wrote 0,1,2,3.</td></tr>
+<tr><td><b>Store latency</b></td><td>ILA + <code>MARK_DEBUG</code></td><td><code>agu_out_we</code> strobes exactly 8 cycles after each activation address was issued.</td></tr>
+</tbody>
+</table>
+
+<h2 class="pb">17. The pass/fail criteria we actually apply</h2>
+
+<p>Compressed to the statements that must all be true before the implementation is called done:</p>
+
+<div class="eq">
+<b>FUNCTION</b>&nbsp;&nbsp;&nbsp; simulation: 11/11 TBs, 3 680 checks, 0 mismatches<br>
+<b>FUNCTION</b>&nbsp;&nbsp;&nbsp; hardware: all 16 result values match the golden T5 matrix exactly<br>
+<b>TIMING</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; WNS &gt; 0, WHS &gt; 0, WPWS &gt; 0, TNS = THS = TPWS = 0.000<br>
+<b>TIMING</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 0 failing endpoints, and the analysed endpoint count is plausible<br>
+<b>TIMING</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; “All user specified timing constraints are met.”<br>
+<b>BEHAVIOUR</b>&nbsp; ILA phase lengths = 4 / N / 8 / 1, total N+13 clocks<br>
+<b>BEHAVIOUR</b>&nbsp; done_count increments by exactly 1 per start; done is 1 clock wide<br>
+<b>INTEGRITY</b>&nbsp; the 13 RTL files are byte-identical to the simulated versions<br>
+<b>RESOURCE</b>&nbsp;&nbsp; utilisation within budget: 2.94 % LUT, 0.74 % FF, 1.79 % BRAM, 0 DSP<br>
+<b>BUILD</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 0 synthesis errors, 0 critical warnings; DRC and methodology reviewed
+</div>
+
+<h2>18. Failure modes and what each report says</h2>
+
+<table>
+<thead><tr><th style="width:26%">Symptom</th><th style="width:28%">Most likely cause</th><th>Fix / which report to open</th></tr></thead>
+<tbody>
+<tr><td><b>"The debug hub core was not detected"</b></td>
+    <td>The hub does not know its clock frequency, or JTAG is too fast relative to the design clock</td>
+    <td>Confirm the <code>dbg_hub</code> block in <code>vio_debug.xdc</code> ran. Set
+    <code>C_CLK_INPUT_FREQ_HZ 100000000</code> and <code>C_ENABLE_CLK_DIVIDER false</code>. Also try
+    lowering the JTAG frequency: right-click target → <i>Open Target Properties</i> → 6 MHz or less.</td></tr>
+<tr><td>No <code>hw_vio_1</code> / <code>hw_ila_1</code> under the device</td>
+    <td>The <code>.ltx</code> probes file was not loaded with the bitstream</td>
+    <td>Re-run <i>Program Device</i> and set <i>Debug probes file</i> to
+    <code>&lt;project&gt;.runs/impl_1/vio_debug_top.ltx</code>.</td></tr>
+<tr><td>Device does not appear at all</td><td>Cable drivers, wrong USB port, or boot-mode jumpers</td>
+    <td>Use <b>J17</b>, not J14. <code>PGOOD</code> lit. JP7–JP11 all to GND. Reinstall Vivado cable drivers.</td></tr>
+<tr><td><code>busy</code> reads 1 forever</td><td>Reset never released, or <code>start</code> stuck high</td>
+    <td>The POR is 65 536 clocks — it releases in 655 µs, so this is <b>never</b> a "wait longer" problem.
+    Check <code>vio_start_lvl</code> is 0 on the dashboard, and confirm the <code>oneshot</code> instances
+    survived synthesis (search the netlist for <code>u_os_start</code>).</td></tr>
+<tr><td><code>done_count</code> jumps by thousands per click</td><td>The one-shot was optimised away or bypassed</td>
+    <td>Confirm <code>oneshot</code> is present in the netlist and that the elaborated design shows
+    <code>start_p</code> driven by a <b>flop</b>, not directly by the VIO. This is mismatch 1 of §4, live.</td></tr>
+<tr><td><code>done_sticky</code> never sets</td>
+    <td>The job never launched — <code>start</code> arrived while <code>busy</code> was high, so it was ignored</td>
+    <td>Read <code>busy</code> first; it must be 0. Confirm <code>done_count</code> did not move either.</td></tr>
+<tr><td><b>All results read 0</b></td><td>Host writes masked because <code>busy</code> was 1, or the writes never pulsed</td>
+    <td>Re-load with <code>busy == 0</code>. Add an ILA trigger on <code>w_we_p == 1</code> and confirm
+    you see exactly four 1-clock spikes.</td></tr>
+<tr><td>Result is <b>transposed</b> or lane-scrambled</td><td>Wrong lane order in the packed word</td>
+    <td><b>Lane 0 is the LOW byte.</b> <code>weight_mem[r]</code> lane <i>c</i> = W[r][c];
+    <code>a_mem[i]</code> lane <i>r</i> = A[i][r]. Re-check against §11.</td></tr>
+<tr><td><b>Row 3 reads <code>28 32 36 40</code> but rows 0–2 are wrong</b></td>
+    <td>Weight rows written in reverse order by the host</td>
+    <td>Write <code>weight_mem[0..3]</code> in <b>natural</b> order — the bottom-first shift is the AGU's
+    job. Row 3 is the column sum and is insensitive to row permutation, which is exactly why this failure
+    hides there. A textbook example of why the golden vector was chosen as it was.</td></tr>
+<tr><td>A small result reads with shifted lanes</td><td>Vivado dropped leading zeros in the hex string</td>
+    <td>Left-pad to 32 hex characters before slicing (§12.1). <code>accel_read</code> does this.</td></tr>
+<tr><td>Negative results read as ≈ 4 billion</td><td>Missing int32 sign extension</td>
+    <td>Subtract <code>0x1_0000_0000</code> from any lane ≥ <code>0x80000000</code>.</td></tr>
+<tr><td>A Tcl script "runs" but nothing changes on the board</td><td>Missing <code>commit_hw_vio</code></td>
+    <td><code>set_property</code> only stages locally. See §12.2.</td></tr>
+<tr><td>Readback values never change</td><td>Missing <code>refresh_hw_vio</code></td><td>You are reading a stale cached snapshot. See §12.2.</td></tr>
+<tr><td>Ambiguous probe name error from Tcl</td><td>Vivado's probe naming varies by version</td>
+    <td>Run <code>accel_probes</code> and use a longer, unambiguous name.</td></tr>
+<tr><td>Results read as X in simulation but fine on hardware</td><td>The memories have no reset</td>
+    <td>Expected behaviour. Write every address you intend to read.</td></tr>
+<tr><td>Timing fails after adding debug cores</td><td>ILA depth and wide probes cost routing</td>
+    <td>Reduce depth 1024 → 256; drop probes you are not reading; drop
+    <code>-flatten_hierarchy none</code>. Last resort: MMCM to 50 MHz — <b>nothing here depends on
+    throughput</b> — and update <code>C_CLK_INPUT_FREQ_HZ</code> to match, or you trade a timing failure
+    for a "debug hub not detected".</td></tr>
+</tbody>
+</table>
+
+<h2 class="pb">19. Alternative methods 1, 3 and 4 — when to use them</h2>
+
+<h3>19.1 Method 1 — switches and LEDs (<code>fpga_top.sv</code>)</h3>
+<p>A console FSM around the accelerator: enter each int8 byte on <code>SW[7:0]</code>, commit with
+<b>BTNC</b> (the pointer auto-advances), 16 commits for weights then 16 for activations; <b>BTNU</b>
+runs the job; then <code>SW[5:4]</code> selects the result row and <code>SW[3:0]</code> selects the byte
+within that row's 128-bit word, and the LEDs display it. <b>BTND</b> resets entry. Use it when you want
+a self-contained board demo with no PC attached at run time. Sanity check: with T5 loaded,
+<code>SW[5:4] = 11</code>, <code>SW[3:0] = 0000</code> → LEDs <code>00011100</code> = 28.</p>
+
+<h3>19.2 Method 3 — USB-UART text console (<code>accel_axi.sv</code> + <code>accel_monitor.c</code>)</h3>
+<p>On the ZedBoard the USB-UART is a <b>PS</b> resource (UART1, MIO48/49), so this needs a minimal Zynq
+PS with <code>accel_axi</code> bridging AXI-Lite to the accelerator. Data path:
+<code>terminal → USB → PS UART1 → ARM → AXI-Lite → accel_axi → accelerator (PL)</code>. Register map
+(byte address = index × 4): <code>0 NUMVEC · 1 ACT_BASE · 2 OUT_BASE · 3 W_WDATA · 4 W_COMMIT ·
+5 A_WDATA · 6 A_COMMIT · 7 START · 8 O_ADDR · 9 STATUS(busy,done,phase) · 10–13 ORD0–3</code>. Note the
+same architectural pattern as the VIO harness: <b>a commit register that turns a bus write into a
+one-cycle strobe, and a sticky-done bit</b> — the two mismatches of §4 recur, because they are inherent
+to bridging a slow host to a fast pipeline. Use it when a human needs to type matrices and read results
+in text. Terminal: 115200 8-N-1, no flow control.</p>
+
+<h3>19.3 Method 4 — full PS/AXI integration</h3>
+<p>What you add on top of Method 3 for real workloads: <b>AXI-DMA</b> to stream a block of activation
+vectors into <code>a_mem</code> and read the result block back instead of one word per register write;
+<b>a done-interrupt</b> routed to <code>IRQ_F2P</code> and enabled in the PS7 GIC so software is
+event-driven instead of polling the sticky bit; <b>Linux/UIO</b> under PetaLinux with an
+<code>mmap</code>ed register block; and <b>benchmarking</b> with up to 256 activation vectors (the depth
+of <code>a_mem</code>) — once the pipe is full it is <b>one vector per clock</b>.</p>
+
+<h2>20. Sign-off checklist</h2>
+
+<table>
+<thead><tr><th style="width:5%">☐</th><th>Item</th></tr></thead>
+<tbody>
+<tr><td>☐</td><td>The 13 RTL files are unmodified — byte-identical to the simulated versions.</td></tr>
+<tr><td>☐</td><td>Simulation baseline current: 11/11 testbenches, 3 680 checks, 0 mismatches.</td></tr>
+<tr><td>☐</td><td><code>vio_0</code> generated with 6 probe_in / 11 probe_out at the widths in §6; <code>vio_num_vectors</code> initial value <code>0x04</code>.</td></tr>
+<tr><td>☐</td><td><code>ila_0</code> generated with 10 probes at the widths in §7; depth chosen deliberately (256 recommended).</td></tr>
+<tr><td>☐</td><td><code>vio_debug_top</code> is the top module; no black-box IP.</td></tr>
+<tr><td>☐</td><td>Clock pin <b>verified against the Digilent master XDC for the actual board revision</b>.</td></tr>
+<tr><td>☐</td><td><code>create_clock -period 10.000</code> present; <code>report_clocks</code> shows exactly 1 clock.</td></tr>
+<tr><td>☐</td><td><code>check_timing</code> run and every category understood.</td></tr>
+<tr><td>☐</td><td>Synthesis: 0 errors, 0 critical warnings.</td></tr>
+<tr><td>☐</td><td>The three <code>oneshot</code> instances exist in the netlist; <code>start_p</code> is flop-driven.</td></tr>
+<tr><td>☐</td><td>Utilization reviewed: LUT 2.94 %, FF 0.74 %, BRAM 1.79 %, DSP 0.</td></tr>
+<tr><td>☐</td><td><b>Post-route</b> timing summary: WNS, WHS, WPWS all positive; TNS = THS = TPWS = 0.000; <b>0 failing endpoints</b>.</td></tr>
+<tr><td>☐</td><td>“All user specified timing constraints are met.” present in the report.</td></tr>
+<tr><td>☐</td><td>Worst path inspected and is the expected one (PE multiply-accumulate).</td></tr>
+<tr><td>☐</td><td>DRC and methodology reports reviewed.</td></tr>
+<tr><td>☐</td><td><code>dbg_hub</code> properties set: <code>C_CLK_INPUT_FREQ_HZ 100000000</code>, <code>C_ENABLE_CLK_DIVIDER false</code>.</td></tr>
+<tr><td>☐</td><td>Bitstream generated; <code>.ltx</code> path noted.</td></tr>
+<tr><td>☐</td><td>Board jumpers JP7–JP11 to GND; cable on J17; <code>PGOOD</code> lit.</td></tr>
+<tr><td>☐</td><td>Programmed <code>xc7z020_1</code> (not <code>arm_dap_0</code>) with the <code>.ltx</code> loaded.</td></tr>
+<tr><td>☐</td><td><code>hw_vio_1</code> and <code>hw_ila_1</code> both visible; <code>accel_probes</code> lists 17 probes.</td></tr>
+<tr><td>☐</td><td><code>busy</code> reads 0 at rest (POR released).</td></tr>
+<tr><td>☐</td><td><code>accel_demo</code> prints <b>PASS</b> — all 16 values match the golden T5 matrix.</td></tr>
+<tr><td>☐</td><td><code>done_count</code> increments by exactly 1 per start.</td></tr>
+<tr><td>☐</td><td>ILA capture reviewed against the §14 cycle map: phases 4 / N / 8 / 1, total N+13 clocks.</td></tr>
+<tr><td>☐</td><td>Four <code>w_we_p</code> and four <code>a_we_p</code> spikes, each exactly 1 clock wide.</td></tr>
+<tr><td>☐</td><td><code>done</code> observed as a 1-clock pulse with <code>busy</code> already low.</td></tr>
+</tbody>
+</table>
+
+<hr>
+<p class="small">
+<b>Sources:</b> harness <code>FPGA_IMPL/rtl/vio_debug_top.sv</code>; constraints
+<code>FPGA_IMPL/vio_debug.xdc</code>; automation <code>FPGA_IMPL/vio_demo.tcl</code>; VIO IP
+configuration and Design Timing Summary from <code>synthesis_screenshots/</code>; resource and
+out-of-context timing figures from <code>VIO_ILA.pdf</code> §15.<br>
+<b>Design reference:</b> <code>context_mkdwn/</code> — chunk 01 (processing element), chunk 06 (memories
+and lane layout), chunk 07 (controller FSM), chunk 08 (AGU), chunk 11 (L3 wrapper and host protocol),
+chunk 12 (dataflow and timing derivations), chunk 13 (worked example / T5 golden case).<br>
+<b>Functional baseline:</b> 11/11 testbenches, 3 680 checks, 0 mismatches (<code>verification_recheck/</code>).<br>
+<b>Companion documents:</b> <code>timing.pdf</code> (timing, WNS and closure in full),
+<code>VIO_ILA.pdf</code> (Method 2 reference), <code>USB_UART.pdf</code> (Method 3 reference),
+<code>ZedBoard_Implementation_Guide.html</code> (all four methods).
+</p>
+
+</body>
+</html>

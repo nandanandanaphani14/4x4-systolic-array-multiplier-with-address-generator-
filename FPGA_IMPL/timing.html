@@ -1,0 +1,1874 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Timing Closure and Static Timing Analysis — 4×4 Systolic Array Accelerator on ZedBoard</title>
+<style>
+@page { size: A4; margin: 16mm 15mm 16mm 15mm; }
+* { box-sizing: border-box; }
+body {
+  font-family: "Segoe UI", "Calibri", "Helvetica Neue", Arial, sans-serif;
+  font-size: 10pt; line-height: 1.45; color: #16181d; margin: 0;
+}
+h1 { font-size: 21pt; line-height: 1.15; margin: 0 0 6px 0; color: #0b3d5c; letter-spacing: -0.3px; }
+h2 {
+  font-size: 14pt; margin: 22px 0 8px 0; color: #0b3d5c;
+  border-bottom: 2px solid #0b3d5c; padding-bottom: 3px;
+  page-break-after: avoid; break-after: avoid;
+}
+h3 { font-size: 11.5pt; margin: 15px 0 5px 0; color: #124a6b; page-break-after: avoid; break-after: avoid; }
+h4 { font-size: 10pt; margin: 12px 0 4px 0; color: #2c3540; page-break-after: avoid; break-after: avoid; }
+p { margin: 6px 0; }
+ul, ol { margin: 6px 0 6px 0; padding-left: 22px; }
+li { margin: 3px 0; }
+code {
+  font-family: "Consolas", "DejaVu Sans Mono", monospace; font-size: 8.8pt;
+  background: #eef2f6; padding: 0.5px 3px; border-radius: 2px; color: #123;
+}
+pre {
+  font-family: "Consolas", "DejaVu Sans Mono", monospace; font-size: 7.9pt;
+  line-height: 1.35; background: #f6f8fa; border: 1px solid #d4dde5;
+  border-left: 3px solid #0b3d5c; border-radius: 3px;
+  padding: 7px 9px; margin: 8px 0; white-space: pre-wrap; overflow-wrap: anywhere;
+  page-break-inside: avoid; break-inside: avoid;
+}
+pre code { background: none; padding: 0; font-size: inherit; }
+table {
+  width: 100%; border-collapse: collapse; margin: 9px 0; font-size: 8.6pt;
+  page-break-inside: avoid; break-inside: avoid;
+}
+th {
+  background: #0b3d5c; color: #fff; text-align: left; padding: 4px 6px;
+  font-weight: 600; border: 1px solid #0b3d5c; vertical-align: top;
+}
+td { border: 1px solid #c6d2dc; padding: 3.5px 6px; vertical-align: top; }
+tbody tr:nth-child(even) { background: #f4f7fa; }
+.mono td:first-child, .mono th:first-child { font-family: "Consolas", monospace; }
+.title-block { border-bottom: 3px solid #0b3d5c; padding-bottom: 12px; margin-bottom: 16px; }
+.subtitle { font-size: 12pt; color: #4a5764; margin: 2px 0 8px 0; }
+.meta { font-size: 8.5pt; color: #6b7885; }
+.note, .warn, .tip {
+  padding: 7px 10px; margin: 9px 0; border-radius: 3px; font-size: 9.2pt;
+  page-break-inside: avoid; break-inside: avoid;
+}
+.note { background: #eaf3fa; border-left: 4px solid #2b7cb8; }
+.warn { background: #fdf1e8; border-left: 4px solid #d2691e; }
+.tip  { background: #edf7ee; border-left: 4px solid #3d8b45; }
+.note b, .warn b, .tip b { display: block; margin-bottom: 2px; font-size: 8.8pt;
+  text-transform: uppercase; letter-spacing: 0.5px; }
+.note b { color: #1c5c8c; } .warn b { color: #a2500f; } .tip b { color: #2c6b33; }
+.note b.inl, .warn b.inl, .tip b.inl { display:inline; text-transform:none; letter-spacing:0;
+  font-size: inherit; color: inherit; }
+.toc { background: #f6f8fa; border: 1px solid #d4dde5; border-radius: 4px; padding: 10px 14px; margin: 14px 0; }
+.toc ol { margin: 0; padding-left: 20px; column-count: 2; column-gap: 26px; font-size: 9.2pt; }
+.toc li { margin: 2px 0; break-inside: avoid; }
+.pb { page-break-before: always; break-before: page; }
+.ascii {
+  font-family: "Consolas", "DejaVu Sans Mono", monospace; font-size: 7.4pt; line-height: 1.25;
+  background: #fbfcfd; border: 1px solid #d4dde5; border-radius: 3px;
+  padding: 8px 10px; margin: 9px 0; white-space: pre; overflow-x: auto;
+  page-break-inside: avoid; break-inside: avoid;
+}
+.tag { display: inline-block; background: #0b3d5c; color: #fff; font-size: 7.5pt;
+  padding: 1px 6px; border-radius: 8px; letter-spacing: 0.4px; vertical-align: 1px; }
+.tag.alt { background: #3d8b45; } .tag.warn2 { background: #b5651d; }
+.small { font-size: 8.5pt; color: #55606c; }
+hr { border: none; border-top: 1px solid #d4dde5; margin: 16px 0; }
+.kbd { font-family: Consolas, monospace; font-size: 8.4pt; background:#2c3540; color:#fff;
+  padding: 1px 5px; border-radius: 3px; }
+.eq { background:#f6f8fa; border:1px solid #d4dde5; border-left:3px solid #3d8b45; border-radius:3px;
+  padding:8px 11px; margin:9px 0; font-family:"Consolas",monospace; font-size:8.6pt;
+  page-break-inside: avoid; break-inside: avoid; }
+.qa { border-left: 3px solid #0b3d5c; padding: 2px 0 2px 11px; margin: 11px 0;
+  page-break-inside: avoid; break-inside: avoid; }
+.qa .q { font-weight: 600; color: #0b3d5c; }
+.qa .a { margin-top: 3px; }
+.big { font-size: 12pt; font-weight: 600; color:#0b3d5c; }
+.pos { color: #2c6b33; font-weight: 600; }
+.neg { color: #b3261e; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="title-block">
+  <div class="tag">TIMING &nbsp;·&nbsp; STATIC TIMING ANALYSIS &nbsp;·&nbsp; CLOSURE</div>
+  <h1>Timing in this project — and what WNS actually means</h1>
+  <div class="subtitle">A from-zero guide to setup, hold, slack and timing closure, built around the
+  measured results of the 4×4 weight-stationary systolic-array multiplier on a Digilent ZedBoard</div>
+  <div class="meta">
+    Target part <code>xc7z020clg484-1</code> &nbsp;·&nbsp; Constraint <code>create_clock -period 10.000</code> (100 MHz)
+    &nbsp;·&nbsp; Design under test <code>accelerator_system_top</code> (unmodified)<br>
+    Result: <b>positive WNS on every reported build</b> &nbsp;·&nbsp;
+    <b>17 clock cycles (170 ns) per 4×4 matrix multiplication</b>, 13 (130 ns) reusing weights &nbsp;·&nbsp;
+    <b>0.145 W total on-chip power</b><br>
+    Implementation metrics from the routed-design reports in <code>FPGA_IMPL/reports/</code>
+    (Vivado 2020.1, run of 4 Aug 2026) &nbsp;·&nbsp;
+    Companion documents: <code>implementation_method.pdf</code>, <code>VIO_ILA.pdf</code>, <code>USB_UART.pdf</code>
+  </div>
+</div>
+
+<div class="toc">
+<b style="font-size:9.5pt;color:#0b3d5c;">Contents</b>
+<ol>
+  <li>Read this first — the one-page summary</li>
+  <li>Why timing analysis exists at all</li>
+  <li>The anatomy of a timing path</li>
+  <li>The setup equation — where WNS comes from</li>
+  <li>The hold equation — the other half</li>
+  <li>Slack, WNS, TNS and friends — every term defined</li>
+  <li>Endpoints, path groups and what "0 failing" means</li>
+  <li>Why simulation passing is not timing passing</li>
+  <li>This design's clock and constraint</li>
+  <li>Where the timing paths in this design actually are</li>
+  <li>The critical path — the PE multiply-accumulate</li>
+  <li><b>Measured results — the full implementation metric set</b></li>
+  <li>Reading the numbers: margin, F<sub>max</sub>, headroom</li>
+  <li><b>Cycles per matrix multiplication — latency and throughput</b></li>
+  <li>Why this design closes timing so comfortably</li>
+  <li>What erodes the margin — debug cores and routing</li>
+  <li>How to read a Vivado timing report line by line</li>
+  <li>What to do when WNS is negative — ordered checklist</li>
+  <li>Hold violations — a different animal</li>
+  <li>Clock domain crossing and this design</li>
+  <li>The constraint file, annotated</li>
+  <li>Reproducing every number in this document</li>
+  <li><b>WNS for preparation — interview / viva question bank</b></li>
+  <li>Glossary and cheat sheet</li>
+</ol>
+</div>
+
+<div class="note"><b>Who this document is for</b>
+Someone who has written RTL and run a simulation, but has never had to answer "does it meet timing?".
+Sections 2–8 assume nothing at all. Sections 9–17 apply that theory to this specific accelerator, using
+figures actually measured on <code>xc7z020clg484-1</code> and taken from the routed-design reports in
+<code>FPGA_IMPL/reports/</code>. Section 23 is a question bank for
+interviews and vivas, where "what is WNS?" is one of the most commonly asked questions in digital
+design and FPGA roles.</div>
+
+<h2>1. Read this first — the one-page summary</h2>
+
+<p>An FPGA design is a sea of flip-flops separated by combinational logic. Every clock edge, each
+flip-flop launches a value that has to arrive at the next flip-flop, settle, and be stable a little
+before the <i>next</i> edge captures it. <b>Static Timing Analysis (STA)</b> is the tool that checks,
+for every such path, whether the value gets there in time. It does this exhaustively and without
+simulating anything — no test vectors, no waveforms, just delay arithmetic over the whole netlist.</p>
+
+<p><b>Slack</b> is how much time to spare a path has. <b>WNS — Worst Negative Slack — is the slack of
+the single worst setup path in the whole design.</b> It is one number that answers "does the design run
+at the requested clock frequency?":</p>
+
+<div class="eq">
+WNS &gt; 0  →  every path arrives in time.  <b>The design meets timing.</b><br>
+WNS = 0  →  the worst path arrives exactly on the deadline. Passing, zero margin.<br>
+WNS &lt; 0  →  at least one path is too slow. <b>The design fails timing</b> at this clock and may
+produce wrong results in hardware.
+</div>
+
+<p>Despite the name, WNS is reported even when it is positive — Vivado prints "Worst Negative Slack"
+and then shows <code>+0.714 ns</code>. It is really "worst slack"; the word "negative" is historical.
+A positive WNS is the thing you want, and it is what this project achieved.</p>
+
+<h3>What we achieved</h3>
+
+<table>
+<thead><tr><th style="width:34%">Build</th><th style="width:13%">WNS</th><th style="width:13%">WHS</th>
+<th style="width:13%">WPWS</th><th>Verdict</th></tr></thead>
+<tbody>
+<tr><td>Accelerator alone, out-of-context synthesis (no debug logic)</td>
+    <td class="pos">+1.279 ns</td><td class="pos">+0.263 ns</td><td class="pos">+3.750 ns</td>
+    <td>0 failing endpoints of 1 305. ~12.8 % margin on a 10 ns period.</td></tr>
+<tr><td>ZedBoard debug build — <code>vio_debug_top</code> with VIO + ILA + debug hub</td>
+    <td class="pos">+0.714 ns</td><td class="pos">+0.045 ns</td><td class="pos">+3.750 ns</td>
+    <td>0 failing endpoints of 5 181. <b>"All user specified timing constraints are met."</b></td></tr>
+</tbody>
+</table>
+
+<p>Both builds are <b>positive on setup, positive on hold, and positive on pulse width, with zero
+failing endpoints and zero total negative slack</b>. That is a clean pass. Section 12 gives the full
+report text and every other implementation metric; section 13 explains exactly how much headroom those
+numbers represent.</p>
+
+<h3>The headline numbers, all in one place</h3>
+
+<p>Everything below is measured, not estimated, and every figure is traceable to a named report in
+<code>FPGA_IMPL/reports/</code> or to the RTL itself. Section 12 shows where each one comes from.</p>
+
+<table>
+<thead><tr><th style="width:22%">Category</th><th style="width:34%">Metric</th><th style="width:20%">Measured value</th><th>Source</th></tr></thead>
+<tbody>
+<tr><td rowspan="4"><b>Timing</b></td>
+    <td>WNS / TNS / failing endpoints (setup)</td><td class="pos">+0.714 ns / 0.000 / 0 of 5 181</td>
+    <td>Design Timing Summary, post-route</td></tr>
+<tr><td>WHS / THS / failing endpoints (hold)</td><td class="pos">+0.045 ns / 0.000 / 0 of 5 181</td><td>Design Timing Summary</td></tr>
+<tr><td>WPWS / TPWS / failing endpoints</td><td class="pos">+3.750 ns / 0.000 / 0 of 2 950</td><td>Design Timing Summary</td></tr>
+<tr><td>Worst bus-skew slack (CDC)</td><td class="pos">+9.253 ns of a 10.000 ns requirement</td><td><code>*_bus_skew_routed.rpt</code></td></tr>
+<tr><td rowspan="3"><b>Frequency</b></td>
+    <td>Constrained clock</td><td>100.0 MHz (10.000 ns)</td><td><code>vio_debug.xdc</code></td></tr>
+<tr><td>Setup margin on the period</td><td><b>7.1 %</b></td><td>derived from WNS</td></tr>
+<tr><td>Estimated F<sub>max</sub></td><td>≈ 107.7 MHz</td><td>derived, see §13</td></tr>
+<tr><td rowspan="4"><b>Performance</b></td>
+    <td><b>Cycles per 4×4 matrix multiplication</b></td><td class="big">17 cycles<br><span style="font-size:9pt">13 reusing weights</span></td>
+    <td><code>controller.sv</code>, see §14</td></tr>
+<tr><td>Wall-clock latency of one 4×4 multiply</td><td><b>170 ns</b> at 100 MHz<br>130 ns reusing weights</td><td>17 (or 13) × 10 ns</td></tr>
+<tr><td>Peak arithmetic rate (COMPUTE phase)</td><td>1.6 GMAC/s = 3.2 GOP/s</td><td>16 PEs × 100 MHz</td></tr>
+<tr><td>Average rate over one 4×4 job</td><td>0.38 GMAC/s (23.5 % of peak)</td><td>64 MACs / 17 cycles</td></tr>
+<tr><td rowspan="4"><b>Resources</b><br><span class="small">(whole debug build, post-route)</span></td>
+    <td>LUTs as logic / as memory</td><td>4 079 (7.67 %) / 442</td><td><code>*_power_routed.rpt</code> §1.1</td></tr>
+<tr><td>Registers</td><td>6 370 (5.99 %)</td><td><code>*_power_routed.rpt</code> §1.1</td></tr>
+<tr><td>Block RAM tiles</td><td>11 of 140 (7.86 %)</td><td><code>*_power_routed.rpt</code> §1.1</td></tr>
+<tr><td>DSP48E1 slices</td><td><b>0</b> of 220 (0.00 %)</td><td><code>*_utilization_synth.rpt</code></td></tr>
+<tr><td rowspan="3"><b>Power</b></td>
+    <td>Total on-chip power</td><td><b>0.145 W</b></td><td><code>*_power_routed.rpt</code></td></tr>
+<tr><td>Dynamic / static split</td><td>0.042 W / 0.104 W</td><td><code>*_power_routed.rpt</code></td></tr>
+<tr><td>Junction temperature / max ambient</td><td>26.7 °C / 83.3 °C</td><td><code>*_power_routed.rpt</code></td></tr>
+<tr><td rowspan="2"><b>Sign-off</b></td>
+    <td>DRC errors / critical warnings</td><td class="pos">0 / 0 (2 warnings)</td><td><code>*_drc_routed.rpt</code></td></tr>
+<tr><td>Methodology TIMING-* violations</td><td class="pos">0 (16 warnings, none timing)</td><td><code>*_methodology_drc_routed.rpt</code></td></tr>
+</tbody>
+</table>
+
+<h2 class="pb">2. Why timing analysis exists at all</h2>
+
+<p>A flip-flop is not instantaneous. It has three physical requirements, and every one of them is a
+promise the silicon vendor makes and the designer must not break:</p>
+
+<table>
+<thead><tr><th style="width:22%">Parameter</th><th style="width:16%">Symbol</th><th>What it means physically</th></tr></thead>
+<tbody>
+<tr><td><b>Clock-to-Q delay</b></td><td><code>T<sub>co</sub></code> / <code>T<sub>cq</sub></code></td>
+    <td>After a clock edge arrives, the flip-flop's output does not change immediately. It takes a
+    small propagation delay before the new value appears on Q.</td></tr>
+<tr><td><b>Setup time</b></td><td><code>T<sub>su</sub></code></td>
+    <td>The data at the D input must be <b>stable for this long before</b> the capturing clock edge.
+    Arrive later than that and the flip-flop may not resolve the value correctly.</td></tr>
+<tr><td><b>Hold time</b></td><td><code>T<sub>h</sub></code></td>
+    <td>The data at D must remain <b>stable for this long after</b> the clock edge. Change too soon and
+    the flip-flop can capture the <i>new</i> value instead of the old one.</td></tr>
+</tbody>
+</table>
+
+<p>Violating setup or hold does not produce a neat error. It produces <b>metastability</b>: the
+flip-flop output hovers at an undefined level for an unpredictable time before settling to either 0 or
+1, effectively at random. Downstream logic sees garbage. The failure is data-dependent, temperature-
+dependent, and chip-to-chip variable — which is exactly why it must be proven <i>analytically</i>
+before the bitstream is built, not hunted for in the lab.</p>
+
+<div class="warn"><b>The central point a beginner must internalise</b>
+Simulation checks <b>what</b> your logic computes. Timing analysis checks <b>whether the silicon can
+compute it fast enough</b>. They are completely independent. A design can pass 3 680 simulation checks
+with 0 mismatches — as this one does — and still fail in hardware if WNS is negative. Both must pass.</div>
+
+<h3>Static, not dynamic</h3>
+<p>STA is called <i>static</i> because it never applies stimulus. It walks the netlist graph, sums up
+cell and wire delays along every register-to-register path, and compares the total against the clock
+period. That makes it <b>exhaustive</b> — it cannot miss a path the way a simulation can miss a corner
+case — at the price of being <b>pessimistic</b> (it will happily analyse paths that can never be
+exercised in real operation, which is what timing exceptions in section 18 are for).</p>
+
+<h2>3. The anatomy of a timing path</h2>
+
+<p>Every path STA analyses has exactly four parts. Learn these four words and the rest follows.</p>
+
+<div class="ascii">
+   STARTPOINT                      DATA PATH                        ENDPOINT
+   (launch FF)                (combinational logic)               (capture FF)
+  ┌───────────┐                                                  ┌───────────┐
+  │        Q  ├──►[ LUT ]──►[ net ]──►[ LUT ]──►[ carry ]──────► │D          │
+  │  FF_A     │            Tlogic + Tnet  =  data path delay     │   FF_B    │
+  │      >CLK │                                                  │      >CLK │
+  └─────▲─────┘                                                  └─────▲─────┘
+        │                                                              │
+        │  launch edge                              capture edge       │
+        └────────────────┬──────────────────────────────┬──────────────┘
+                         │        CLOCK NETWORK         │
+                         │   (BUFG + clock routing)     │
+                    source clock delay            destination clock delay
+                    ─────────────────────────────────────────────────────
+                    the difference between these two = CLOCK SKEW
+</div>
+
+<table>
+<thead><tr><th style="width:20%">Term</th><th>Definition</th></tr></thead>
+<tbody>
+<tr><td><b>Startpoint</b></td><td>Where the data is launched: a flip-flop clock pin, or an input port.</td></tr>
+<tr><td><b>Endpoint</b></td><td>Where the data is captured: a flip-flop D pin, or an output port. <b>Vivado's "number of endpoints" is a count of these capture points</b> — 5 181 of them in our debug build.</td></tr>
+<tr><td><b>Data path delay</b></td><td>Clock-to-Q of the launch flop, plus every LUT / carry / MUX delay, plus every wire (net) delay in between. In modern FPGAs the net delay is often <i>more than half</i> the total.</td></tr>
+<tr><td><b>Clock path delay</b></td><td>How long the clock edge itself takes to reach each flip-flop, through the global buffer (BUFG) and clock routing.</td></tr>
+<tr><td><b>Clock skew</b></td><td>Destination clock delay minus source clock delay. Positive skew (clock arrives at the capture flop <i>later</i>) helps setup and hurts hold. Negative skew does the opposite.</td></tr>
+<tr><td><b>Clock uncertainty</b></td><td>A safety margin the tool subtracts for jitter, PLL/MMCM phase error, and modelling imprecision. You get it for free; it always makes the analysis stricter.</td></tr>
+<tr><td><b>Levels of logic</b></td><td>How many LUTs the signal passes through on the path. A high number is the classic cause of a long path.</td></tr>
+</tbody>
+</table>
+
+<h2>4. The setup equation — where WNS comes from</h2>
+
+<p>Setup asks: <b>does the data arrive early enough for the next edge?</b> The launch edge and the
+capture edge are one clock period apart (for a normal single-cycle path).</p>
+
+<div class="eq">
+<b>Data Arrival Time</b>  = T<sub>launch-clk</sub> + T<sub>co</sub> + T<sub>logic</sub> + T<sub>net</sub><br><br>
+<b>Data Required Time</b> = T<sub>capture-clk</sub> + T<sub>period</sub> − T<sub>setup</sub> − T<sub>uncertainty</sub><br><br>
+<b>Setup Slack</b> = Data Required Time − Data Arrival Time
+</div>
+
+<p>Expand it and the intuition is plain:</p>
+
+<div class="eq">
+Setup Slack = T<sub>period</sub> − ( T<sub>co</sub> + T<sub>logic</sub> + T<sub>net</sub> + T<sub>setup</sub> )
+              + T<sub>skew</sub> − T<sub>uncertainty</sub>
+</div>
+
+<p>The clock period is your budget. Clock-to-Q, the logic, the wires and the setup requirement are the
+spending. What is left over is slack. Note what this tells you immediately:</p>
+
+<ul>
+  <li><b>Raise the frequency</b> (shrink T<sub>period</sub>) and slack falls. This is why the same
+      netlist can pass at 100 MHz and fail at 200 MHz — nothing about the logic changed, only the budget.</li>
+  <li><b>Add logic levels between flops</b> and slack falls. Deep combinational clouds are the number
+      one cause of setup failure.</li>
+  <li><b>Pipelining fixes setup</b> — inserting a register splits one long path into two short ones,
+      each getting a full period.</li>
+</ul>
+
+<p><b>The worst setup slack across all paths is WNS.</b> That is the whole definition.</p>
+
+<h4>A worked number</h4>
+<p>Suppose T<sub>period</sub> = 10.000 ns, T<sub>co</sub> = 0.400 ns, logic + net = 8.500 ns,
+T<sub>setup</sub> = 0.100 ns, skew = +0.050 ns, uncertainty = 0.035 ns:</p>
+<div class="eq">
+Slack = 10.000 − (0.400 + 8.500 + 0.100) + 0.050 − 0.035 = <b>+1.015 ns</b>  →  passes, ~10 % margin
+</div>
+<p>Now ask for 150 MHz instead — T<sub>period</sub> = 6.667 ns — and with the identical logic:</p>
+<div class="eq">
+Slack = 6.667 − 9.000 + 0.050 − 0.035 = <b class="neg">−2.318 ns</b>  →  fails
+</div>
+
+<h2 class="pb">5. The hold equation — the other half</h2>
+
+<p>Hold asks the opposite question: <b>does the data arrive too early?</b> If a path is so short that
+the new value races through the logic and reaches the capture flop <i>before that same clock edge has
+finished capturing the old value</i>, the flip-flop captures the wrong data. The launch and capture
+edges here are the <b>same</b> edge — there is no period term.</p>
+
+<div class="eq">
+<b>Hold Slack</b> = Data Arrival Time − ( T<sub>capture-clk</sub> + T<sub>hold</sub> )<br><br>
+&nbsp;&nbsp;&nbsp;&nbsp;= ( T<sub>co</sub> + T<sub>logic</sub> + T<sub>net</sub> ) − T<sub>hold</sub> − T<sub>skew</sub>
+</div>
+
+<div class="warn"><b>The single most important asymmetry in all of STA</b>
+<b class="inl">The clock period does not appear in the hold equation.</b> Therefore
+<b>slowing the clock down cannot fix a hold violation</b>. A design with negative WHS is broken at every
+frequency, including 1 Hz. Setup failures are a speed problem; hold failures are a structural problem
+fixed by adding delay (buffers, routing detours) or fixing skew. On FPGAs the placer and router fix
+hold automatically in almost all cases — a leftover hold violation usually means a genuine design
+error such as an unconstrained clock crossing.</div>
+
+<p>The worst hold slack across all paths is <b>WHS — Worst Hold Slack</b>. Our debug build reports
+<b>WHS = +0.045 ns</b>: tight in absolute terms, but positive, with 0 failing endpoints. Small positive
+hold slack is entirely normal and not a concern — the router targets "just enough" hold margin because
+over-fixing hold costs setup margin.</p>
+
+<h2>6. Slack, WNS, TNS and friends — every term defined</h2>
+
+<table class="mono">
+<thead><tr><th style="width:12%">Acronym</th><th style="width:26%">Full name</th><th>Meaning, and how to read it</th></tr></thead>
+<tbody>
+<tr><td><b>WNS</b></td><td>Worst Negative Slack</td>
+    <td>The <b>smallest setup slack of any path in the design</b>. One number. Positive → all setup
+    paths pass. This is the headline timing metric and the answer to "did it close?".</td></tr>
+<tr><td><b>TNS</b></td><td>Total Negative Slack</td>
+    <td>The <b>sum of the slacks of all failing setup endpoints</b> (passing endpoints contribute 0).
+    TNS = 0 means nothing fails. TNS tells you <i>how much</i> of the design is failing, where WNS tells
+    you only <i>how badly the worst one</i> fails. WNS = −0.05 ns with TNS = −0.05 ns is one lazy path;
+    WNS = −0.05 ns with TNS = −900 ns is a design-wide problem.</td></tr>
+<tr><td><b>WHS</b></td><td>Worst Hold Slack</td>
+    <td>The smallest hold slack of any path. Must be positive. Cannot be fixed by lowering frequency.</td></tr>
+<tr><td><b>THS</b></td><td>Total Hold Slack</td>
+    <td>Sum over all failing hold endpoints. Should be 0.000.</td></tr>
+<tr><td><b>WPWS</b></td><td>Worst Pulse Width Slack</td>
+    <td>Checks that the clock <i>pulse itself</i> is legal — that its high time and low time are longer
+    than the minimum the flip-flop, BRAM or DSP requires, and that the clock period is not shorter than
+    the cell's own minimum period. This catches broken clock division, badly configured MMCMs, and
+    clocks that are too fast for a hard block.</td></tr>
+<tr><td><b>TPWS</b></td><td>Total Pulse Width Negative Slack</td><td>Sum over failing pulse-width checks. Should be 0.000.</td></tr>
+<tr><td><b>Failing endpoints</b></td><td>—</td>
+    <td>How many capture points have negative slack. <b>0 is the only acceptable value for sign-off.</b></td></tr>
+<tr><td><b>Total endpoints</b></td><td>—</td>
+    <td>How many capture points were analysed at all. Useful as a sanity check: if this number is
+    suspiciously small, large parts of your design are <b>unconstrained and therefore not being checked</b>.</td></tr>
+<tr><td><b>F<sub>max</sub></b></td><td>Maximum frequency</td>
+    <td>Not printed directly. Derive it: <code>Fmax = 1 / (T<sub>period</sub> − WNS)</code>. It is an
+    estimate, valid near the constrained frequency only.</td></tr>
+</tbody>
+</table>
+
+<div class="note"><b>The three lines that constitute a pass</b>
+A Vivado Design Timing Summary is a pass if and only if all three of these hold, and the report says
+<i>"All user specified timing constraints are met."</i>:
+<pre style="margin:5px 0 0 0"><code>Setup:        WNS  &gt; 0    TNS  = 0.000    Failing Endpoints = 0
+Hold:         WHS  &gt; 0    THS  = 0.000    Failing Endpoints = 0
+Pulse Width:  WPWS &gt; 0    TPWS = 0.000    Failing Endpoints = 0</code></pre></div>
+
+<h2>7. Endpoints, path groups and what "0 failing" means</h2>
+
+<p>Vivado groups paths so you can see <i>which kind</i> of path is the problem. In the timing summary
+GUI these appear as a tree:</p>
+
+<table>
+<thead><tr><th style="width:26%">Group</th><th>What lives there</th></tr></thead>
+<tbody>
+<tr><td><b>Intra-Clock Paths</b></td><td>Launch and capture flops on the <b>same</b> clock. In this project, essentially the entire design: everything runs on <code>sys_clk</code>.</td></tr>
+<tr><td><b>Inter-Clock Paths</b></td><td>Launch and capture on <b>different</b> clocks. Real CDC lives here. In this project, only the JTAG/debug-hub boundary — and Vivado's debug IP constrains that itself.</td></tr>
+<tr><td><b>Other Path Groups</b></td><td>Special groups such as <code>**async_default**</code> — paths through asynchronous set/reset pins.</td></tr>
+<tr><td><b>User Ignored Paths</b></td><td>Paths you removed from analysis with <code>set_false_path</code> / <code>set_clock_groups</code>. <b>Always read this list.</b> A design "passes" trivially if you have falsely ignored the failing paths.</td></tr>
+<tr><td><b>Unconstrained Paths</b></td><td>Paths with no clock definition reaching them. <b>These are not analysed at all.</b> They are invisible in WNS and are the classic way a broken design shows a beautiful timing summary.</td></tr>
+<tr><td><b>Check Timing</b></td><td>A separate audit (our build shows 8 377 entries) listing structural issues: no_clock, constant_clock, unconstrained_internal_endpoints, no_input_delay, no_output_delay, etc. High counts here are normal for a PL-only design with no external I/O interface, but they must be understood, not ignored.</td></tr>
+</tbody>
+</table>
+
+<div class="warn"><b>"0 failing endpoints" is only meaningful together with the endpoint count</b>
+0 failing out of 5 181 analysed is a real pass. 0 failing out of 12 analysed means you forgot to write a
+<code>create_clock</code> and the tool checked almost nothing. Always read the two numbers as a pair,
+and always run <code>check_timing</code> and <code>report_clocks</code> before believing a summary.</div>
+
+<h2 class="pb">8. Why simulation passing is not timing passing</h2>
+
+<p>This project has a very strong functional baseline: <b>11 of 11 testbenches, 3 680 checks, 0
+mismatches</b> in the QuestaSim re-verification regression. It is worth being precise about what that
+does and does not prove.</p>
+
+<table>
+<thead><tr><th style="width:32%">Question</th><th style="width:34%">Answered by simulation (RTL)</th><th>Answered by STA</th></tr></thead>
+<tbody>
+<tr><td>Is the maths right — does C = A × W?</td><td><b>Yes.</b> 3 680 checks say so.</td><td>No. STA has no idea what the design computes.</td></tr>
+<tr><td>Is the FSM phase sequence right (WLOAD 4, COMPUTE N, DRAIN 8, DONE 1)?</td><td><b>Yes.</b></td><td>No.</td></tr>
+<tr><td>Will the silicon actually hit 100 MHz?</td><td><b>No.</b> RTL simulation is zero-delay; every gate is instantaneous.</td><td><b>Yes.</b> That is exactly what WNS answers.</td></tr>
+<tr><td>Is there a setup violation on a 32-bit adder in a PE?</td><td>No.</td><td><b>Yes.</b></td></tr>
+<tr><td>Is the clock pin constrained to the right package pin?</td><td>No.</td><td>Partly — <code>check_timing</code> flags the missing constraint; the XDC does the placement.</td></tr>
+</tbody>
+</table>
+
+<p>The two are orthogonal and both are mandatory. A design that computes the right answer at a clock
+frequency it cannot sustain will produce <i>wrong answers in hardware while simulating perfectly</i>,
+which is one of the most confusing failure modes a beginner can meet. That is why the hardware bring-up
+in <code>implementation_method.pdf</code> re-runs the <b>same golden T5 vector</b> on the board: it
+proves the functional result <i>and</i> the timing result at once.</p>
+
+<h2>9. This design's clock and constraint</h2>
+
+<p>The entire accelerator is a <b>single-clock, fully synchronous design</b>. There is exactly one
+clock, and it is constrained in one line:</p>
+
+<pre><code>## ---- 100 MHz on-board PL clock (Bank 13, GCLK) ----------------------
+set_property -dict {PACKAGE_PIN Y9 IOSTANDARD LVCMOS33} [get_ports clk]
+create_clock -name sys_clk -period 10.000 [get_ports clk]</code></pre>
+
+<table>
+<thead><tr><th style="width:26%">Property</th><th style="width:22%">Value</th><th>Consequence for timing</th></tr></thead>
+<tbody>
+<tr><td>Clock source</td><td>ZedBoard 100 MHz PL oscillator, package pin <code>Y9</code></td><td>A real board oscillator, not a PS-derived <code>FCLK</code>. The PL runs even with no PS software loaded.</td></tr>
+<tr><td>Period constraint</td><td><code>10.000 ns</code></td><td>The budget every path is measured against. This <b>is</b> T<sub>period</sub> in section 4.</td></tr>
+<tr><td>Clock name</td><td><code>sys_clk</code></td><td>Naming the clock makes every later constraint and report readable.</td></tr>
+<tr><td>Duty cycle</td><td>50 % (default)</td><td>High time = low time = 5.000 ns. This is what the pulse-width check measures against.</td></tr>
+<tr><td>Number of clock domains</td><td><b>1</b> (plus the debug hub's JTAG domain, self-constrained by the IP)</td><td>No CDC to constrain, no <code>set_clock_groups</code>, no asynchronous FIFO. A large class of timing problems simply does not exist here.</td></tr>
+<tr><td>Reset</td><td><b>Synchronous</b>, active-low <code>rst_n</code>, from a 65 536-cycle power-on counter</td><td>Synchronous resets are analysed as ordinary data paths — no <code>**async_default**</code> group headaches, no recovery/removal surprises.</td></tr>
+<tr><td>External I/O timing</td><td>None to constrain in the VIO/ILA build</td><td>The only physical pin is <code>clk</code>. All data enters and leaves over JTAG, inside Vivado's own debug IP, so no <code>set_input_delay</code> / <code>set_output_delay</code> is required.</td></tr>
+</tbody>
+</table>
+
+<div class="tip"><b>Why "constrain the source, not the buffer output"</b>
+<code>create_clock</code> is applied to <code>[get_ports clk]</code> — the package pin — not to the
+output of the BUFG. Constraining the buffer output makes the tool ignore the buffer's own delay and
+produces optimistic, wrong numbers. Constrain where the clock physically enters the chip and let the
+tool propagate it forward.</div>
+
+<h2 class="pb">10. Where the timing paths in this design actually are</h2>
+
+<p>To reason about timing you must know what the register-to-register paths look like. This accelerator
+is a three-level hierarchy, and every level is pipelined:</p>
+
+<div class="ascii">
+  accelerator_system_top  (L3)          ← host ports, memories, status
+   ├── weight_mem   4 × 32   (LUTRAM, distributed)
+   ├── a_mem      256 × 32   (BRAM, 1-cycle read latency)
+   ├── output_mem  N × 128   (BRAM)
+   ├── controller            ← 5-state FSM: IDLE/WLOAD/COMPUTE/DRAIN/DONE
+   ├── agu                   ← address generator + 8-deep write-strobe pipe
+   └── wrapper_array_buf  (L1)
+        ├── input_buf       ← diagonal skew of activations
+        ├── array           ← 4 × 4 = 16 processing_element instances   ◄ THE ARITHMETIC
+        └── output_skewbuf  ← de-skew of results (delay 3−c on column c)
+
+  Latency chain (fixed, no back-pressure anywhere):
+     down a PE column .......... ROWS−1 = 3
+     east to column c .......... +c            → 3+c
+     de-skew pipe .............. +(3−c)        → 6, independent of c
+     a_mem read latency ........ +1            → 7  = RESULT_LATENCY
+     write strobe .............. +1            → 8  = STORE_LATENCY
+     total job, load W ......... N + 13 clocks (= 17 clocks = 170 ns for N = 4)
+     total job, reuse W ........ N +  9 clocks (= 13 clocks = 130 ns for N = 4)
+</div>
+
+<p>Grouped by kind, the timing paths are:</p>
+
+<table>
+<thead><tr><th style="width:30%">Path class</th><th style="width:22%">Typical depth</th><th>Comment</th></tr></thead>
+<tbody>
+<tr><td><b>PE psum accumulation</b> — <code>psum_q</code> → next row's <code>psum_q</code></td>
+    <td>1 mux + 8×8 multiply + 32-bit add + 1 mux</td>
+    <td><b>The critical path.</b> See section 11.</td></tr>
+<tr><td><b>PE activation march</b> — <code>a_q</code> → east neighbour's <code>a_q</code></td>
+    <td>1 net, 0 logic levels</td><td>Trivially fast: a straight register-to-register hop.</td></tr>
+<tr><td><b>BRAM read</b> — <code>a_mem</code> / <code>output_mem</code> output → consumer flop</td>
+    <td>Hard block clock-to-out + routing</td><td>BRAM T<sub>co</sub> is significant on 7-series but the consumer logic here is shallow.</td></tr>
+<tr><td><b>LUTRAM read</b> — <code>weight_mem</code> (4 × 32 distributed RAM)</td>
+    <td>LUT delay + routing</td><td>Only 40 LUTs as memory; a deeper weight memory would be dead silicon <i>and</i> slower.</td></tr>
+<tr><td><b>FSM state</b> — <code>controller</code> state register feedback</td>
+    <td>A few LUT levels</td><td>6 states, tiny next-state function. Never critical.</td></tr>
+<tr><td><b>AGU counters and write-strobe pipe</b></td><td>8-bit increments, 8-deep shift</td>
+    <td>Counters and shift registers are the fastest structures the fabric offers.</td></tr>
+<tr><td><b>128-bit result fan-out</b> — <code>output_mem</code> → <code>o_rdata</code> → VIO probe</td>
+    <td>Wide but shallow</td><td>Wide buses cost routing resources, not logic depth.</td></tr>
+</tbody>
+</table>
+
+<h2>11. The critical path — the PE multiply-accumulate</h2>
+
+<p>The longest combinational cloud in this design is inside <code>processing_element</code>
+(<code>MAC.sv</code>). This is the only module in the whole accelerator that contains arithmetic, and
+there are sixteen copies of it:</p>
+
+<pre><code>// Combinational arithmetic
+assign product_ext = 32'(weight_q * a_in);      // signed 8 × signed 8, sign-extended to 32
+assign adder_out   = psum_in + product_ext;     // 32-bit signed add
+
+always_ff @(posedge clk) begin
+    ...
+    psum_q &lt;= valid_in ? adder_out : psum_in;   // accumulate OR bypass
+end
+
+assign psum_out = wload ? 32'(weight_q) : psum_q;   // COMBINATIONAL output mux</code></pre>
+
+<p>Trace the worst path from one row of the array to the next:</p>
+
+<div class="ascii">
+  PE(r,c)                                              PE(r+1,c)
+  ┌────────────────────────┐                          ┌────────────────────────┐
+  │ psum_q ──┐             │                          │                        │
+  │          ├─► [ mux ] ──┼── psum_out ─── net ──────┼──► psum_in             │
+  │ weight_q─┘   (wload)   │                          │        │               │
+  └────────────────────────┘                          │        ▼               │
+                                                      │   [ 32-bit ADDER ] ◄── product_ext
+   a_q (west PE) ─── net ──► a_in ──► [ 8×8 SIGNED MULTIPLIER ] ◄── weight_q
+                                       (mapped to LUT fabric — 0 DSPs used)
+                                                      │        │               │
+                                                      │        ▼               │
+                                                      │   [ mux (valid_in) ]   │
+                                                      │        │               │
+                                                      │        ▼  psum_q  ◄──── capture FF
+                                                      └────────────────────────┘
+
+  Path = FF(clk-to-Q) → output mux → routing → 32-bit carry chain → valid mux → FF(setup)
+  In parallel: FF(a_q) → routing → 8×8 signed multiply (LUT array) → into the same adder
+</div>
+
+<h3>Why 0 DSPs is the interesting part</h3>
+
+<p>The measured utilisation report says <b>DSPs: 0 of 220 (0.00 %)</b>. Vivado mapped all sixteen 8×8
+signed multipliers into <b>general LUT fabric</b>, not into DSP48E1 slices. The consequences:</p>
+
+<table>
+<thead><tr><th style="width:30%">Consequence</th><th>Detail</th></tr></thead>
+<tbody>
+<tr><td>Slower per multiply</td><td>A fabric multiplier is a tree of LUTs and carry logic. A DSP48E1 has a hardened multiplier and is faster and far more compact.</td></tr>
+<tr><td>Explains the LUT count</td><td>1 564 LUTs for a design this small is dominated by sixteen fabric multipliers plus sixteen 32-bit adders.</td></tr>
+<tr><td>It is still fast enough</td><td>An 8×8 multiply is small. The synthesiser judged the fabric implementation would meet 10 ns, and the measurement (+1.279 ns / +0.714 ns) confirms it.</td></tr>
+<tr><td><b>It is the first lever if you ever raise the clock</b></td><td>Forcing DSP inference — <code>(* use_dsp = "yes" *)</code> on the module, or <code>synth_design -max_dsp</code> tuning — would shorten this path substantially and free ~1 000 LUTs. It is the single highest-value change if you ever target 200 MHz.</td></tr>
+</tbody>
+</table>
+
+<div class="note"><b>Why the adder, not the multiplier, is usually the deeper half</b>
+An 8×8 product needs only a shallow partial-product tree. The <b>32-bit addition</b> that follows it
+propagates a carry across 32 bits — on 7-series that maps to the dedicated CARRY4 chain, which is fast
+but is a genuine serial dependency. Add the two output muxes and you have the design's longest cloud.
+This is also why the accumulator width matters: widening <code>psum</code> to 48 bits would directly
+cost setup slack.</div>
+
+<h2 class="pb">12. Measured results — the full implementation metric set</h2>
+
+<p>Everything in this section is a measurement, not a projection. Sub-sections 12.1 and 12.2 are the
+timing summaries; 12.3 onward covers the rest of the reports Vivado produced for the routed design,
+which live in <code>FPGA_IMPL/reports/</code>. Signing off a build means reading <i>all</i> of these,
+not only the WNS line.</p>
+
+<table>
+<thead><tr><th style="width:38%">Report file (<code>FPGA_IMPL/reports/</code>)</th><th style="width:14%">Design state</th><th>What it answers</th></tr></thead>
+<tbody class="mono">
+<tr><td>vio_debug_top_utilization_synth.rpt</td><td>Synthesized</td><td>How much of the device the logic occupies, by primitive.</td></tr>
+<tr><td>vio_debug_top_control_sets_placed.rpt</td><td>Placed</td><td>How well the flip-flops pack into slices — a QoR and routability indicator.</td></tr>
+<tr><td>vio_debug_top_io_placed.rpt</td><td>Placed</td><td>Which package pins are used, at which I/O standard, in which bank.</td></tr>
+<tr><td>vio_debug_top_clock_utilization_routed.rpt</td><td>Routed</td><td>Which clock buffers exist, how many loads each drives, which clock regions they span.</td></tr>
+<tr><td>vio_debug_top_bus_skew_routed.rpt</td><td>Routed</td><td>Whether multi-bit CDC buses arrive together enough to be safe.</td></tr>
+<tr><td>vio_debug_top_power_routed.rpt</td><td>Routed</td><td>On-chip power, thermal margin, and where the power goes by hierarchy.</td></tr>
+<tr><td>vio_debug_top_drc_opted.rpt / _drc_routed.rpt</td><td>Synth / Routed</td><td>Physical design-rule violations. Errors here block the bitstream.</td></tr>
+<tr><td>vio_debug_top_methodology_drc_routed.rpt</td><td>Routed</td><td>Xilinx methodology rules — including the TIMING-* family.</td></tr>
+</tbody>
+</table>
+
+<h3>12.1 Build A — accelerator alone, out-of-context synthesis</h3>
+
+<p>Out-of-context synthesis of <code>accelerator_system_top</code> with no VIO, no ILA and no debug
+hub, on <code>xc7z020clg484-1</code> in Vivado 2020.1, constrained at 100 MHz. Synthesis completed with
+<b>0 errors, 0 warnings, 0 critical warnings</b>.</p>
+
+<pre><code>Constraint : create_clock -period 10.000   (100 MHz)
+
+WNS  = +1.279 ns        0 failing endpoints of 1305
+WHS  = +0.263 ns        0 failing endpoints of 1305
+WPWS = +3.750 ns        0 failing endpoints of  838</code></pre>
+
+<table>
+<thead><tr><th style="width:26%">Resource</th><th style="width:12%">Used</th><th style="width:14%">Available</th><th style="width:10%">%</th><th>Note</th></tr></thead>
+<tbody>
+<tr><td>Slice LUTs</td><td><b>1 564</b></td><td>53 200</td><td>2.94</td><td>1 524 as logic + 40 as memory</td></tr>
+<tr><td>Slice Registers</td><td><b>792</b></td><td>106 400</td><td>0.74</td><td>Pipeline flops dominate</td></tr>
+<tr><td>Block RAM Tile</td><td><b>2.5</b></td><td>140</td><td>1.79</td><td><code>output_mem</code> (32 kbit) + <code>a_mem</code> (8 kbit)</td></tr>
+<tr><td>DSPs</td><td><b>0</b></td><td>220</td><td>0.00</td><td>All sixteen 8×8 multipliers in LUT fabric — see §11</td></tr>
+<tr><td>LUT as Memory</td><td>40</td><td>17 400</td><td>0.23</td><td><code>weight_mem</code> 4 × 32 distributed RAM</td></tr>
+</tbody>
+</table>
+
+<h3>12.2 Build B — the ZedBoard debug build (VIO + ILA + debug hub)</h3>
+
+<p>This is the build you actually program onto the board for Method 2. It is
+<code>vio_debug_top</code>: the same unmodified accelerator, plus a VIO core (6 input probes,
+11 output probes), an ILA core (10 probes), three <code>oneshot</code> pulse generators, the sticky-done
+logic, and the auto-inserted <code>dbg_hub</code>. This is the <b>post-route</b> Design Timing Summary
+(Vivado's <code>timing_1</code> report on the implemented design) as captured in
+<code>synthesis_screenshots/</code> — these are sign-off numbers, not estimates. Every report in
+<code>FPGA_IMPL/reports/</code> comes from the same implementation run:</p>
+
+<table>
+<thead><tr><th style="width:20%"></th><th style="width:27%">Setup</th><th style="width:27%">Hold</th><th>Pulse Width</th></tr></thead>
+<tbody>
+<tr><td><b>Worst slack</b></td>
+    <td>WNS <span class="pos">0.714 ns</span></td>
+    <td>WHS <span class="pos">0.045 ns</span></td>
+    <td>WPWS <span class="pos">3.750 ns</span></td></tr>
+<tr><td><b>Total slack</b></td>
+    <td>TNS 0.000 ns</td><td>THS 0.000 ns</td><td>TPWS 0.000 ns</td></tr>
+<tr><td><b>Failing endpoints</b></td><td><b>0</b></td><td><b>0</b></td><td><b>0</b></td></tr>
+<tr><td><b>Total endpoints</b></td><td>5 181</td><td>5 181</td><td>2 950</td></tr>
+</tbody>
+</table>
+
+<p style="text-align:center;font-size:11pt;color:#2c6b33;margin:10px 0;">
+<b>“All user specified timing constraints are met.”</b></p>
+
+<p>Vivado prints that sentence only when every setup, hold and pulse-width check passes. It is the
+formal statement that the design has <b>closed timing</b>. The Clock Summary shows <b>1</b> clock —
+confirming the single-domain structure described in section 9.</p>
+
+<div class="tip"><b>Reading the endpoint count as a cross-check</b>
+Build A analysed 1 305 endpoints; Build B analyses <b>5 181</b> — roughly four times as many. That jump
+is the debug infrastructure: the ILA's capture registers, the VIO's probe registers, and the debug hub's
+JTAG shift chains are all real flip-flops that must meet timing. The count going <i>up</i> when you add
+debug cores is exactly what you should expect, and seeing it is a cheap confirmation that the debug
+logic really is in the netlist and was not optimised away.</div>
+
+<h3 class="pb">12.3 Resource utilisation — two different numbers, and why</h3>
+
+<p>The utilisation report is taken after synthesis, when <code>vio_0</code> and <code>ila_0</code> are
+still <b>black boxes</b>: their internal cells are not counted. The power report is taken after routing,
+when everything is real. Both are true; they answer different questions, and quoting one where the other
+is meant is a common way to mis-state a design's size.</p>
+
+<h4>Post-synthesis — <code>vio_debug_top_utilization_synth.rpt</code></h4>
+
+<table>
+<thead><tr><th style="width:26%">Site type</th><th style="width:11%">Used</th><th style="width:13%">Available</th><th style="width:9%">Util %</th><th>Note</th></tr></thead>
+<tbody>
+<tr><td>Slice LUTs</td><td><b>1 889</b></td><td>53 200</td><td>3.55</td><td>1 848 as logic + 41 as memory</td></tr>
+<tr><td>&nbsp;&nbsp;LUT as Distributed RAM</td><td>32</td><td>17 400</td><td>—</td><td><code>weight_mem</code> 4 × 32 (<code>RAMS32</code> × 32)</td></tr>
+<tr><td>&nbsp;&nbsp;LUT as Shift Register</td><td>9</td><td>17 400</td><td>—</td><td>The AGU write-strobe pipe, inferred as <code>SRL16E</code></td></tr>
+<tr><td>Slice Registers</td><td><b>1 098</b></td><td>106 400</td><td>1.03</td><td>All flip-flops; <b>0 latches</b> — no accidental latch inference anywhere</td></tr>
+<tr><td>F7 / F8 Muxes</td><td>0</td><td>26 600 / 13 300</td><td>0.00</td><td>No wide multiplexers — consistent with a shallow control path</td></tr>
+<tr><td>Block RAM Tile</td><td><b>2.5</b></td><td>140</td><td>1.79</td><td>2 × RAMB36E1 (<code>output_mem</code>) + 1 × RAMB18E1 (<code>a_mem</code>)</td></tr>
+<tr><td>DSPs</td><td><b>0</b></td><td>220</td><td>0.00</td><td>All sixteen 8×8 multipliers in LUT fabric — see §11</td></tr>
+<tr><td>Bonded IOB</td><td>1</td><td>200</td><td>0.50</td><td>Only <code>clk</code>. Everything else is JTAG</td></tr>
+<tr><td>BUFGCTRL</td><td>1</td><td>32</td><td>3.13</td><td>Becomes 2 after the debug hub adds its TCK buffer</td></tr>
+<tr><td>MMCM / PLL</td><td>0 / 0</td><td>4 / 4</td><td>0.00</td><td>No clock generation at all — the board oscillator is used directly</td></tr>
+</tbody>
+</table>
+
+<h4>Primitive census — what the design is actually built from</h4>
+
+<table class="mono">
+<thead><tr><th style="width:16%">Primitive</th><th style="width:11%">Count</th><th>What it is, and where it comes from</th></tr></thead>
+<tbody>
+<tr><td>FDRE</td><td>1 097</td><td>D flip-flop with clock enable and <b>synchronous</b> reset — the design's standard register.</td></tr>
+<tr><td>FDSE</td><td>1</td><td>One synchronous-<i>set</i> flop; the sticky-done latch in <code>vio_debug_top</code>.</td></tr>
+<tr><td>LUT3 / LUT2 / LUT4 / LUT6 / LUT5 / LUT1</td><td>1 006 / 586 / 483 / 439 / 290 / 6</td>
+    <td>The 2 810 LUTs. The bias toward small LUTs (LUT2/LUT3 dominate) is the signature of the sixteen 8×8 partial-product trees.</td></tr>
+<tr><td>CARRY4</td><td>348</td><td>The dedicated carry chains: sixteen 32-bit accumulators need 8 CARRY4 each = 128, plus the multiplier trees and the AGU counters.</td></tr>
+<tr><td>RAMS32</td><td>32</td><td><code>weight_mem</code> as distributed RAM.</td></tr>
+<tr><td>SRL16E</td><td>9</td><td>The AGU's 8-deep write-strobe / write-address pipeline.</td></tr>
+<tr><td>RAMB36E1 / RAMB18E1</td><td>2 / 1</td><td><code>output_mem</code> (N × 128) and <code>a_mem</code> (256 × 32).</td></tr>
+<tr><td>IBUF / BUFG</td><td>1 / 1</td><td>The clock input buffer and the global clock buffer it drives.</td></tr>
+<tr><td>vio_0 / ila_0</td><td>1 / 1</td><td><b>Black boxes at this stage</b> — their thousands of cells are not in the counts above.</td></tr>
+</tbody>
+</table>
+
+<h4>Post-route, whole design — <code>vio_debug_top_power_routed.rpt</code> §1.1</h4>
+
+<p>Once the debug IP is elaborated and routed, the real footprint is roughly <b>2.2× the LUTs and 5.8×
+the registers</b> of the synthesis figure. That entire difference is debug infrastructure.</p>
+
+<table>
+<thead><tr><th style="width:30%">Resource</th><th style="width:14%">Post-synth</th><th style="width:14%">Post-route</th><th style="width:12%">Util %</th><th>Growth is</th></tr></thead>
+<tbody>
+<tr><td>LUT as Logic</td><td>1 848</td><td><b>4 079</b></td><td>7.67</td><td>ILA trigger/compare logic, VIO, debug hub</td></tr>
+<tr><td>Registers</td><td>1 098</td><td><b>6 370</b></td><td>5.99</td><td>ILA capture pipeline + VIO probe registers + JTAG shift chains</td></tr>
+<tr><td>CARRY4</td><td>348</td><td>423</td><td>3.18</td><td>Mostly already ours — the accelerator's adders</td></tr>
+<tr><td>LUT as Distributed RAM</td><td>32</td><td>56</td><td>0.32</td><td>Debug-hub FIFOs</td></tr>
+<tr><td>LUT as Shift Register</td><td>9</td><td>386</td><td>2.22</td><td>ILA probe pipelining is heavily SRL-based</td></tr>
+<tr><td>F7 / F8 Muxes</td><td>0</td><td>191</td><td>0.36</td><td>Entirely debug IP</td></tr>
+<tr><td>Block RAM</td><td>2.5</td><td><b>11</b></td><td>7.86</td><td>≈ 8 BRAM36 of ILA capture storage — see §16</td></tr>
+<tr><td>I/O</td><td>1</td><td>1</td><td>0.50</td><td>Unchanged: still just <code>clk</code></td></tr>
+</tbody>
+</table>
+
+<div class="note"><b>The accelerator is a small tenant in its own bitstream</b>
+Of the 11 block RAM tiles in the routed design, only 2.5 belong to the accelerator; the rest is ILA
+capture memory. Of the 6 370 registers, 1 097 are ours. Instrumentation is the majority of this build by
+every resource measure — which is exactly why §16 treats it as the first thing to shrink if margin is
+ever needed.</div>
+
+<h3>12.4 Clock resources — <code>vio_debug_top_clock_utilization_routed.rpt</code></h3>
+
+<table>
+<thead><tr><th style="width:20%">Clock</th><th style="width:12%">Period</th><th style="width:14%">Buffer / site</th><th style="width:12%">Clock loads</th><th>Reach</th></tr></thead>
+<tbody>
+<tr><td><code>sys_clk</code></td><td>10.000 ns</td><td>BUFG at <code>BUFGCTRL_X0Y0</code></td><td><b>6 497</b></td>
+    <td>4 clock regions: X0Y1 (2 968 loads), X1Y1 (1 243), X0Y2 (1 285), X1Y2 (758)</td></tr>
+<tr><td><code>…bscan_inst/TCK</code></td><td>33.000 ns</td><td>BUFG at <code>BUFGCTRL_X0Y1</code></td><td>465</td>
+    <td>2 clock regions: X0Y2 (204), X1Y2 (258)</td></tr>
+</tbody>
+</table>
+
+<p>Reading it:</p>
+<ul>
+  <li><b>Both clocks are on true global buffers.</b> That is what keeps clock skew in the tens of
+      picoseconds and is a precondition for the small, well-behaved WHS in §12.2. A clock accidentally
+      routed on general fabric shows up here immediately.</li>
+  <li><b>2 BUFGCTRL of 32, 0 MMCM, 0 PLL, 0 BUFR/BUFIO/BUFH.</b> The design does not synthesise a clock
+      at all — the ZedBoard's 100 MHz oscillator drives the fabric directly. Nothing can be misconfigured
+      because nothing is configured.</li>
+  <li><b><code>sys_clk</code> spans four of the six clock regions</b> and drives 6 254 slice loads. That
+      spread is a consequence of low utilisation (the placer had no reason to cluster), and it costs
+      nothing here because a BUFG reaches the whole device by design.</li>
+  <li><b>The 33 ns TCK clock is the JTAG domain.</b> It exists only inside the debug hub, and Vivado's
+      own IP constrains the crossing — see §12.5 and §20.</li>
+</ul>
+
+<h4>The clock pin — <code>vio_debug_top_io_placed.rpt</code></h4>
+
+<table>
+<thead><tr><th style="width:14%">Pin</th><th style="width:14%">Signal</th><th style="width:26%">Pin name</th><th style="width:14%">Standard / bank</th><th>Why it matters</th></tr></thead>
+<tbody>
+<tr><td><code>Y9</code></td><td><code>clk</code></td><td><code>IO_L12P_T1_MRCC_13</code></td><td>LVCMOS33 / bank 13</td>
+    <td><b>MRCC</b> = Multi-Region Clock Capable. A clock <i>must</i> enter on an MRCC or SRCC pin to
+    reach a BUFG cleanly; entering on an ordinary I/O pin forces a fabric detour and inflates skew.
+    Placement is <code>FIXED</code>, i.e. it came from the XDC and not from the placer.</td></tr>
+</tbody>
+</table>
+
+<p>Total user I/O: <b>1</b>. Every other signal in the design enters and leaves over JTAG.</p>
+
+<h3 class="pb">12.5 Bus skew — the CDC check you did not write</h3>
+
+<p>A bus-skew constraint is different from setup and hold. It does not ask "did each bit arrive in
+time?" but "did all the bits of this bus arrive <b>close enough together</b>?" — which is the question
+that matters for a gray-coded pointer crossing between clock domains, where two bits changing on
+different clock edges corrupts the pointer even though every individual path meets timing.</p>
+
+<p>You did not write these constraints; Xilinx's debug IP supplied them for its own asynchronous FIFOs.
+Vivado checked them anyway, and they pass with enormous room:</p>
+
+<table>
+<thead><tr><th style="width:8%">Id</th><th style="width:34%">Bus (all inside <code>dbg_hub</code>)</th><th style="width:14%">Requirement</th>
+<th style="width:14%">Actual skew</th><th>Slack</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>RD-FIFO read pointer, TCK → <code>sys_clk</code></td><td>10.000 ns</td><td>0.690 ns</td><td class="pos">+9.310 ns</td></tr>
+<tr><td>2</td><td>RD-FIFO write pointer, TCK → <code>sys_clk</code></td><td>10.000 ns</td><td>0.727 ns</td><td class="pos">+9.273 ns</td></tr>
+<tr><td>3</td><td>WR-FIFO read pointer, TCK → <code>sys_clk</code></td><td>10.000 ns</td><td>0.747 ns</td><td class="pos"><b>+9.253 ns</b> ← worst</td></tr>
+<tr><td>4</td><td>WR-FIFO write pointer, TCK → <code>sys_clk</code></td><td>10.000 ns</td><td>0.682 ns</td><td class="pos">+9.318 ns</td></tr>
+</tbody>
+</table>
+
+<p>All four are 4-bit gray-coded FIFO pointers crossing from the 33 ns JTAG domain into
+<code>sys_clk</code>, each with 4 endpoints. Worst-case actual skew is <b>0.747 ns against a 10.000 ns
+budget — 7.5 % of the allowance used</b>. The report is generated with
+<code>-warn_on_violation</code>, so a failure would appear as a warning rather than an error; there are
+none.</p>
+
+<div class="note"><b>Why the accelerator contributes nothing here</b>
+Bus-skew checks only exist where a multi-bit bus crosses clock domains. The accelerator is single-clock,
+so it has no such bus — every one of the four constraints belongs to the debug hub. If you ever add a
+second clock domain to this design, this report stops being a formality and becomes something you must
+read.</div>
+
+<h3>12.6 Power — <code>vio_debug_top_power_routed.rpt</code></h3>
+
+<p>Vector-less power estimation on the routed design, commercial grade, typical process, 25 °C ambient,
+250 LFM airflow, no heat sink, medium board:</p>
+
+<table>
+<thead><tr><th style="width:34%">Quantity</th><th style="width:18%">Value</th><th>What it tells you</th></tr></thead>
+<tbody>
+<tr><td><b>Total on-chip power</b></td><td class="big">0.145 W</td>
+    <td>Trivial for a ZedBoard, which supplies several watts. No thermal or supply concern whatsoever.</td></tr>
+<tr><td>Dynamic power</td><td>0.042 W (29 %)</td><td>Switching activity. This is the part your design controls.</td></tr>
+<tr><td>Device static power</td><td>0.104 W (71 %)</td>
+    <td>Leakage. It is a property of the xc7z020 die, not of your design — you would pay it for an empty bitstream too. <b>Static dominating is the normal signature of a small, slow-ish design on a large part.</b></td></tr>
+<tr><td>Junction temperature</td><td>26.7 °C</td><td>1.7 °C above the 25 °C ambient. Effectively cold.</td></tr>
+<tr><td>Maximum ambient</td><td>83.3 °C</td><td>The design would still be within thermal limits in an 83 °C room.</td></tr>
+<tr><td>Effective θ<sub>JA</sub></td><td>11.5 °C/W</td><td>Package-to-air thermal resistance assumed by the model.</td></tr>
+<tr><td>Confidence level</td><td><b>Medium</b></td>
+    <td><b>Read this before quoting the number.</b> Design state, clock activity, I/O activity and device models are all "High"; <i>internal node activity is "Medium"</i> because less than 25 % of internal nodes had user-specified toggle rates. To upgrade it, feed a post-route simulation SAIF into <code>read_saif</code>.</td></tr>
+</tbody>
+</table>
+
+<h4>Where the power goes</h4>
+
+<table>
+<thead><tr><th style="width:24%">On-chip component</th><th style="width:16%">Power</th><th>Comment</th></tr></thead>
+<tbody>
+<tr><td>Clocks</td><td>0.025 W</td><td><b>60 % of all dynamic power is the clock tree itself</b> — 6 497 clock loads toggling every cycle, whether or not the design is doing anything.</td></tr>
+<tr><td>Block RAM</td><td>0.014 W</td><td>Second largest, and mostly the ILA's capture memory.</td></tr>
+<tr><td>Signals</td><td>0.002 W</td><td>9 900 nets.</td></tr>
+<tr><td>Slice logic</td><td>0.001 W</td><td>13 622 cells. Fabric logic is remarkably cheap at this scale.</td></tr>
+<tr><td>I/O</td><td>&lt; 0.001 W</td><td>One pin.</td></tr>
+<tr><td>Static</td><td>0.104 W</td><td>Leakage.</td></tr>
+</tbody>
+</table>
+
+<h4>Dynamic power by hierarchy — the interesting table</h4>
+
+<table>
+<thead><tr><th style="width:34%">Instance</th><th style="width:16%">Dynamic power</th><th style="width:14%">Share</th><th>What it is</th></tr></thead>
+<tbody>
+<tr><td><code>vio_debug_top</code> (total)</td><td>0.042 W</td><td>100 %</td><td>Whole design</td></tr>
+<tr><td><code>u_ila</code></td><td>0.019 W</td><td>45 %</td><td>The ILA — the single largest consumer in the design</td></tr>
+<tr><td><b><code>u_acc</code> (the accelerator)</b></td><td><b>0.012 W</b></td><td><b>29 %</b></td><td>Everything this project actually computes with</td></tr>
+<tr><td>&nbsp;&nbsp;<code>u_acc/u_datapath/u_output_mem</code></td><td>0.008 W</td><td>19 %</td><td>The 128-bit result BRAM — two thirds of the accelerator's power</td></tr>
+<tr><td>&nbsp;&nbsp;<code>u_acc/u_datapath/u_fabric</code></td><td>0.003 W</td><td>7 %</td><td><b>The entire 4×4 PE array</b> — sixteen MACs for 3 mW</td></tr>
+<tr><td><code>u_vio</code></td><td>0.007 W</td><td>17 %</td><td>VIO probe registers (0.005 W in, 0.001 W out)</td></tr>
+<tr><td><code>dbg_hub</code></td><td>0.003 W</td><td>7 %</td><td>JTAG shift chains and FIFOs</td></tr>
+</tbody>
+</table>
+
+<div class="tip"><b>The most quotable number in this document</b>
+<b>The sixteen processing elements — the whole arithmetic engine — burn 3 mW.</b> The memory that stores
+their results burns 8 mW, and the debug logic watching them burns 29 mW, nearly 2.5× the accelerator
+itself. This is the classic accelerator result in miniature: <i>arithmetic is cheap, moving and
+observing data is expensive</i>. §14 converts these figures into energy per matrix multiplication.</div>
+
+<h4>Supply currents</h4>
+
+<table>
+<thead><tr><th style="width:18%">Rail</th><th style="width:14%">Voltage</th><th style="width:14%">Total</th><th style="width:14%">Dynamic</th><th>Static</th></tr></thead>
+<tbody>
+<tr><td><code>Vccint</code></td><td>1.000 V</td><td>0.048 A</td><td>0.041 A</td><td>0.008 A</td></tr>
+<tr><td><code>Vccaux</code></td><td>1.800 V</td><td>0.010 A</td><td>0.000 A</td><td>0.010 A</td></tr>
+<tr><td><code>Vccbram</code></td><td>1.000 V</td><td>0.002 A</td><td>0.001 A</td><td>0.001 A</td></tr>
+<tr><td><code>Vccpint</code> / <code>Vccpaux</code> / <code>Vccpll</code></td><td>1.0 / 1.8 / 1.8 V</td><td>0.017 / 0.010 / 0.003 A</td><td>0</td><td>all static</td></tr>
+<tr><td><code>Vccadc</code></td><td>1.800 V</td><td>0.020 A</td><td>0.000 A</td><td>0.020 A</td></tr>
+<tr><td>All <code>Vcco*</code> banks</td><td>—</td><td>0.000 A</td><td>0.000 A</td><td>0.000 A</td></tr>
+</tbody>
+</table>
+
+<p>The <code>Vccp*</code> rails are the <b>Processing System</b>'s. They draw static current even though
+this is a PL-only design and no software is loaded — that is the Zynq architecture, not a fault, and it
+is the same fact behind the <code>ZPS7-1</code> DRC warning in §12.8. Every <code>Vcco</code> bank reads
+0.000 A because only one pin is used and it is an input.</p>
+
+<h3 class="pb">12.7 Control sets — <code>vio_debug_top_control_sets_placed.rpt</code></h3>
+
+<p>A <b>control set</b> is the triple {clock, clock-enable, set/reset}. On 7-series, all eight flip-flops
+in a slice must share one control set, so a design with many distinct control sets packs badly: flops are
+scattered across more slices, nets get longer, and timing gets harder. It is a leading indicator of
+routability that nothing else reports.</p>
+
+<table>
+<thead><tr><th style="width:44%">Statistic</th><th style="width:14%">Value</th><th>Interpretation</th></tr></thead>
+<tbody>
+<tr><td>Total control sets</td><td><b>160</b></td><td>For 6 370 registers — about 40 flops per control set. Healthy.</td></tr>
+<tr><td>Minimum possible</td><td>158</td><td>The tool could only have saved 2. There is essentially nothing to optimise.</td></tr>
+<tr><td>Added by synthesis replication</td><td>2</td><td>Deliberate register duplication to cut fan-out.</td></tr>
+<tr><td>Added by physical synthesis</td><td>0</td><td>The placer never had to replicate to meet timing.</td></tr>
+<tr><td>Unused register locations in occupied slices</td><td>454</td><td>Wasted flop sites from imperfect packing. Negligible against 106 400 available.</td></tr>
+<tr><td>Control sets with fan-out ≥ 16</td><td>71 of 160</td><td>Nearly half are large and pack well; only 29 have fan-out below 4.</td></tr>
+</tbody>
+</table>
+
+<h4>Flip-flop style distribution — a direct check on the RTL's reset discipline</h4>
+
+<table>
+<thead><tr><th style="width:14%">Clock enable</th><th style="width:18%">Synchronous set/reset</th><th style="width:18%">Asynchronous set/reset</th>
+<th style="width:14%">Registers</th><th>Slices</th></tr></thead>
+<tbody>
+<tr><td>No</td><td>No</td><td>No</td><td>2 559</td><td>562</td></tr>
+<tr><td>No</td><td><b>Yes</b></td><td>No</td><td>1 970</td><td>559</td></tr>
+<tr><td>Yes</td><td>No</td><td>No</td><td>925</td><td>267</td></tr>
+<tr><td>Yes</td><td><b>Yes</b></td><td>No</td><td>699</td><td>187</td></tr>
+<tr><td>No</td><td>No</td><td><i>Yes</i></td><td>135</td><td>44</td></tr>
+<tr><td>Yes</td><td>No</td><td><i>Yes</i></td><td>82</td><td>18</td></tr>
+</tbody>
+</table>
+
+<p><b>6 153 of 6 370 registers (96.6 %) use synchronous or no reset.</b> The 217 asynchronous-reset flops
+are all inside the debug hub's FIFO reset logic — they are also the cells behind the four
+<code>LUTAR-1</code> methodology warnings in §12.8. Not one asynchronously-reset flop belongs to the
+accelerator, which is exactly what §9 claims about the reset scheme and is worth knowing because
+asynchronous resets create <code>**async_default**</code> path groups and recovery/removal checks that
+this design simply never has to argue about.</p>
+
+<h3>12.8 DRC and methodology sign-off</h3>
+
+<h4>Design rule checks — <code>vio_debug_top_drc_routed.rpt</code></h4>
+
+<table>
+<thead><tr><th style="width:14%">Rule</th><th style="width:12%">Severity</th><th style="width:24%">Description</th><th style="width:8%">Count</th><th>Verdict</th></tr></thead>
+<tbody>
+<tr><td><code>RTSTAT-10</code></td><td>Warning</td><td>No routable loads</td><td>1 (25 nets)</td>
+    <td><b>Benign.</b> All 25 nets are inside <code>dbg_hub</code> and <code>u_ila</code> — IP outputs
+    (FIFO <code>overflow</code>, spare <code>ctl_reg</code> bits, unused BSCAN taps) that this
+    configuration does not consume. Nothing of ours is dangling.</td></tr>
+<tr><td><code>ZPS7-1</code></td><td>Warning</td><td>PS7 block required</td><td>1</td>
+    <td><b>Expected and deliberate.</b> This is a PL-only design on a Zynq part; no PS7 is instantiated.
+    Handled by <code>BITSTREAM.GENERAL.UNCONSTRAINEDPINS {Allow}</code> in the XDC (§21). It does not
+    affect timing.</td></tr>
+</tbody>
+</table>
+
+<p><b>0 errors and 0 critical warnings</b> at both checkpoints — <code>_drc_opted.rpt</code> after
+synthesis shows only <code>ZPS7-1</code>, and routing added only the benign <code>RTSTAT-10</code>. A
+single DRC <i>error</i> would have blocked <code>write_bitstream</code> entirely.</p>
+
+<h4>Methodology — <code>vio_debug_top_methodology_drc_routed.rpt</code></h4>
+
+<table>
+<thead><tr><th style="width:14%">Rule</th><th style="width:8%">Count</th><th style="width:26%">Description</th><th>Where it is, and what to do</th></tr></thead>
+<tbody>
+<tr><td><code>PDRC-190</code></td><td>11</td><td>Suboptimally placed synchronised register chain</td>
+    <td>All eleven are <code>stat_reg</code> → <code>stat_reg_1</code> synchroniser pairs inside
+    <code>dbg_hub</code>, split across different SLICEs instead of sharing one. It slightly raises MTBF
+    exposure in Xilinx's own IP. Not ours, and not actionable without floorplanning the debug hub.</td></tr>
+<tr><td><code>LUTAR-1</code></td><td>4</td><td>LUT drives asynchronous reset</td>
+    <td>All four are the <code>dbg_hub</code> FIFO reset generators — a multi-input LUT feeding a
+    <code>PRE</code> pin, which can glitch. Again inside Xilinx IP. The accelerator has no
+    asynchronous resets at all (see §12.7).</td></tr>
+<tr><td><code>SYNTH-6</code></td><td>1</td><td>Timing of a RAM block might be sub-optimal</td>
+    <td><b>This one is ours, and it is the only genuinely actionable finding in the whole report set.</b>
+    See the box below.</td></tr>
+</tbody>
+</table>
+
+<p><b>16 warnings, 0 errors, and — the line that matters — zero <code>TIMING-*</code> violations.</b>
+The <code>TIMING-*</code> family is the one that flags constraint mistakes: missing clock definitions,
+unconstrained I/O, clock crossings without exceptions, false paths hiding real failures. None fired,
+which is independent evidence that the clean Design Timing Summary in §12.2 was earned rather than
+produced by an incomplete set of constraints.</p>
+
+<div class="warn"><b><code>SYNTH-6</code>: the one finding inside the accelerator</b>
+<code>The timing for the instance u_acc/u_datapath/u_a_mem/mem_reg, implemented as a RAM block, might be
+sub-optimal as no output register was merged into the block.</code><br><br>
+A 7-series BRAM has an <b>optional internal output register</b>. If the RTL's read register is written so
+that Vivado can absorb it into the BRAM, the read data comes out of a hardened flip-flop right at the
+memory; if it cannot, the data leaves the BRAM combinationally and is captured by a fabric flop some
+distance away — costing both the BRAM's clock-to-out advantage and the routing hop.
+<code>a_mem</code> is in the second category.<br><br>
+<b>Why it does not matter today:</b> the a_mem read is not the critical path (§11 shows that is the PE
+MAC), and the design closes with +0.714 ns anyway. <b>Why it would matter tomorrow:</b> if you take the
+DSP route in §18 step 6 and shorten the MAC path, the a_mem read becomes a candidate for the new critical
+path — and this is then the next thing to fix. Note that absorbing the output register adds a cycle of
+read latency, so <code>RESULT_LATENCY</code>, <code>STORE_LATENCY</code>, the AGU pipe depth and the
+controller's DRAIN length must all be updated together (§18 step 4).</div>
+
+<h3>12.9 Every measured number, one table</h3>
+
+<table class="mono">
+<thead><tr><th style="width:40%">Metric</th><th style="width:22%">Value</th><th>Report</th></tr></thead>
+<tbody>
+<tr><td>WNS / TNS / failing / total (setup)</td><td>+0.714 ns / 0.000 / 0 / 5 181</td><td>timing summary</td></tr>
+<tr><td>WHS / THS / failing / total (hold)</td><td>+0.045 ns / 0.000 / 0 / 5 181</td><td>timing summary</td></tr>
+<tr><td>WPWS / TPWS / failing / total</td><td>+3.750 ns / 0.000 / 0 / 2 950</td><td>timing summary</td></tr>
+<tr><td>Worst bus skew slack</td><td>+9.253 ns (0.747 of 10.000 ns used)</td><td>bus_skew_routed</td></tr>
+<tr><td>Clocks / BUFG / MMCM / PLL</td><td>2 / 2 / 0 / 0</td><td>clock_utilization_routed</td></tr>
+<tr><td><code>sys_clk</code> loads / regions</td><td>6 497 / 4</td><td>clock_utilization_routed</td></tr>
+<tr><td>LUT (logic + memory), post-route</td><td>4 079 + 442 = 4 521 (8.5 %)</td><td>power_routed §1.1</td></tr>
+<tr><td>Registers, post-route</td><td>6 370 (5.99 %)</td><td>power_routed §1.1</td></tr>
+<tr><td>CARRY4 / F7-F8 muxes</td><td>423 / 191</td><td>power_routed §1.1</td></tr>
+<tr><td>Block RAM tiles</td><td>11 of 140 (7.86 %)</td><td>power_routed §1.1</td></tr>
+<tr><td>DSP48E1</td><td>0 of 220 (0.00 %)</td><td>utilization_synth</td></tr>
+<tr><td>Bonded IOB</td><td>1 of 200 (0.50 %)</td><td>io_placed</td></tr>
+<tr><td>Total on-chip power</td><td>0.145 W (0.042 dyn + 0.104 static)</td><td>power_routed</td></tr>
+<tr><td>Accelerator dynamic power</td><td>0.012 W (PE array alone: 0.003 W)</td><td>power_routed §3.1</td></tr>
+<tr><td>Junction temp / max ambient</td><td>26.7 °C / 83.3 °C</td><td>power_routed</td></tr>
+<tr><td>Control sets (actual / minimum)</td><td>160 / 158</td><td>control_sets_placed</td></tr>
+<tr><td>Async-reset registers</td><td>217 of 6 370 (3.4 %, all in debug IP)</td><td>control_sets_placed</td></tr>
+<tr><td>DRC errors / crit. warnings / warnings</td><td>0 / 0 / 2</td><td>drc_routed</td></tr>
+<tr><td>Methodology violations (TIMING-*)</td><td>16 warnings, <b>0 timing</b></td><td>methodology_drc_routed</td></tr>
+<tr><td><b>Cycles per 4×4 matrix multiply</b></td><td><b>17 (170 ns); 13 (130 ns) reusing weights</b></td><td><code>controller.sv</code>, §14</td></tr>
+</tbody>
+</table>
+
+<h2 class="pb">13. Reading the numbers: margin, F<sub>max</sub>, headroom</h2>
+
+<div class="eq">
+Margin (%) = WNS / T<sub>period</sub> × 100<br>
+F<sub>max</sub> ≈ 1 / (T<sub>period</sub> − WNS)
+</div>
+
+<table>
+<thead><tr><th style="width:28%">Build</th><th style="width:14%">WNS</th><th style="width:16%">Margin on 10 ns</th>
+<th style="width:20%">Longest path takes</th><th>Estimated F<sub>max</sub></th></tr></thead>
+<tbody>
+<tr><td>A — accelerator alone</td><td>+1.279 ns</td><td><b>12.8 %</b></td><td>10.000 − 1.279 = 8.721 ns</td><td>1 / 8.721 ns ≈ <b>114.7 MHz</b></td></tr>
+<tr><td>B — with VIO + ILA</td><td>+0.714 ns</td><td><b>7.1 %</b></td><td>10.000 − 0.714 = 9.286 ns</td><td>1 / 9.286 ns ≈ <b>107.7 MHz</b></td></tr>
+</tbody>
+</table>
+
+<p>How to interpret those figures honestly:</p>
+
+<ul>
+  <li><b>Both pass, comfortably enough to ship.</b> Zero failing endpoints, zero TNS.</li>
+  <li><b>7.1 % is a working margin, not a luxurious one.</b> It is entirely adequate for a design that
+      is programmed, run and observed on a bench at a fixed 100 MHz. It is <i>not</i> the kind of margin
+      that would survive being asked for 150 MHz.</li>
+  <li><b>The debug cores cost ~0.565 ns of setup slack</b> (1.279 → 0.714). That is the price of
+      observability, and it is worth stating explicitly: instrumenting a design is not free in timing,
+      because the probes contend for the same routing resources as the logic they observe.</li>
+  <li><b>WHS fell from +0.263 ns to +0.045 ns.</b> Still positive, still 0 failing endpoints. Tight hold
+      slack is normal after place-and-route because the router deliberately does not over-insert hold
+      buffers — every one of them would eat setup margin.</li>
+  <li><b>WPWS is +3.750 ns in both builds</b>, and it is the same number for a reason: a 10 ns clock at
+      50 % duty has a 5.000 ns high pulse, and the 7-series minimum high pulse for a BUFG-driven
+      flip-flop is 1.250 ns. 5.000 − 1.250 = 3.750 ns. This value is a property of the <i>clock</i>, not
+      of your logic, which is why adding the entire debug infrastructure did not move it by a picosecond.</li>
+</ul>
+
+<div class="warn"><b>Do not treat F<sub>max</sub> as a promise</b>
+F<sub>max</sub> derived from WNS is a linear extrapolation from one operating point. Re-constraining the
+design at 114 MHz will <i>not</i> reliably give WNS = 0 — the tools optimise <b>to the constraint</b>,
+so a tighter constraint changes placement, routing and even logic mapping. The only way to know the real
+F<sub>max</sub> is to re-run implementation at the new period and read the new WNS.</div>
+
+<h2 class="pb">14. Cycles per matrix multiplication — latency and throughput</h2>
+
+<p>WNS tells you <b>how fast one clock cycle may be</b>. It says nothing about <b>how many cycles the job
+takes</b>. Both are needed before you can state how long a matrix multiplication actually costs, and the
+second number comes not from Vivado but from the RTL — specifically from the phase counters in
+<code>controller.sv</code>. This section derives it.</p>
+
+<h3>14.1 The six phases and their exact durations</h3>
+
+<p>The controller is a five-state machine with <b>fixed, data-independent phase lengths</b>. There is no
+back-pressure, no handshake and no stall condition anywhere in the design, so the cycle count is not an
+average or a typical case — it is exact, every time:</p>
+
+<table>
+<thead><tr><th style="width:14%">Phase</th><th style="width:22%">Duration (parameter)</th><th style="width:12%">4×4 value</th><th>What is happening</th></tr></thead>
+<tbody>
+<tr><td><code>IDLE</code></td><td><i>reference point</i></td><td><i>—</i></td>
+    <td><code>start</code> is sampled and <code>num_vectors</code> latched; the state moves to
+    <code>WLOAD</code> on that same edge. Latency is measured <b>from</b> this edge, so this cycle is
+    the zero point rather than a term in the total. It <i>is</i> counted in the issue interval.</td></tr>
+<tr><td><code>WLOAD</code></td><td><code>ROWS</code></td><td><b>4</b></td>
+    <td>The four weight rows are shifted into the array, <b>bottom row first</b>, one row per cycle.
+    <b>Skipped entirely</b> when the array already holds the right weights — see §14.4.</td></tr>
+<tr><td><code>COMPUTE</code></td><td><code>num_vectors</code> = N</td><td><b>4</b></td>
+    <td>One activation vector issued per clock. This is the only phase that does useful arithmetic, and
+    the array is fully busy for all of it.</td></tr>
+<tr><td><code>DRAIN</code></td><td><code>STORE_LATENCY = 1 + ROWS + COLS − 2 + 1</code></td><td><b>8</b></td>
+    <td>The last activation vector issued is still in flight through the skew buffer, the array, the
+    de-skew buffer and the output write port. The FSM waits exactly as long as that pipeline is deep.</td></tr>
+<tr><td><code>DONE</code></td><td>1</td><td><b>1</b></td>
+    <td><code>done</code> pulses high for one cycle, then the machine returns to <code>IDLE</code>.</td></tr>
+</tbody>
+</table>
+
+<p>The <code>IDLE</code> cycle is the <b>reference point</b>, not a term in the sum: latency is measured
+<i>from</i> the edge that samples <code>start</code>, so the phases that follow it are what get counted.</p>
+
+<div class="eq">
+<b>Weights loaded</b> = ROWS + N + STORE_LATENCY + 1<sub>(DONE)</sub>
+= 4 + N + 8 + 1 = <b>N + 13</b><br>
+<b>Weights reused</b> = &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; N + STORE_LATENCY + 1<sub>(DONE)</sub>
+= &nbsp;&nbsp;&nbsp;&nbsp; N + 8 + 1 = <b>N + 9</b><br><br>
+For one complete 4×4 × 4×4 matrix multiplication, <b>N = 4</b>:<br>
+<b class="big">4 + 13 = 17 clock cycles = 170 ns at 100 MHz</b><br>
+<b class="big">4 + 9 &nbsp;= 13 clock cycles = 130 ns</b> when the weight matrix has not changed<br><br>
+Counting the <code>IDLE</code> cycle as well gives <b>N + 14 = 18</b> (or 14) — the <b>issue
+interval</b>, i.e. how often a new <code>start</code> can be accepted, not the latency.
+</div>
+
+<h3>14.2 The timeline, cycle by cycle</h3>
+
+<p>Numbering from the clock edge on which <code>start</code> is sampled:</p>
+
+<div class="ascii">
+  A. NEW WEIGHT MATRIX  -  17 cycles
+
+  cycle   0    1  2  3  4    5  6  7  8    9 10 11 12 13 14 15 16   17   18
+        ┌────┬──────────────┬───────────┬────────────────────────┬─────┬────
+ state  │IDLE│    WLOAD     │  COMPUTE  │         DRAIN          │DONE │IDLE
+        │    │  4 cycles    │ N=4 cycles│        8 cycles        │  1  │
+        └────┴──────────────┴───────────┴────────────────────────┴─────┴────
+ start  ▔█▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+ busy   ▁▁▁▁▁███████████████████████████████████████████████████▁▁▁▁▁▁▁▁▁▁
+ done   ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁█▁▁▁▁
+
+   ├─────────────── 17 cycles, start edge → done pulse ──────────────┤
+   ├───────────── 18 cycles, start edge → next start accepted ─────────────┤
+
+
+  B. SAME WEIGHTS AS THE PREVIOUS JOB  -  13 cycles
+
+  cycle   0    1  2  3  4    5  6  7  8  9 10 11 12   13   14
+        ┌────┬───────────┬────────────────────────┬─────┬────
+ state  │IDLE│  COMPUTE  │         DRAIN          │DONE │IDLE
+        │    │ N=4 cycles│        8 cycles        │  1  │
+        └────┴───────────┴────────────────────────┴─────┴────
+
+   WLOAD is not entered at all: the array still physically holds the weights.
+
+   Useful arithmetic happens only in the 4 COMPUTE cycles.
+   The other 13 are weight loading (4), pipeline drain (8) and the DONE handshake (1);
+   drop the weight load and only 9 remain.
+   Period 0 is the reference point, not part of the total - it is what makes the
+   issue interval one larger than the latency.
+</div>
+
+<table>
+<thead><tr><th style="width:44%">Question</th><th style="width:16%">Answer</th><th>Why</th></tr></thead>
+<tbody>
+<tr><td>Cycles from <code>start</code> to <code>done</code></td><td><b>17</b> / <b>13</b></td><td>The latency of one job, loading / reusing weights. These are the numbers to quote.</td></tr>
+<tr><td>Cycles for which <code>busy</code> is high</td><td>16 / 12</td><td><code>busy</code> covers WLOAD…DRAIN and is already low when <code>done</code> fires.</td></tr>
+<tr><td>Cycles before the next <code>start</code> is accepted</td><td>18 / 14</td>
+    <td>The machine passes through <code>DONE</code> and back to <code>IDLE</code>; <code>start</code> is only sampled in <code>IDLE</code>. This is the issue interval for back-to-back jobs.</td></tr>
+<tr><td>Cycles of actual multiply-accumulate work</td><td>4</td><td>COMPUTE only — one activation vector per cycle.</td></tr>
+</tbody>
+</table>
+
+<div class="warn"><b>A common off-by-one, worth getting right</b>
+<code>start</code> is sampled <b>only in <code>IDLE</code></b> and is ignored while <code>busy</code> is
+high. If a host asserts <code>start</code> during a job it is silently dropped — no error, no stall, the
+command simply never happens. That is the single most common bring-up bug on this design, and it looks
+exactly like a timing failure from the outside. See <code>implementation_method.pdf</code> §4 on why the
+VIO's <code>start</code> must go through the <code>oneshot</code> module.</div>
+
+<h3 class="pb">14.3 What that means as throughput</h3>
+
+<p>One 4×4 × 4×4 multiplication is 4 × 4 × 4 = <b>64 multiply-accumulate operations</b>, or 128
+arithmetic operations counting the multiply and the add separately.</p>
+
+<table>
+<thead><tr><th style="width:38%">Measure</th><th style="width:22%">Value at 100 MHz</th><th>Derivation</th></tr></thead>
+<tbody>
+<tr><td><b>Latency, one 4×4 multiply</b></td><td class="big">170 ns</td><td>17 cycles × 10.000 ns</td></tr>
+<tr><td>&nbsp;&nbsp;…reusing the loaded weights</td><td class="big">130 ns</td><td>13 cycles × 10.000 ns</td></tr>
+<tr><td>Back-to-back repeat rate</td><td>180 ns → 5.56 M multiplies/s<br>140 ns → 7.14 M reusing weights</td><td>18- / 14-cycle issue interval</td></tr>
+<tr><td>Cycles per output element</td><td>1.06 / 0.81</td><td>17 or 13 cycles ÷ 16 results</td></tr>
+<tr><td><b>Peak arithmetic rate</b> (during COMPUTE)</td><td><b>1.6 GMAC/s = 3.2 GOP/s</b></td>
+    <td>16 PEs × 1 MAC/cycle × 100 MHz. This is the array's ceiling and it is <i>sustained</i> for the whole COMPUTE phase — every PE is busy every cycle.</td></tr>
+<tr><td>Average rate over the whole 4×4 job</td><td>0.376 GMAC/s = 0.753 GOP/s<br>0.492 GMAC/s reusing weights</td>
+    <td>64 MACs ÷ 170 ns. <b>23.5 % of peak</b> (30.8 % reusing), because 13 of the 17 cycles are overhead.</td></tr>
+<tr><td>Latency at the estimated F<sub>max</sub></td><td>≈ 158 ns</td><td>17 × 9.286 ns at 107.7 MHz (see §13 for why F<sub>max</sub> is not a promise)</td></tr>
+</tbody>
+</table>
+
+<h3>14.4 Why 13 cycles of overhead, and how it amortises</h3>
+
+<p>The fixed cycles are not waste in the sense of bad design — they are the physical depth of the
+pipeline that <i>makes</i> the design fast (§15). But for a job with only 4 vectors they dominate.
+Efficiency is exactly <code>N / (N + 13)</code> when the weights are loaded, and
+<code>N / (N + 9)</code> when they are reused:</p>
+
+<table>
+<thead><tr><th style="width:13%">N (vectors)</th><th style="width:13%">Cycles<br>(load)</th><th style="width:13%">Cycles<br>(reuse)</th><th style="width:12%">Time<br>(load)</th>
+<th style="width:11%">MACs</th><th style="width:19%">Array efficiency<br>load / reuse</th><th>Effective rate (load)</th></tr></thead>
+<tbody>
+<tr><td><b>4</b> <span class="small">(one 4×4 matrix)</span></td><td><b>17</b></td><td><b>13</b></td><td><b>170 ns</b></td><td>64</td><td><b>23.5 % / 30.8 %</b></td><td>0.38 GMAC/s</td></tr>
+<tr><td>8</td><td>21</td><td>17</td><td>210 ns</td><td>128</td><td>38.1 % / 47.1 %</td><td>0.61 GMAC/s</td></tr>
+<tr><td>16</td><td>29</td><td>25</td><td>290 ns</td><td>256</td><td>55.2 % / 64.0 %</td><td>0.88 GMAC/s</td></tr>
+<tr><td>64</td><td>77</td><td>73</td><td>770 ns</td><td>1 024</td><td>83.1 % / 87.7 %</td><td>1.33 GMAC/s</td></tr>
+<tr><td>128</td><td>141</td><td>137</td><td>1.41 µs</td><td>2 048</td><td>90.8 % / 93.4 %</td><td>1.45 GMAC/s</td></tr>
+<tr><td>255 <span class="small">(max, 8-bit <code>num_vectors</code>)</span></td><td>268</td><td>264</td><td>2.68 µs</td><td>4 080</td><td>95.1 % / 96.6 %</td><td>1.52 GMAC/s</td></tr>
+</tbody>
+</table>
+
+<p>This is the weight-stationary bargain in one table. The weights are loaded once and then reused for
+every activation vector, so the longer you keep streaming vectors against the same weight matrix, the
+closer you get to the 1.6 GMAC/s ceiling. <b>A single isolated 4×4 multiplication is the worst case this
+architecture has</b>; it is also, unfortunately, the case that a 4×4 demonstration measures.</p>
+
+<div class="tip"><b>Weight reuse is automatic — you get the 13-cycle path for free</b>
+<code>accelerator_system_top</code> keeps a one-bit <code>weights_dirty</code> flag. It is set by any
+host write to <code>weight_mem</code> that actually reaches the SRAM, cleared on the final WLOAD cycle,
+and set by reset. It drives <code>controller.load_weights</code>, so a job whose weight matrix has not
+changed <b>skips WLOAD entirely and finishes in N + 9</b>. Nothing in the host protocol changes and the
+module's port list is unchanged — <code>fpga_top</code>, <code>vio_debug_top</code> and
+<code>accel_axi</code> all benefit without modification. Verified in
+<code>tb_accelerator_system_top</code> T7/T8: a reuse job measures 13 cycles with WLOAD never entered
+and results bit-identical to a full-load job, and rewriting one weight row puts the next job back on
+the 17-cycle path.</div>
+
+<h3>14.5 Energy per matrix multiplication</h3>
+
+<p>Combining §12.6's power figures with the 170 ns job time gives the metric accelerator work is usually
+judged by. These are derived from a <b>vector-less, medium-confidence</b> power estimate (§12.6), so
+treat them as the right order of magnitude rather than as measured joules:</p>
+
+<table>
+<thead><tr><th style="width:34%">Scope</th><th style="width:14%">Power</th><th style="width:18%">Energy per 4×4 multiply</th><th style="width:14%">Per MAC</th><th>Reusing weights</th></tr></thead>
+<tbody>
+<tr><td>Whole chip, including static leakage</td><td>0.145 W</td><td>24.7 nJ</td><td>385 pJ</td><td>18.9 nJ / 295 pJ</td></tr>
+<tr><td>Whole design, dynamic only</td><td>0.042 W</td><td>7.1 nJ</td><td>112 pJ</td><td>5.5 nJ / 85 pJ</td></tr>
+<tr><td>The accelerator alone (<code>u_acc</code>)</td><td>0.012 W</td><td>2.0 nJ</td><td>32 pJ</td><td>1.6 nJ / 24 pJ</td></tr>
+<tr><td><b>The 4×4 PE array alone</b> (<code>u_fabric</code>)</td><td>0.003 W</td><td><b>0.51 nJ</b></td><td><b>8 pJ</b></td><td>0.39 nJ / 6 pJ</td></tr>
+</tbody>
+</table>
+
+<p>Two honest observations. First, the gap between the 8 pJ/MAC of the arithmetic and the 385 pJ/MAC of
+the whole chip is almost entirely <b>static leakage and debug instrumentation</b> — the accelerator is a
+2 % tenant of a device it does not need. Second, because efficiency is only 23.5 % at N = 4, the energy
+per MAC falls sharply with larger N: at N = 255 the same arithmetic-only figure drops to roughly 2 pJ/MAC,
+since the array is busy 95 % of the time instead of 24 %.</p>
+
+<h3>14.6 What is <i>not</i> in the 17 cycles</h3>
+
+<table>
+<thead><tr><th style="width:32%">Activity</th><th style="width:20%">Cost</th><th>Why it is excluded</th></tr></thead>
+<tbody>
+<tr><td>Loading the activation matrix into <code>a_mem</code></td><td>Host-paced</td>
+    <td>Done before <code>start</code>, over JTAG through the VIO. Milliseconds of human/USB latency, not clock cycles. The accelerator is idle throughout.</td></tr>
+<tr><td>Loading the weight matrix into <code>weight_mem</code></td><td>Host-paced</td>
+    <td>Same: written over the host port before <code>start</code>. The 4 <code>WLOAD</code> cycles are the <i>array</i> load, not the memory write.</td></tr>
+<tr><td>Reading the 16 results back out</td><td>Host-paced</td>
+    <td><code>output_mem</code> holds the results indefinitely after <code>done</code>; the host reads them at its leisure. Over JTAG this is by far the slowest part of the whole exercise, and it is entirely an interface cost.</td></tr>
+<tr><td>Power-on reset</td><td>65 536 cycles (655 µs)</td><td>Once per configuration, not per job (§9).</td></tr>
+</tbody>
+</table>
+
+<div class="tip"><b>The bring-up consequence</b>
+On the board, a 4×4 multiplication finishes in <b>230 nanoseconds</b> — roughly ten thousand times faster
+than a human can click a VIO button. This is precisely why <code>done</code> has to be made
+<b>sticky</b> in <code>vio_debug_top</code> and why the ILA is triggered on <code>start</code> rather
+than polled: the entire computation is over long before any JTAG transaction can observe it in flight.
+The 17-cycle figure is therefore not just a performance number, it is the reason the debug architecture
+looks the way it does.</div>
+
+<h2 class="pb">15. Why this design closes timing so comfortably</h2>
+
+<p>The positive WNS is not luck. It is a consequence of specific architectural choices, and being able
+to name them is far more valuable than quoting the number:</p>
+
+<table>
+<thead><tr><th style="width:32%">Design property</th><th>Why it helps timing</th></tr></thead>
+<tbody>
+<tr><td><b>Systolic architecture: short local links only</b></td>
+    <td>The defining property of a systolic array. Every PE talks only to its immediate north/west
+    neighbours through a register. There are no long global buses, no broadcast nets, and no
+    combinational path that crosses the array. <b>This is the single biggest reason the design is
+    fast</b>, and it is why systolic arrays are used for high-frequency accelerators in the first place.</td></tr>
+<tr><td><b>Every PE output is registered</b></td>
+    <td><code>a_q</code>, <code>valid_q</code>, <code>psum_q</code> and <code>weight_q</code> are all
+    flip-flops. Combinational logic never spans two PEs — except the <code>wload</code> shift mux, which
+    is active only during the 4-cycle weight load when nothing else is happening.</td></tr>
+<tr><td><b>Deeply pipelined by construction</b></td>
+    <td>The 8-cycle store latency is not overhead invented for timing — it falls out of the dataflow
+    (3 down the column, +c east, +(3−c) de-skew, +1 memory, +1 strobe). A design whose <i>correctness</i>
+    model is already pipeline-shaped tends to close timing without extra effort.</td></tr>
+<tr><td><b>Narrow datapath: int8 in, int32 accumulate</b></td>
+    <td>8×8 multipliers are small. A 32-bit accumulator carry chain is one CARRY4 column group. Had this
+    been 16×16 or float, the critical path would be several times longer.</td></tr>
+<tr><td><b>Tiny control logic</b></td>
+    <td>A 5-state FSM with fixed phase durations, and an AGU built from counters and a shift register.
+    No wide comparators, no priority encoders, no arbitration in the datapath.</td></tr>
+<tr><td><b>No back-pressure, no handshakes</b></td>
+    <td>There is no ready/valid negotiation anywhere. Handshake logic creates combinational paths that
+    run <i>backwards</i> through a pipeline and is a common source of critical paths. Fixed latency
+    removes the whole category.</td></tr>
+<tr><td><b>Very low utilisation (2.9 % LUT, 0.7 % FF)</b></td>
+    <td>The placer has the entire device to spread into and the router has abundant free channels. Net
+    delay — often more than half the path — stays small. Timing gets dramatically harder above roughly
+    70–80 % utilisation.</td></tr>
+<tr><td><b>Single clock domain, synchronous reset</b></td>
+    <td>No CDC, no clock groups, no recovery/removal analysis on asynchronous resets, no MMCM phase
+    relationships to get wrong.</td></tr>
+<tr><td><b>Modest target frequency</b></td>
+    <td>100 MHz on a 7-series device is a relaxed target. The board oscillator sets it; the design does
+    not need more.</td></tr>
+</tbody>
+</table>
+
+<h2>16. What erodes the margin — debug cores and routing</h2>
+
+<p>Build B is 0.565 ns slower than Build A. Everything below contributes, and each is a lever you can
+pull in the opposite direction if you ever need margin back:</p>
+
+<table>
+<thead><tr><th style="width:32%">Cause</th><th style="width:14%">Effect</th><th>What to do about it</th></tr></thead>
+<tbody>
+<tr><td><b>ILA capture registers and BRAM</b></td><td>Large</td>
+    <td>An ILA at depth 1024 with 288 probe bits needs ≈ 8 BRAM36 — more than three times the
+    accelerator's own memory footprint. <b>Reduce sample depth to 256</b> (the whole job is 17 clocks);
+    that saves about 6 BRAM36 and the routing pressure that goes with them.</td></tr>
+<tr><td><b>Probing wide buses</b></td><td>Large</td>
+    <td>Two 128-bit probes (<code>o_rdata</code>, <code>result_flat</code>) on both the VIO and the ILA
+    is 512 probe bits of pure routing. Probe only what you need for the question you are asking.</td></tr>
+<tr><td><b>The debug hub's JTAG shift chain</b></td><td>Moderate</td>
+    <td>Unavoidable if you want any debug core. It is well constrained by the IP itself.</td></tr>
+<tr><td><b><code>-flatten_hierarchy none</code></b></td><td>Moderate</td>
+    <td>Required if you want hierarchical net names to survive so you can <code>MARK_DEBUG</code> them
+    from the XDC without editing the RTL. It genuinely costs QoR because cross-boundary optimisation is
+    disabled. Use it while debugging, drop it for a final build.</td></tr>
+<tr><td><b>Post-synthesis vs post-route</b></td><td>Systematic</td>
+    <td>Build A's +1.279 ns is a <b>post-synthesis estimate</b>, and on 7-series those are generally
+    optimistic because routing is not yet real. <b>Only post-route numbers are sign-off numbers.</b></td></tr>
+<tr><td><b>High utilisation</b></td><td>Severe, above ~75 %</td>
+    <td>Not a problem here at 2.9 %, but the mechanism is worth knowing: congestion forces the router
+    onto longer detours, and net delay balloons.</td></tr>
+</tbody>
+</table>
+
+<div class="warn"><b>The honest caveat about Build A</b>
+An earlier edition of the VIO/ILA guide described this design's margin as "enormous" and advised that a
+negative WNS should make you suspect the constraint rather than the design. That was overstated and has
+been corrected. <b>+1.279 ns on a 10 ns period is ~13 % — comfortable and passing, but not enormous</b>,
+and it is a post-synthesis figure without any debug logic. If <i>your</i> build reports a negative WNS,
+check the constraint first because that is cheap to check, but do not dismiss the result.</div>
+
+<h2 class="pb">17. How to read a Vivado timing report line by line</h2>
+
+<h3>17.1 The commands</h3>
+<pre><code>check_timing                     ;# FIRST, EVERY TIME. Unconstrained clocks/endpoints, missing I/O delay
+report_clocks                    ;# confirm exactly the clocks you intended exist, at the right periods
+report_timing_summary            ;# WNS/TNS/WHS/THS/WPWS + failing/total endpoints + unconstrained count
+report_timing -delay_type max -max_paths 10 -nworst 10 -sort_by slack   ;# the 10 worst setup paths
+report_timing -delay_type min -max_paths 10                            ;# the 10 worst hold paths
+report_utilization                                                     ;# LUT/FF/BRAM/DSP
+report_design_analysis -congestion                                     ;# routing congestion, if timing is hard
+report_methodology                                                     ;# TIMING-* rule violations</code></pre>
+
+<h3>17.2 Anatomy of a single path report</h3>
+
+<pre><code>Slack (MET) :             0.714ns  (required time - arrival time)
+  Source:                 u_acc/.../psum_q_reg[17]/C
+                            (rising edge-triggered cell FDRE clocked by sys_clk {rise@0.000 fall@5.000 period=10.000})
+  Destination:            u_acc/.../psum_q_reg[19]/D
+                            (rising edge-triggered cell FDRE clocked by sys_clk ...)
+  Path Group:             sys_clk
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            10.000ns  (sys_clk rise@10.000 - sys_clk rise@0.000)
+  Data Path Delay:         9.0xx ns  (logic 3.xxx ns (35%)  route 5.xxx ns (65%))
+  Logic Levels:           12  (LUT2=1 LUT6=4 CARRY4=7)
+  Clock Path Skew:        -0.0xx ns
+  Clock Uncertainty:       0.035 ns</code></pre>
+
+<table>
+<thead><tr><th style="width:26%">Field</th><th>How to use it when diagnosing</th></tr></thead>
+<tbody>
+<tr><td><b>Slack (MET / VIOLATED)</b></td><td>The verdict for this one path. MET = positive.</td></tr>
+<tr><td><b>Source / Destination</b></td><td>The startpoint and endpoint <i>by instance name</i>. This is how you find out which module is slow. If they are both inside <code>u_acc/.../pe_*</code>, your critical path is the MAC.</td></tr>
+<tr><td><b>Requirement</b></td><td>The period the tool used. If this is not what you expected, your constraint is wrong — check before touching the RTL.</td></tr>
+<tr><td><b>Data Path Delay + logic/route split</b></td>
+    <td><b>The most diagnostic line in the report.</b> Logic-dominated (&gt; 60 % logic) → restructure or pipeline the logic. Route-dominated (&gt; 60 % route) → a placement/congestion problem: improve the placer directives, reduce fan-out, or reduce utilisation.</td></tr>
+<tr><td><b>Logic Levels</b></td><td>How many cells deep the cloud is. In the 1–8 range at 100 MHz you are usually fine; 20+ at 100 MHz is a red flag. A long <code>CARRY4</code> chain here points at a wide adder or comparator.</td></tr>
+<tr><td><b>Clock Path Skew</b></td><td>Usually tiny inside one BUFG domain. A large value suggests the clock is not on a global buffer.</td></tr>
+<tr><td><b>Clock Uncertainty</b></td><td>Jitter plus tool margin. You cannot remove it; it is there to keep you honest.</td></tr>
+</tbody>
+</table>
+
+<h2>18. What to do when WNS is negative — ordered checklist</h2>
+
+<p>Work down this list. It is deliberately ordered cheapest-and-most-likely first.</p>
+
+<table>
+<thead><tr><th style="width:5%">#</th><th style="width:30%">Step</th><th>Detail</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><b>Check the constraint is what you think</b></td>
+    <td>Run <code>report_clocks</code>. Is the period right? Did you accidentally define the clock twice
+    (once in your XDC, once by an IP), producing overlapping definitions and nonsense analysis? Is
+    <code>create_clock</code> on the port or wrongly on a BUFG output?</td></tr>
+<tr><td>2</td><td><b>Run <code>check_timing</code></b></td>
+    <td>Unconstrained endpoints, no_clock, missing input/output delays. Fixing these can make WNS
+    <i>worse</i> — because paths that were invisible are now being checked. That is a good thing.</td></tr>
+<tr><td>3</td><td><b>Read the worst path</b></td>
+    <td><code>report_timing -delay_type max -nworst 10</code>. Identify the module by instance name. Do
+    not optimise anything until you know what the path actually is.</td></tr>
+<tr><td>4</td><td><b>Logic-dominated? Pipeline it.</b></td>
+    <td>Insert a register in the middle of the long cloud. This is the definitive fix for setup. It costs
+    one cycle of latency — which for a fixed-latency design like this one means updating
+    <code>RESULT_LATENCY</code> / <code>STORE_LATENCY</code> and the AGU pipe depth <b>consistently</b>,
+    or the results land at the wrong addresses.</td></tr>
+<tr><td>5</td><td><b>Route-dominated? Attack placement.</b></td>
+    <td>Try stronger implementation directives (<code>Explore</code>, <code>AggressiveExplore</code>),
+    enable phys_opt, reduce high fan-out nets, or floorplan with a Pblock to keep a tight cluster together.</td></tr>
+<tr><td>6</td><td><b>Use hard blocks</b></td>
+    <td>For this design specifically: force the multipliers into DSP48E1 slices with
+    <code>(* use_dsp = "yes" *)</code>. Hard blocks are faster and denser than fabric equivalents.</td></tr>
+<tr><td>7</td><td><b>Reduce the debug footprint</b></td>
+    <td>ILA depth 1024 → 256; drop the wide 128-bit probes you are not currently reading; remove
+    <code>-flatten_hierarchy none</code>.</td></tr>
+<tr><td>8</td><td><b>Add legitimate timing exceptions — carefully</b></td>
+    <td>Only for paths that genuinely are multi-cycle or genuinely do not matter. See the warning below.</td></tr>
+<tr><td>9</td><td><b>Lower the clock frequency</b></td>
+    <td>The last resort — and for <i>this</i> project a perfectly legitimate one. <b>None of the four
+    interface methods depends on throughput.</b> Add an MMCM and run the fabric at 50 MHz; the period
+    doubles and every setup path passes with enormous room. If you do, remember to update
+    <code>C_CLK_INPUT_FREQ_HZ</code> on <code>dbg_hub</code> to match, or you will trade a timing failure
+    for a "debug hub not detected" failure.</td></tr>
+</tbody>
+</table>
+
+<div class="warn"><b>Timing exceptions are how designs "pass" and then fail in the lab</b>
+<code>set_false_path</code> switches analysis <b>off</b> for a path. If the path was real, you have not
+fixed anything — you have hidden it. <code>set_multicycle_path</code> must constrain <b>both</b> setup
+and hold: <code>-setup N</code> followed by <code>-hold N-1</code>. Doing only the setup half is a
+classic silent hold violation that reaches silicon. Use exceptions only where you can articulate, in one
+sentence, why the path is genuinely not a single-cycle path.</div>
+
+<h2 class="pb">19. Hold violations — a different animal</h2>
+
+<p>Restating section 5 because it is the most commonly misunderstood point in STA, and a favourite
+interview trap:</p>
+
+<table>
+<thead><tr><th style="width:24%"></th><th style="width:38%">Setup violation (negative WNS)</th><th>Hold violation (negative WHS)</th></tr></thead>
+<tbody>
+<tr><td><b>Question asked</b></td><td>Is the data too <b>slow</b>?</td><td>Is the data too <b>fast</b>?</td></tr>
+<tr><td><b>Edges involved</b></td><td>Launch edge and the <b>next</b> capture edge</td><td>Launch edge and <b>that same</b> edge</td></tr>
+<tr><td><b>Depends on clock period?</b></td><td><b>Yes</b> — period is in the equation</td><td><b>No</b> — period is absent</td></tr>
+<tr><td><b>Fixed by slowing the clock?</b></td><td><b>Yes</b></td><td><b>Never.</b> Broken at every frequency.</td></tr>
+<tr><td><b>Typical fix</b></td><td>Pipeline, restructure logic, better placement, hard blocks</td><td>Insert delay/buffers on the short path, fix clock skew, fix the CDC that caused it</td></tr>
+<tr><td><b>Who usually fixes it</b></td><td>You, the designer</td><td>The router, automatically — a leftover means something structural is wrong</td></tr>
+<tr><td><b>Our result</b></td><td>WNS +0.714 ns, 0 failing</td><td>WHS +0.045 ns, 0 failing</td></tr>
+</tbody>
+</table>
+
+<h2>20. Clock domain crossing and this design</h2>
+
+<p>CDC is where most real timing disasters live, so it is worth stating precisely why this project is
+mostly exempt — and where the one crossing is.</p>
+
+<ul>
+  <li><b>The accelerator itself has exactly one clock.</b> Every flip-flop in
+      <code>accelerator_system_top</code> is on <code>sys_clk</code>. There is no crossing to
+      synchronise, so no two-flop synchronisers, no gray-coded pointers, no async FIFOs.</li>
+  <li><b>The reset is synchronous and glitch-free by construction.</b> A 16-bit counter holds
+      <code>rst_n</code> low for 65 536 clocks (≈ 655 µs) after configuration, then releases it
+      synchronously. Synchronous release means no recovery/removal timing problem.</li>
+  <li><b>The one real crossing is JTAG ↔ fabric</b>, inside the debug hub. You do not design or
+      constrain it — Xilinx's debug IP owns both sides. Your one obligation is to tell it the truth
+      about the fabric clock:
+      <pre style="margin:5px 0"><code>set_property C_CLK_INPUT_FREQ_HZ  100000000 [get_debug_cores dbg_hub]
+set_property C_ENABLE_CLK_DIVIDER false     [get_debug_cores dbg_hub]</code></pre>
+      Getting this wrong is the number-one cause of "The debug hub core was not detected".</li>
+  <li><b>The VIO's level-to-pulse conversion is not a CDC problem, it is a rate problem.</b> A VIO
+      <code>probe_out</code> is already synchronous to <code>clk</code>; the issue is that a human holds
+      it high for milliseconds while the accelerator wants a one-clock pulse. That is solved in logic by
+      the <code>oneshot</code> module, not by a synchroniser. See
+      <code>implementation_method.pdf</code> §4.</li>
+</ul>
+
+<h2>21. The constraint file, annotated</h2>
+
+<pre><code>##---- 100 MHz on-board PL clock (Bank 13, GCLK) ----------------------
+set_property -dict {PACKAGE_PIN Y9 IOSTANDARD LVCMOS33} [get_ports clk]
+create_clock -name sys_clk -period 10.000 [get_ports clk]
+   #  ^ physical placement AND the timing budget. Verify Y9 against the
+   #    Digilent master XDC for YOUR board revision before you build.
+
+##---- Build hygiene --------------------------------------------------
+set_property BITSTREAM.GENERAL.UNCONSTRAINEDPINS {Allow} [current_design]
+   #  PL-only design on a Zynq part: silences the harmless unconstrained-PS
+   #  DRC so bitstream generation completes. It does NOT affect timing.
+
+##---- Debug hub ------------------------------------------------------
+if {[llength [get_debug_cores -quiet dbg_hub]]} {
+    set_property C_CLK_INPUT_FREQ_HZ   100000000 [get_debug_cores dbg_hub]
+    set_property C_ENABLE_CLK_DIVIDER  false     [get_debug_cores dbg_hub]
+    set_property C_USER_SCAN_CHAIN     1         [get_debug_cores dbg_hub]
+    connect_debug_port dbg_hub/clk [get_nets clk]
+}
+   #  Tells the JTAG-side hardware what the fabric clock rate is.</code></pre>
+
+<p><b>What is deliberately absent, and why:</b></p>
+
+<table>
+<thead><tr><th style="width:32%">Constraint</th><th>Why it is not here</th></tr></thead>
+<tbody>
+<tr><td><code>set_input_delay</code> / <code>set_output_delay</code></td>
+    <td>The VIO/ILA build has exactly one physical pin — the clock. No data crosses the package boundary
+    on a user pin, so there is no external interface to model. <b>In any design that does have real
+    I/O, omitting these is a serious error</b>: the paths are then simply unanalysed.</td></tr>
+<tr><td><code>set_false_path</code> / <code>set_multicycle_path</code></td>
+    <td>Nothing in this design needs an exception. Every path is a genuine single-cycle synchronous path.
+    Adding exceptions here would only hide information.</td></tr>
+<tr><td><code>set_clock_groups</code></td>
+    <td>One clock domain. Nothing to declare asynchronous.</td></tr>
+<tr><td><code>create_generated_clock</code></td>
+    <td>No clock dividers, no MMCM in the PL-only build. If you add the 50 MHz MMCM suggested in §18
+    step 9, this becomes necessary (or is created automatically by the MMCM IP).</td></tr>
+</tbody>
+</table>
+
+<h2 class="pb">22. Reproducing every number in this document</h2>
+
+<h3>22.1 Build A — out-of-context synthesis, accelerator alone</h3>
+<pre><code>create_project -in_memory -part xc7z020clg484-1
+foreach f [glob &lt;RTL_DIR&gt;/*.sv] { read_verilog -sv $f }
+read_xdc clk_only.xdc              ;# contains only: create_clock -period 10.000 [get_ports clk]
+synth_design -top accelerator_system_top -part xc7z020clg484-1 -mode out_of_context
+report_utilization
+report_timing_summary</code></pre>
+
+<h3>22.2 Build B — the full ZedBoard debug build</h3>
+<pre><code># GUI flow: add the 13 RTL files + FPGA_IMPL/rtl/vio_debug_top.sv,
+#           generate vio_0 (6 probe_in / 11 probe_out) and ila_0 (10 probes),
+#           add FPGA_IMPL/vio_debug.xdc, set vio_debug_top as top.
+launch_runs synth_1 -jobs 4 ; wait_on_run synth_1
+launch_runs impl_1 -to_step write_bitstream -jobs 4 ; wait_on_run impl_1
+
+open_run impl_1                    ;# POST-ROUTE — these are the sign-off numbers
+check_timing
+report_clocks
+report_timing_summary -file timing_summary_impl.rpt
+report_timing -delay_type max -max_paths 10 -nworst 10 -sort_by slack -file worst_setup.rpt
+report_timing -delay_type min -max_paths 10                          -file worst_hold.rpt
+report_utilization -file utilization_impl.rpt
+report_methodology -file methodology.rpt</code></pre>
+
+<div class="tip"><b>Where to look in the GUI</b>
+After implementation: <i>Flow Navigator → Implementation → Open Implemented Design</i>, then
+<i>Reports → Timing → Report Timing Summary</i>. The <b>Design Timing Summary</b> node on the left gives
+you exactly the Setup / Hold / Pulse Width table quoted in §12.2. The sentence
+<i>"All user specified timing constraints are met."</i> appears directly underneath it.</div>
+
+<h2>23. WNS for preparation — interview / viva question bank</h2>
+
+<p>These are the questions actually asked about this topic, with answers at the level expected. The
+short answer is what you say first; the follow-up is what a good candidate adds.</p>
+
+<div class="qa">
+<div class="q">Q1. What is WNS?</div>
+<div class="a"><b>Worst Negative Slack — the smallest setup slack among all timing paths in the
+design.</b> Slack is required time minus arrival time, so WNS tells you how much margin the single worst
+path has. Positive WNS means every setup path meets timing at the constrained frequency; negative WNS
+means at least one path is too slow and the design does not close. The word "negative" in the name is
+historical — the value is reported whether it is positive or negative.</div>
+</div>
+
+<div class="qa">
+<div class="q">Q2. What WNS did your design achieve, and at what frequency?</div>
+<div class="a">On <code>xc7z020clg484-1</code> constrained at 100 MHz (<code>create_clock -period
+10.000</code>): the accelerator alone synthesises to <b>WNS +1.279 ns</b>, and the full ZedBoard debug
+build with the VIO, ILA and debug hub reports <b>WNS +0.714 ns, TNS 0.000, 0 failing endpoints of
+5 181</b>, with WHS +0.045 ns and WPWS +3.750 ns, and Vivado's <i>"All user specified timing constraints
+are met."</i> So roughly <b>7 % margin</b> on the 10 ns period in the build that actually runs on the
+board, which corresponds to an estimated F<sub>max</sub> of about 108 MHz.</div>
+</div>
+
+<div class="qa">
+<div class="q">Q3. What is the difference between WNS and TNS?</div>
+<div class="a">WNS is the <b>worst single</b> path's slack; TNS is the <b>sum</b> of the negative slacks
+of <i>all</i> failing endpoints. WNS tells you how bad the worst offender is; TNS tells you how
+widespread the failure is. WNS = −0.1 ns with TNS = −0.1 ns is one path to fix; WNS = −0.1 ns with
+TNS = −500 ns means thousands of endpoints are failing and the problem is systemic — usually
+over-constraining or congestion, not one bad path.</div>
+</div>
+
+<div class="qa">
+<div class="q">Q4. Write the setup slack equation.</div>
+<div class="a"><code>Setup slack = T<sub>period</sub> − (T<sub>co</sub> + T<sub>logic</sub> +
+T<sub>net</sub> + T<sub>setup</sub>) + T<sub>skew</sub> − T<sub>uncertainty</sub></code>, or equivalently
+required time minus arrival time, where arrival = launch clock path + T<sub>co</sub> + data path, and
+required = capture clock path + period − T<sub>setup</sub> − uncertainty.</div>
+</div>
+
+<div class="qa">
+<div class="q">Q5. Can you fix a hold violation by reducing the clock frequency?</div>
+<div class="a"><b>No.</b> The clock period does not appear in the hold equation — hold compares the
+launch and capture at the <i>same</i> edge. A hold violation exists at every frequency including DC. You
+fix it by adding delay on the short path, by fixing clock skew, or by fixing the structural cause (often
+a missing synchroniser on a clock crossing). Setup, by contrast, <i>is</i> fixed by slowing the clock,
+because the period is the budget.</div>
+</div>
+
+<div class="qa">
+<div class="q">Q6. What is the critical path of your design?</div>
+<div class="a">The multiply-accumulate inside <code>processing_element</code>: from a PE's
+<code>psum_q</code> register, through the combinational <code>wload</code> output mux, across the routing
+to the PE below, into the 32-bit signed adder whose other operand is the 8×8 signed product
+<code>weight_q * a_in</code>, through the <code>valid_in</code> accumulate/bypass mux, into the next
+<code>psum_q</code> register. Utilisation shows <b>0 DSPs used</b>, so all sixteen multipliers were
+mapped into LUT fabric — which is why LUT count is 1 564 and why forcing DSP48E1 inference would be my
+first move if I had to raise the clock.</div>
+</div>
+
+<div class="qa">
+<div class="q">Q7. Why does your design have positive slack — what did you do to get it?</div>
+<div class="a">Mostly architecture rather than tuning. A systolic array has only <b>short, local,
+register-to-register links</b> — every PE talks solely to its north and west neighbours through a
+flip-flop, so no combinational path spans the array. The datapath is narrow (int8 × int8 into int32).
+The control is a 5-state FSM with fixed phase lengths and there is no ready/valid back-pressure logic,
+so no combinational path runs backwards through the pipeline. Utilisation is 2.9 % LUT / 0.7 % FF, so
+routing is uncongested. And 100 MHz is a relaxed target for a 7-series part.</div>
+</div>
+
+<div class="qa">
+<div class="q">Q8. Your WNS dropped from +1.279 ns to +0.714 ns. Why?</div>
+<div class="a">Two separate reasons. First, +1.279 ns was <b>post-synthesis and out-of-context</b> with no
+debug logic; post-synthesis estimates on 7-series are optimistic because routing is not yet real.
+Second, the board build adds the VIO, the ILA and the auto-inserted debug hub — thousands of extra
+flip-flops and, more importantly, competition for routing resources near the logic being probed. The
+endpoint count rising from 1 305 to 5 181 is the visible evidence. Both builds still pass with zero
+failing endpoints.</div>
+</div>
+
+<div class="qa">
+<div class="q">Q9. Your WHS is only +0.045 ns. Is that a problem?</div>
+<div class="a">No. Hold slack is pass/fail, not a margin you bank. The router deliberately inserts only
+just enough delay to fix hold, because every hold buffer it adds eats setup margin. +0.045 ns with
+<b>0 failing endpoints and THS 0.000</b> is a normal, healthy post-route result. What would worry me is
+a <i>negative</i> WHS, because that indicates a structural problem the router could not fix.</div>
+</div>
+
+<div class="qa">
+<div class="q">Q10. What is WPWS, and why is yours exactly +3.750 ns in both builds?</div>
+<div class="a">Worst Pulse Width Slack checks that the clock waveform itself is legal — minimum high
+time, minimum low time, and minimum period for each cell. With a 10 ns clock at 50 % duty the high pulse
+is 5.000 ns, and the 7-series minimum high pulse for a BUFG-driven flip-flop is 1.250 ns, so the slack is
+5.000 − 1.250 = 3.750 ns. It is a property of the <b>clock</b>, not of the logic, which is exactly why
+adding the entire debug infrastructure did not change it at all.</div>
+</div>
+
+<div class="qa">
+<div class="q">Q11. If your timing summary showed WNS positive but you still got wrong results on the
+board, what would you check?</div>
+<div class="a">First, whether the analysis was <b>complete</b>: run <code>check_timing</code> and
+<code>report_clocks</code> and look at the unconstrained-path count — a beautiful WNS over 12 analysed
+endpoints means nothing was checked. Second, whether I hid the failure with a
+<code>set_false_path</code> or an incomplete <code>set_multicycle_path</code> — I would read the "User
+Ignored Paths" group. Third, whether the problem is not timing at all: for this design the usual
+suspects are the <b>host protocol</b> rather than the silicon — writing weight rows in reverse order,
+issuing <code>start</code> while <code>busy</code> is high so it is ignored, or driving a VIO level
+instead of a one-clock pulse.</div>
+</div>
+
+<div class="qa">
+<div class="q">Q12. Is post-synthesis timing enough to sign off?</div>
+<div class="a">No. Post-synthesis delays are estimates with no real routing. <b>Sign-off is
+post-route</b> — <code>open_run impl_1</code> then <code>report_timing_summary</code>. That is the
+Design Timing Summary quoted for the board build here.</div>
+</div>
+
+<div class="qa">
+<div class="q">Q13. How would you take this design to 200 MHz?</div>
+<div class="a">In order: (1) force the multipliers into DSP48E1 hard blocks with <code>(* use_dsp =
+"yes" *)</code> — the biggest single win, since the MAC is the critical path and 0 DSPs are currently
+used; (2) pipeline the multiply and the add into separate stages, then update
+<code>RESULT_LATENCY</code>, <code>STORE_LATENCY</code>, the AGU write-pipe depth and the controller's
+DRAIN length <b>consistently</b>, because this design has fixed latency and no back-pressure — an
+inconsistent change writes results to the wrong addresses; (3) shrink or remove the debug cores; (4) use
+stronger implementation directives and, if congestion appears, floorplan the array. Then re-run
+implementation at the new period and read the new WNS, rather than trusting the F<sub>max</sub>
+extrapolation.</div>
+</div>
+
+<div class="qa">
+<div class="q">Q14. What does "0 failing endpoints of 5 181" mean?</div>
+<div class="a">5 181 capture points — flip-flop D pins and output ports — were analysed, and none of
+them has negative slack. The second number matters as much as the first: it confirms the analysis
+actually covered the design. If it had said "0 failing endpoints of 12", I would go looking for a
+missing <code>create_clock</code>.</div>
+</div>
+
+<div class="qa">
+<div class="q">Q15. What is clock uncertainty and can you get rid of it?</div>
+<div class="a">A margin the tool subtracts from the required time to account for clock jitter, MMCM/PLL
+phase error and modelling imprecision. You cannot remove it and should not want to — it is what keeps
+the analysis from being optimistic. You can <i>tighten</i> it deliberately with
+<code>set_clock_uncertainty</code> to build in extra guard band, which makes timing harder to close on
+purpose.</div>
+</div>
+
+<div class="qa">
+<div class="q">Q16. Simulation passed all 3 680 checks. Doesn't that prove the hardware works?</div>
+<div class="a">It proves the <b>logic</b> is right, not that the <b>silicon</b> can run it at 100 MHz.
+RTL simulation is zero-delay — every gate is instantaneous — so it can never detect a setup violation.
+Functional correctness and timing closure are independent, and both are required. That is why the
+hardware bring-up replays the same golden T5 vector on the board through the VIO: a match there proves
+the function <i>and</i> the timing together.</div>
+</div>
+
+<div class="qa">
+<div class="q">Q17. How many clock cycles does one matrix multiplication take?</div>
+<div class="a"><b>17 cycles for a 4×4 × 4×4 multiplication — 170 ns at 100 MHz — and 13 cycles
+(130 ns) when the weight matrix has not changed since the last job.</b> Measured from the edge that
+samples <code>start</code>, it breaks down as <code>ROWS</code> = 4 cycles of <code>WLOAD</code> to
+shift the weight matrix in, N = 4 cycles of <code>COMPUTE</code> (one activation vector per clock),
+<code>STORE_LATENCY</code> = 8 cycles of <code>DRAIN</code> while the last result is still in flight,
+and 1 <code>DONE</code> cycle: 4+4+8+1 = 17. In general it is <b>N + 13</b>, or <b>N + 9</b> when
+WLOAD is skipped, and because there is no back-pressure anywhere in the design those figures are exact
+rather than typical. Counting the <code>IDLE</code> cycle too gives the issue interval for back-to-back
+jobs, 18 or 14. There is deliberately no FLUSH phase — see Q22.</div>
+</div>
+
+<div class="qa">
+<div class="q">Q18. What throughput is that, and why is it so far below the peak?</div>
+<div class="a">A 4×4 × 4×4 multiply is 64 MACs, so 64 MACs in 17 cycles is <b>3.76 MAC/cycle = 0.38
+GMAC/s</b> at 100 MHz. The <b>peak</b> is 16 MACs/cycle = <b>1.6 GMAC/s = 3.2 GOP/s</b>, because all
+sixteen PEs are busy every cycle of the COMPUTE phase. The gap is entirely the 13 fixed overhead cycles:
+efficiency is <code>N/(N+13)</code>, which is 23.5 % at N = 4 but 95 % at N = 255. That is the
+weight-stationary trade-off — the weights are loaded once and amortised over however many activation
+vectors you stream against them, so a single isolated 4×4 multiply is the architecture's worst case.</div>
+</div>
+
+<div class="qa">
+<div class="q">Q19. How would you make it faster without raising the clock?</div>
+<div class="a">Both of the obvious levers are already implemented. <b>Weight reuse:</b> 4 of the 13
+fixed cycles exist only to install the weight matrix, and the weights are stationary, so a job whose
+weight matrix has not changed skips WLOAD and runs in 13 cycles instead of 17 — automatically, via the
+<code>weights_dirty</code> flag in <code>accelerator_system_top</code>. <b>Removing FLUSH:</b> an
+earlier revision inserted 6 more cycles between WLOAD and COMPUTE to let weight residue drain out of
+the psum registers; that was margin rather than function and has been deleted (Q22). Together those
+took a 4×4 job from 17 cycles to 17, or 13 on a repeat. What remains: <b>increase N</b> so the fixed
+cost amortises — no RTL change at all — or raise the clock, which costs timing margin (Q13).</div>
+</div>
+
+<div class="qa">
+<div class="q">Q20. What does the design consume, and where does the power go?</div>
+<div class="a"><b>0.145 W total on-chip</b>, of which 0.104 W is device static leakage and only 0.042 W is
+dynamic; junction temperature 26.7 °C against a maximum ambient of 83.3 °C. The interesting part is the
+hierarchy breakdown: the ILA takes 0.019 W, the VIO 0.007 W and the debug hub 0.003 W — <b>69 % of all
+dynamic power is instrumentation</b> — while the accelerator itself takes 0.012 W and the entire 4×4 PE
+array takes <b>0.003 W</b>. At 170 ns per multiply that is about 8 pJ per MAC for the arithmetic and
+385 pJ per MAC once static leakage and debug logic are counted. Worth caveating: it is a vector-less
+estimate at medium confidence, because under 25 % of internal nodes had specified toggle rates.</div>
+</div>
+
+<div class="qa">
+<div class="q">Q21. You said the timing summary is clean. What else did you check before believing it?</div>
+<div class="a">Four things beyond the WNS line. <b><code>report_methodology</code></b>: 16 warnings but
+<b>zero <code>TIMING-*</code> violations</b>, which is the family that catches missing clocks and
+unconstrained paths — that is independent evidence the analysis was complete.
+<b><code>report_bus_skew</code></b>: the four gray-pointer CDC buses in the debug hub pass with 0.747 ns
+of skew against a 10 ns requirement. <b><code>report_clock_utilization</code></b>: both clocks are on real
+BUFGs and the clock pin is on an MRCC site, so skew is genuinely small rather than accidentally
+optimistic. <b><code>report_drc</code></b>: 0 errors, 0 critical warnings. The one finding that is
+actually ours is <code>SYNTH-6</code> — <code>a_mem</code>'s output register was not merged into the
+BRAM — which costs nothing today but would become the critical path if the MAC were ever moved into
+DSP48E1 slices.</div>
+</div>
+
+<div class="qa">
+<div class="q">Q22. Your FSM has no FLUSH phase. Didn't the weight load leave residue in the psum registers?</div>
+<div class="a">It does, and it does not matter. Two independent reasons. <b>Accumulation is never at
+risk:</b> in <code>MAC.sv</code> the accumulator is
+<code>psum_q &lt;= valid_in ? (psum_in + product) : psum_in</code> — a PE's own <code>psum_q</code> is
+only ever an <i>output</i> of the adder, never an input, so the chain is fed entirely from the row
+above and stale content is overwritten rather than accumulated into. <b>The residue can never reach
+memory:</b> it drains out of the bottom of the array at one row per cycle and clears the de-skewed
+result bus on cycle 12, while the first <code>out_we</code> — the AGU's write-strobe pipe, keyed off
+<code>compute_phase</code> and <code>STORE_LATENCY</code> deep — does not fire until cycle 13. The two
+trains move at the same rate and cannot converge. Removing FLUSH cut 6 cycles from every job with no
+functional change, confirmed by 187 checks at system level including two full signed 4×4 × 4×4
+multiplications. The honest caveat: <b>the margin is now zero</b>, so anyone adding a pipeline stage in
+the skew → array → de-skew → pack path must re-derive that table.</div>
+</div>
+
+<h2 class="pb">24. Glossary and cheat sheet</h2>
+
+<table class="mono">
+<thead><tr><th style="width:22%">Term</th><th>One-line definition</th></tr></thead>
+<tbody>
+<tr><td>STA</td><td>Static Timing Analysis — exhaustive, vectorless delay checking of every path.</td></tr>
+<tr><td>Slack</td><td>Required time − arrival time. Positive = passes.</td></tr>
+<tr><td>WNS</td><td>Worst Negative Slack — the minimum setup slack in the design. <b>The headline number.</b></td></tr>
+<tr><td>TNS</td><td>Total Negative Slack — sum over all failing setup endpoints. 0.000 when nothing fails.</td></tr>
+<tr><td>WHS / THS</td><td>Worst / Total Hold Slack. Period-independent; cannot be fixed by slowing down.</td></tr>
+<tr><td>WPWS / TPWS</td><td>Worst / Total Pulse Width Slack — is the clock waveform itself legal.</td></tr>
+<tr><td>Setup time</td><td>Data must be stable this long <b>before</b> the capture edge.</td></tr>
+<tr><td>Hold time</td><td>Data must be stable this long <b>after</b> the capture edge.</td></tr>
+<tr><td>T<sub>co</sub></td><td>Clock-to-Q: delay from the clock edge to the flip-flop output changing.</td></tr>
+<tr><td>Startpoint / Endpoint</td><td>Where a path launches / where it is captured. Endpoint counts appear in the summary.</td></tr>
+<tr><td>Clock skew</td><td>Capture clock delay − launch clock delay. Helps setup, hurts hold when positive.</td></tr>
+<tr><td>Clock uncertainty</td><td>Jitter + tool margin subtracted from required time. Always makes analysis stricter.</td></tr>
+<tr><td>Levels of logic</td><td>Number of cells in the combinational cloud on a path.</td></tr>
+<tr><td>Critical path</td><td>The path with the least slack — here, the PE multiply-accumulate.</td></tr>
+<tr><td>F<sub>max</sub></td><td>1 / (T<sub>period</sub> − WNS). An extrapolation, not a guarantee.</td></tr>
+<tr><td>Timing closure</td><td>The state where all setup, hold and pulse-width checks pass post-route.</td></tr>
+<tr><td>Timing exception</td><td>false_path / multicycle_path / max_delay — tells STA the default single-cycle assumption is wrong.</td></tr>
+<tr><td>Unconstrained path</td><td>A path with no clock reaching it. <b>Not analysed at all</b> — invisible in WNS.</td></tr>
+<tr><td>CDC</td><td>Clock Domain Crossing. Not present in this accelerator; only the JTAG/debug-hub boundary, owned by Xilinx IP.</td></tr>
+<tr><td>Metastability</td><td>The undefined-output condition that a setup/hold violation causes.</td></tr>
+<tr><td>Bus skew</td><td>How far apart in time the bits of one bus arrive. Checked by <code>report_bus_skew</code>; the check that matters for gray-coded CDC pointers.</td></tr>
+<tr><td>Control set</td><td>The {clock, clock-enable, set/reset} triple. All 8 flops in a 7-series slice must share one; too many distinct sets means bad packing.</td></tr>
+<tr><td>MRCC / SRCC</td><td>Multi- / Single-Region Clock Capable I/O pin. A clock must enter on one to reach a BUFG cleanly. <code>clk</code> is on <code>Y9 = IO_L12P_T1_MRCC_13</code>.</td></tr>
+<tr><td>Static vs dynamic power</td><td>Leakage (a property of the die) vs switching (a property of your design). Here 0.104 W vs 0.042 W.</td></tr>
+<tr><td>Job latency</td><td>Cycles from <code>start</code> to <code>done</code>. Here <b>N + 13</b> (= <b>17</b> for a 4×4), or <b>N + 9</b> (= 13) when WLOAD is skipped.</td></tr>
+<tr><td>Issue interval</td><td>Cycles before the next <code>start</code> is accepted. Here N + 14 = 18, or N + 10 = 14.</td></tr>
+<tr><td>Array efficiency</td><td>Fraction of cycles the PEs do useful work: <code>N/(N+13)</code>. 23.5 % at N = 4, 95 % at N = 255.</td></tr>
+<tr><td><code>weights_dirty</code></td><td>Internal flag in <code>accelerator_system_top</code> that skips WLOAD when the array already holds the right weight matrix.</td></tr>
+<tr><td>GMAC/s</td><td>Billion multiply-accumulates per second. Peak here = 16 PEs × 100 MHz = 1.6 GMAC/s (3.2 GOP/s).</td></tr>
+</tbody>
+</table>
+
+<h3>The one-minute recap</h3>
+<div class="eq">
+<b>Constraint:</b>  create_clock -period 10.000 [get_ports clk]     → 100 MHz, single domain<br>
+<b>Critical path:</b> PE MAC — psum mux → 8×8 LUT multiplier → 32-bit adder → valid mux → psum_q<br>
+<b>Accelerator alone (post-synth, OOC):</b>   WNS <b>+1.279</b>  WHS <b>+0.263</b>  WPWS <b>+3.750</b>   0 failing / 1 305<br>
+<b>ZedBoard debug build (post-route):</b>     WNS <b>+0.714</b>  WHS <b>+0.045</b>  WPWS <b>+3.750</b>   0 failing / 5 181<br>
+<b>TNS = THS = TPWS = 0.000</b>  →  <b>“All user specified timing constraints are met.”</b><br>
+<b>Bus skew:</b> worst slack <b>+9.253 ns</b> of 10.000 · <b>DRC:</b> 0 errors, 0 critical · <b>Methodology:</b> 0 TIMING-*<br>
+<b>Margin:</b> 7.1 % of the period · <b>Estimated F<sub>max</sub>:</b> ≈ 108 MHz<br>
+<b>Resources (post-route, whole build):</b> 4 079 LUT (7.7 %) · 6 370 FF (6.0 %) · 11 BRAM (7.9 %) · <b>0 DSP</b><br>
+<b>Power:</b> <b>0.145 W</b> total = 0.042 dynamic + 0.104 static · PE array alone <b>0.003 W</b> · T<sub>J</sub> 26.7 °C<br>
+<b>Cycles per 4×4 matrix multiply:</b> <b class="big">17</b>  (= N + 13 from the start edge; 4 WLOAD + N COMPUTE + 8 DRAIN + 1 DONE · issue interval 18)<br>
+<b>…reusing the loaded weights:</b> <b class="big">13</b>  (= N + 9; WLOAD skipped automatically · issue interval 14)<br>
+<b>Latency:</b> <b>170 ns</b> / <b>130 ns</b> at 100 MHz · <b>Peak:</b> 1.6 GMAC/s (3.2 GOP/s) · <b>Average over one 4×4 job:</b> 0.38 GMAC/s (23.5 % of peak)<br>
+<b>Energy:</b> ≈ 25 nJ per multiply whole-chip, ≈ 0.5 nJ for the PE array alone<br>
+<b>If timing ever fails:</b> nothing here depends on throughput — drop the fabric to 50 MHz with an MMCM.
+</div>
+
+<hr>
+<p class="small">
+<b>Measured data sources:</b> post-route implementation reports in <code>FPGA_IMPL/reports/</code>
+(Vivado 2020.1, <code>xc7z020clg484-1</code> speed grade −1, run of 4 Aug 2026) —
+<code>utilization_synth</code>, <code>control_sets_placed</code>, <code>io_placed</code>,
+<code>clock_utilization_routed</code>, <code>bus_skew_routed</code>, <code>power_routed</code>,
+<code>drc_opted</code>, <code>drc_routed</code>, <code>methodology_drc_routed</code>;
+Design Timing Summary for the debug build from <code>synthesis_screenshots/</code>;
+out-of-context synthesis figures from <code>VIO_ILA.pdf</code> §15.<br>
+<b>Cycle-count derivation:</b> phase durations read directly from
+<code>controller.sv</code> (<code>ROWS</code>,
+<code>STORE_LATENCY = 1+ROWS+COLS−2+1</code>), cross-checked against
+<code>context_mkdwn/12_dataflow_and_timing.md</code>, and <b>measured in simulation</b> by
+<code>tb_controller</code> (78 checks) and <code>tb_accelerator_system_top</code> T7/T8, which count
+the cycles between the <code>start</code> edge and the <code>done</code> pulse rather than assuming
+them: <code>N + 13</code> loading, <code>N + 9</code> reusing.<br>
+<b>Design reference:</b> <code>context_mkdwn/</code> — chunk 01 (processing element / MAC), chunk 02
+(systolic array), chunk 07 (controller FSM), chunk 12 (dataflow and timing derivations), chunk 13
+(worked example / T5 golden case).<br>
+<b>Functional baseline:</b> 11/11 testbenches, 3 680 checks, 0 mismatches (<code>verification_recheck/</code>).<br>
+<b>Companion documents:</b> <code>implementation_method.pdf</code> (methodology and the VIO/ILA flow),
+<code>VIO_ILA.pdf</code> (Method 2 in full), <code>USB_UART.pdf</code> (Method 3 in full).
+</p>
+
+</body>
+</html>

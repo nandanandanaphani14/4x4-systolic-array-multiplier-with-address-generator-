@@ -1,0 +1,1931 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>VIO + ILA Implementation Guide — 4×4 Systolic Array Accelerator on ZedBoard</title>
+<style>
+@page { size: A4; margin: 16mm 15mm 16mm 15mm; }
+* { box-sizing: border-box; }
+body {
+  font-family: "Segoe UI", "Calibri", "Helvetica Neue", Arial, sans-serif;
+  font-size: 10pt; line-height: 1.45; color: #16181d; margin: 0;
+}
+h1 { font-size: 21pt; line-height: 1.15; margin: 0 0 6px 0; color: #0b3d5c; letter-spacing: -0.3px; }
+h2 {
+  font-size: 14pt; margin: 22px 0 8px 0; color: #0b3d5c;
+  border-bottom: 2px solid #0b3d5c; padding-bottom: 3px;
+  page-break-after: avoid; break-after: avoid;
+}
+h3 { font-size: 11.5pt; margin: 15px 0 5px 0; color: #124a6b; page-break-after: avoid; break-after: avoid; }
+h4 { font-size: 10pt; margin: 12px 0 4px 0; color: #2c3540; page-break-after: avoid; break-after: avoid; }
+p { margin: 6px 0; }
+ul, ol { margin: 6px 0 6px 0; padding-left: 22px; }
+li { margin: 3px 0; }
+code {
+  font-family: "Consolas", "DejaVu Sans Mono", monospace; font-size: 8.8pt;
+  background: #eef2f6; padding: 0.5px 3px; border-radius: 2px; color: #123;
+}
+pre {
+  font-family: "Consolas", "DejaVu Sans Mono", monospace; font-size: 7.9pt;
+  line-height: 1.35; background: #f6f8fa; border: 1px solid #d4dde5;
+  border-left: 3px solid #0b3d5c; border-radius: 3px;
+  padding: 7px 9px; margin: 8px 0; white-space: pre-wrap; overflow-wrap: anywhere;
+  page-break-inside: avoid; break-inside: avoid;
+}
+pre code { background: none; padding: 0; font-size: inherit; }
+table {
+  width: 100%; border-collapse: collapse; margin: 9px 0; font-size: 8.6pt;
+  page-break-inside: avoid; break-inside: avoid;
+}
+th {
+  background: #0b3d5c; color: #fff; text-align: left; padding: 4px 6px;
+  font-weight: 600; border: 1px solid #0b3d5c; vertical-align: top;
+}
+td { border: 1px solid #c6d2dc; padding: 3.5px 6px; vertical-align: top; }
+tbody tr:nth-child(even) { background: #f4f7fa; }
+.mono td:first-child, .mono th:first-child { font-family: "Consolas", monospace; }
+.title-block { border-bottom: 3px solid #0b3d5c; padding-bottom: 12px; margin-bottom: 16px; }
+.subtitle { font-size: 12pt; color: #4a5764; margin: 2px 0 8px 0; }
+.meta { font-size: 8.5pt; color: #6b7885; }
+.note, .warn, .tip {
+  padding: 7px 10px; margin: 9px 0; border-radius: 3px; font-size: 9.2pt;
+  page-break-inside: avoid; break-inside: avoid;
+}
+.note { background: #eaf3fa; border-left: 4px solid #2b7cb8; }
+.warn { background: #fdf1e8; border-left: 4px solid #d2691e; }
+.tip  { background: #edf7ee; border-left: 4px solid #3d8b45; }
+.note b, .warn b, .tip b { display: block; margin-bottom: 2px; font-size: 8.8pt;
+  text-transform: uppercase; letter-spacing: 0.5px; }
+.note b { color: #1c5c8c; } .warn b { color: #a2500f; } .tip b { color: #2c6b33; }
+.toc { background: #f6f8fa; border: 1px solid #d4dde5; border-radius: 4px; padding: 10px 14px; margin: 14px 0; }
+.toc ol { margin: 0; padding-left: 20px; column-count: 2; column-gap: 26px; font-size: 9.2pt; }
+.toc li { margin: 2px 0; break-inside: avoid; }
+.pb { page-break-before: always; break-before: page; }
+.ascii {
+  font-family: "Consolas", "DejaVu Sans Mono", monospace; font-size: 7.4pt; line-height: 1.25;
+  background: #fbfcfd; border: 1px solid #d4dde5; border-radius: 3px;
+  padding: 8px 10px; margin: 9px 0; white-space: pre; overflow-x: auto;
+  page-break-inside: avoid; break-inside: avoid;
+}
+.step { counter-reset: none; }
+.tag { display: inline-block; background: #0b3d5c; color: #fff; font-size: 7.5pt;
+  padding: 1px 6px; border-radius: 8px; letter-spacing: 0.4px; vertical-align: 1px; }
+.tag.alt { background: #3d8b45; } .tag.warn2 { background: #b5651d; }
+.small { font-size: 8.5pt; color: #55606c; }
+hr { border: none; border-top: 1px solid #d4dde5; margin: 16px 0; }
+.kbd { font-family: Consolas, monospace; font-size: 8.4pt; background:#2c3540; color:#fff;
+  padding: 1px 5px; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="title-block">
+  <div class="tag">METHOD 2 &nbsp;·&nbsp; PERIPHERAL-FREE</div>
+  <h1>VIO + ILA over JTAG</h1>
+  <div class="subtitle">Driving and observing the 4×4 weight-stationary systolic-array
+  multiplier on a Digilent ZedBoard entirely from the Vivado Hardware Manager</div>
+  <div class="meta">
+    Target part <code>xc7z020clg484-1</code> &nbsp;·&nbsp; Vivado 2019.1 or later &nbsp;·&nbsp;
+    Design under test <code>accelerator_system_top</code> (unmodified) &nbsp;·&nbsp;
+    Companion document: <code>USB_UART.pdf</code>
+  </div>
+</div>
+
+<div class="toc">
+<b style="font-size:9.5pt;color:#0b3d5c;">Contents</b>
+<ol>
+  <li>What this method gives you</li>
+  <li>Prerequisites and board setup</li>
+  <li>The design under test — everything the harness must respect</li>
+  <li>The debug harness <code>vio_debug_top.sv</code></li>
+  <li>Vivado project creation</li>
+  <li>Generating the VIO core</li>
+  <li>Generating the ILA core</li>
+  <li>Probing internal nets without editing the RTL</li>
+  <li>Constraints, synthesis, implementation, bitstream</li>
+  <li>Programming the board and opening the dashboards</li>
+  <li>Running the demo from the VIO dashboard (manual)</li>
+  <li>Running the demo from Tcl (scripted)</li>
+  <li>Reading the ILA waveform — the expected cycle map</li>
+  <li>Trigger recipes</li>
+  <li>Resource and timing — measured</li>
+  <li>Troubleshooting</li>
+  <li>Extending the harness</li>
+  <li><b>Writing an XDC for any design — a general guide</b></li>
+  <li>Appendix A — data packing reference</li>
+  <li>Appendix B — full source listing</li>
+</ol>
+<p style="margin:8px 0 0 0;font-size:9.2pt;border-top:1px solid #d4dde5;padding-top:6px;">
+<b>Plus §8A</b> (between §8 and §9) — <b>How the VIO and ILA get wired in, and how the build is
+staged</b>: the two ways a debug core enters a design, what IP generation really produces, the
+auto-inserted <code>dbg_hub</code> and its <code>BSCANE2</code>/JTAG path, the auto-generated
+<code>connect_debug_port</code> constraints, the ten build stages from IP synthesis to programming, where
+every artefact lands on disk, and how to verify the wiring at each stage.</p>
+</div>
+
+<div class="warn"><b>Revision note — read this if you used the first edition</b>
+Three corrections have been folded into this document, all driven by running the flow rather than
+reasoning about it:
+<ul style="margin:4px 0 0 0">
+<li><b>§12 — the Tcl script had a real bug.</b> <code>accel_read</code> returned the four result lanes
+    <i>reversed</i> (<code>4 3 2 1</code> where the golden is <code>1 2 3 4</code>), so
+    <code>accel_demo</code> reported MISMATCH on every row even on correct hardware. Fixed, with the
+    error modes now documented in §12.4.</li>
+<li><b>§11.7 — <code>result_flat</code> reads all-zero on the VIO dashboard, and that is correct
+    behaviour, not a fault.</b> It is a live bus that only carries data for four clocks out of a 170 ns
+    job. Full explanation added.</li>
+<li><b>§15 — the timing claim was overstated.</b> Measured post-synthesis WNS is <b>+1.279 ns</b> at
+    100 MHz, not the "enormous" margin previously claimed. Real utilization figures now replace the
+    estimates.</li>
+</ul></div>
+
+<h2>1. What this method gives you</h2>
+
+<p>The accelerator finishes a four-vector job in <b>17 clock cycles = 170 ns</b> at 100 MHz. That is far
+too fast for a human to watch on LEDs, and eight switches cannot hold a 4×4 int8 matrix. Method 1
+(switches + LEDs) works around this with a byte-at-a-time console FSM. <b>Method 2 removes the board
+from the loop entirely:</b> the JTAG programming cable carries both the stimulus and the observation.</p>
+
+<p>Two Xilinx debug cores do the work:</p>
+
+<table>
+<thead><tr><th style="width:10%">Core</th><th style="width:22%">Role</th><th>What it buys you here</th></tr></thead>
+<tbody>
+<tr><td><b>VIO</b><br><span class="small">Virtual I/O</span></td>
+    <td>Software-driven inputs and outputs, updated at human speed over JTAG</td>
+    <td>Type a 32-bit weight word into a text box and click <i>commit</i> — no switches, no button
+        debouncing, no 16-press entry sequence. Read back the full 128-bit result word as one value.</td></tr>
+<tr><td><b>ILA</b><br><span class="small">Integrated Logic Analyzer</span></td>
+    <td>On-chip trace buffer, samples every signal on every clock edge</td>
+    <td>The only way to see the pipeline <i>as it runs on silicon</i>: the four WLOAD cycles, the six
+        the diagonal wavefront through COMPUTE, and each column's result landing in
+        <code>output_mem</code> during DRAIN.</td></tr>
+</tbody>
+</table>
+
+<div class="ascii">
+   PC (Vivado Hardware Manager)                    ZedBoard PL (xc7z020)
+   ┌──────────────────────────┐                ┌─────────────────────────────────────┐
+   │  hw_vio_1 dashboard      │                │  vio_debug_top                      │
+   │   · probe_out text boxes │   USB-JTAG     │  ┌────────┐                         │
+   │   · probe_in readouts    │◄══════════════►│  │ vio_0  │──probe_out──┐           │
+   │                          │  (J17 micro-B) │  └────────┘             │           │
+   │  hw_ila_1 waveform       │                │       ▲            ┌────▼────────┐  │
+   │   · trigger setup        │                │  ┌────┴───┐        │  oneshot ×3 │  │
+   │   · 1024-sample window   │                │  │ dbg_hub│        └────┬────────┘  │
+   └──────────────────────────┘                │  └────────┘             │           │
+                                               │  ┌────────┐        ┌────▼─────────────────┐
+   Only ONE physical pin is used:              │  │ ila_0  │◄───────┤ accelerator_system_  │
+   clk = 100 MHz PL oscillator (Y9)            │  └────────┘        │ top   (UNMODIFIED)   │
+                                               │                    └──────────────────────┘
+                                               └─────────────────────────────────────┘
+</div>
+
+<div class="note"><b>The rule that shapes everything</b>
+The 13 RTL files in <code>…SIMPLE_ACCEL_RTL/</code> are <b>never modified</b>. Every technique in this
+document either wraps the design (<code>vio_debug_top.sv</code>) or applies a <i>constraint</i> to the
+synthesized netlist (<code>MARK_DEBUG</code> from the XDC). No <code>(* mark_debug *)</code> attribute is
+ever added to a design source.</div>
+
+<h3>1.1 Deliverables this document uses</h3>
+<table class="mono">
+<thead><tr><th style="width:32%">File</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td>FPGA_IMPL/rtl/vio_debug_top.sv</td><td>The debug top: VIO + ILA + one-shot pulse generators + sticky-done around <code>accelerator_system_top</code></td></tr>
+<tr><td>FPGA_IMPL/vio_debug.xdc</td><td>Clock pin, clock period, debug-hub settings, optional <code>MARK_DEBUG</code> lines</td></tr>
+<tr><td>FPGA_IMPL/vio_demo.tcl</td><td>Hardware Manager script: loads the T5 golden matrices, runs the job, reads back and checks all 16 results</td></tr>
+<tr><td>…SIMPLE_ACCEL_RTL/*.sv</td><td>The 13 unmodified design files</td></tr>
+</tbody>
+</table>
+
+<h2>2. Prerequisites and board setup</h2>
+
+<h3>2.1 Tools</h3>
+<ul>
+<li><b>Vivado 2019.1 or later</b>, any edition that supports Zynq-7000 (the free WebPACK covers
+    <code>xc7z020</code>). Vitis is <i>not</i> needed for this method — no software runs on the ARM.</li>
+<li><b>Digilent Adept / cable drivers</b>. On Windows, Vivado's installer offers "Install Cable Drivers";
+    accept it. Verify afterwards that Device Manager shows the JTAG interface without a warning triangle.</li>
+<li>Optionally the <b>Digilent board files</b> for the ZedBoard, which let you pick the board by name
+    instead of the raw part. Not required — selecting the part directly works fine.</li>
+</ul>
+
+<h3>2.2 Board jumpers and cables</h3>
+<table>
+<thead><tr><th style="width:20%">Item</th><th style="width:22%">Setting</th><th>Why</th></tr></thead>
+<tbody>
+<tr><td>Power source <code>JP3</code></td><td>USB (or wall adapter)</td><td>Either is fine; USB power is adequate for a PL-only design.</td></tr>
+<tr><td>Boot mode <code>JP7–JP11</code></td><td>All five to <b>GND</b> = JTAG mode</td><td>Stops the PS from trying to boot from QSPI/SD. In JTAG mode the PS sits idle and the PL TAP is reachable. <span class="small">Verify against the ZedBoard Hardware User Guide for your board revision.</span></td></tr>
+<tr><td>USB cable</td><td>Micro-USB into <b>J17 (PROG)</b></td><td>J17 is the JTAG/programming port. J14 is the USB-UART and is <i>not</i> used by this method.</td></tr>
+<tr><td>Power switch <code>SW8</code></td><td>ON</td><td>The green <code>PGOOD</code> LED (LD13) must be lit.</td></tr>
+</tbody>
+</table>
+
+<div class="warn"><b>PL-only on a Zynq is legal</b>
+This design never configures the Processing System. That is supported: the PL is programmed straight
+over JTAG and clocked by the 100 MHz board oscillator on pin Y9, entirely independent of the PS.
+Vivado will emit an <i>unconstrained PS pins</i> DRC; the supplied XDC silences it with
+<code>set_property BITSTREAM.GENERAL.UNCONSTRAINEDPINS {Allow}</code>. In cascaded JTAG mode the
+Hardware Manager shows <b>two</b> devices in the chain — <code>arm_dap_0</code> and
+<code>xc7z020_1</code>. Program the <code>xc7z020_1</code>.</div>
+
+<h2>3. The design under test — everything the harness must respect</h2>
+
+<p>Read this section before building anything. Four properties of
+<code>accelerator_system_top</code> completely determine the shape of the debug harness.</p>
+
+<h3>3.1 Port list</h3>
+<table class="mono">
+<thead><tr><th style="width:24%">Port</th><th style="width:8%">Dir</th><th style="width:8%">Width</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td>clk</td><td>in</td><td>1</td><td>System clock (100 MHz here)</td></tr>
+<tr><td>rst_n</td><td>in</td><td>1</td><td>Active-low synchronous reset</td></tr>
+<tr><td>start</td><td>in</td><td>1</td><td>Launch a job. <b>Sampled only in IDLE</b>; ignored while busy.</td></tr>
+<tr><td>num_vectors</td><td>in</td><td>8</td><td>How many activation vectors to stream. 0 is legal and does not hang.</td></tr>
+<tr><td>act_base</td><td>in</td><td>8</td><td>First <code>a_mem</code> address of the job</td></tr>
+<tr><td>out_base</td><td>in</td><td>8</td><td>First <code>output_mem</code> address of the job</td></tr>
+<tr><td>host_a_we / _addr / _wdata</td><td>in</td><td>1 / 8 / 32</td><td>Activation-memory write port. Honoured <b>only while <code>busy==0</code></b>.</td></tr>
+<tr><td>host_w_we / _addr / _wdata</td><td>in</td><td>1 / 2 / 32</td><td>Weight-memory write port. Honoured <b>only while <code>busy==0</code></b>.</td></tr>
+<tr><td>host_o_addr</td><td>in</td><td>8</td><td>Result read address (host side of <code>output_mem</code> is read-only)</td></tr>
+<tr><td>o_rdata</td><td>out</td><td>128</td><td>Result word: four int32 lanes, lane <i>c</i> = column <i>c</i></td></tr>
+<tr><td>phase</td><td>out</td><td>3</td><td>FSM state: 0 IDLE, 1 WLOAD, 2 COMPUTE, 3 DRAIN, 4 DONE</td></tr>
+<tr><td>busy</td><td>out</td><td>1</td><td><code>(state != IDLE) &amp;&amp; (state != DONE)</code></td></tr>
+<tr><td>done</td><td>out</td><td>1</td><td><b>Single-cycle pulse.</b> <code>busy</code> is already low when it fires.</td></tr>
+<tr><td>result[0:3]</td><td>out</td><td>4×32</td><td>Live result bus, for observation. Unpacked array — must be flattened to probe it.</td></tr>
+</tbody>
+</table>
+
+<h3>3.2 Host protocol</h3>
+<pre><code>1.  hold rst_n low, then release
+2.  while (!busy):  write weight rows   via host_w_*   (4 words)
+                    write activations   via host_a_*   (num_vectors words)
+3.  pulse start, with num_vectors / act_base / out_base valid
+4.  wait for the done pulse             (job length = num_vectors + 13 clocks)
+5.  while (!busy):  read results        via host_o_addr -> o_rdata</code></pre>
+
+<h3>3.3 The four properties that shape the harness</h3>
+
+<table>
+<thead><tr><th style="width:4%">#</th><th style="width:26%">Property</th><th>Consequence for a VIO-driven design</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><b>Every command is a single-cycle pulse.</b> <code>start</code>, <code>host_w_we</code>, <code>host_a_we</code>.</td>
+    <td>A VIO <code>probe_out</code> is a <i>level</i> — it stays where you left it for milliseconds until you click again. Holding <code>start</code> high would relaunch the 17-cycle job roughly 4 million times per second; the ILA would retrigger continuously and never let you inspect a single run. <b>The harness edge-detects every command bit</b> (<code>oneshot</code> module).</td></tr>
+<tr><td>2</td><td><b><code>done</code> is one cycle wide (10 ns).</b></td>
+    <td>VIO refreshes at human rate and will never observe it. <b>The harness latches it</b> into <code>done_sticky</code>, cleared automatically by the next <code>start</code> pulse. A 16-bit <code>done_count</code> is also provided so you can prove exactly one job ran per click.</td></tr>
+<tr><td>3</td><td><b>Host writes are masked while <code>busy==1</code>.</b> Port arbitration at L3 forces <code>a_we_mux = w_we_mux = 0</code> during a job.</td>
+    <td>Harmless but silent: a write clicked mid-job simply vanishes. Always confirm <code>busy==0</code> on the dashboard before loading. Because JTAG round-trips take milliseconds and a job takes 170 ns, this is essentially never a problem in practice.</td></tr>
+<tr><td>4</td><td><b>Fixed latency, no back-pressure.</b> No ready/valid handshake exists anywhere in the design.</td>
+    <td>Nothing will stall to wait for you. Every timing number in section 13 is a hard constant, which is exactly what makes the ILA capture checkable against the specification.</td></tr>
+</tbody>
+</table>
+
+<h3>3.4 Data layout — get a lane wrong and the matrix silently transposes</h3>
+<pre><code>weight_mem[r]   [31:24][23:16][15:8][7:0]  =  W[r][3] W[r][2] W[r][1] W[r][0]   (lane c = column c)
+a_mem[i]        [31:24][23:16][15:8][7:0]  =  A[i][3] A[i][2] A[i][1] A[i][0]   (lane r = row r)
+output_mem[i]   [127:96][95:64][63:32][31:0] = C[i][3] C[i][2] C[i][1] C[i][0]  (lane c, int32)</code></pre>
+
+<div class="tip"><b>The bottom-first rule is <i>not</i> yours to apply</b>
+The design's rule 1 says "weight rows load bottom-first". That is the <b>AGU's</b> job — during WLOAD it
+counts <code>w_addr</code> down 3, 2, 1, 0. As the host you write <code>weight_mem[r] = W</code> row
+<i>r</i> in <b>natural order 0, 1, 2, 3</b>. Pre-reversing them here is a classic and silent error: the
+result is a plausible-looking but wrong matrix.</div>
+
+<h2 class="pb">4. The debug harness <code>vio_debug_top.sv</code></h2>
+
+<p>The harness is deliberately thin. It adds exactly four things around the unmodified accelerator:</p>
+
+<ol>
+<li><b>A power-on reset.</b> A 16-bit counter holds <code>rst_n</code> low for 65 536 clocks (≈655 µs)
+    after configuration. The declaration initializer (<code>logic [15:0] por = '0;</code>) is a
+    synthesizable power-up value on Xilinx 7-series — flip-flops configure to a known state at
+    bitstream load, so no external reset pin is required.</li>
+<li><b>Three <code>oneshot</code> instances.</b> Rising-edge detectors on
+    <code>vio_start_lvl</code>, <code>vio_w_we_lvl</code>, <code>vio_a_we_lvl</code>. Property 1 above.</li>
+<li><b>Sticky done + a job counter.</b> Property 2 above.</li>
+<li><b>A flattening assign.</b> <code>result[0:3]</code> is an unpacked array and cannot be wired to a
+    probe port; <code>result_flat</code> concatenates it into one 128-bit vector.</li>
+</ol>
+
+<pre><code>// the load-bearing 10 lines of the harness
+
+// level -> single-cycle pulse                       (property 1)
+oneshot u_os_start (.clk(clk), .rst_n(rst_n), .lvl(vio_start_lvl), .pulse(start_p));
+oneshot u_os_wwe   (.clk(clk), .rst_n(rst_n), .lvl(vio_w_we_lvl),  .pulse(w_we_p));
+oneshot u_os_awe   (.clk(clk), .rst_n(rst_n), .lvl(vio_a_we_lvl),  .pulse(a_we_p));
+
+// catch the 10 ns done pulse                        (property 2)
+if      (start_p) done_sticky &lt;= 1'b0;   // arm for the new job
+else if (done)    done_sticky &lt;= 1'b1;   // latch
+if (done) done_count &lt;= done_count + 1'b1;
+
+// unpacked array -> probeable vector
+assign result_flat = {result[3], result[2], result[1], result[0]};</code></pre>
+
+<div class="warn"><b>Why <code>oneshot</code> is not optional</b>
+Without it the design still <i>computes correctly</i> — the job is idempotent, so re-running it gives
+the same answer. What breaks is <b>observability</b>: <code>busy</code> never reads 0 on the dashboard,
+<code>done_sticky</code> is cleared as fast as it is set, and the ILA arms and fires continuously so you
+can never freeze a single 17-cycle window. It is the difference between a working demo and an
+unreadable one.</div>
+
+<p>The full listing is in Appendix B. The two IP instantiations at the bottom
+(<code>vio_0</code> and <code>ila_0</code>) refer to cores you generate in sections 6 and 7 — their
+port widths must match the instance exactly or elaboration fails.</p>
+
+<h2>5. Vivado project creation</h2>
+
+<div class="step">
+<p><b>Step 5.1 — Create the project.</b><br>
+Vivado → <i>Create Project</i> → <i>Next</i> → name it e.g. <code>accel_vio</code>, choose a path with
+<b>no spaces</b> → <i>Next</i> → <b>RTL Project</b>, tick <i>Do not specify sources at this time</i> →
+<i>Next</i> → <b>Parts</b> tab → filter and select <code>xc7z020clg484-1</code> (or the <i>Boards</i> tab
+→ ZedBoard, if you installed the board files) → <i>Next</i> → <i>Finish</i>.</p>
+
+<p><b>Step 5.2 — Add the design sources.</b><br>
+<i>Flow Navigator → Add Sources → Add or create design sources → Add Files</i>. Select:</p>
+<ul>
+<li>all <b>13</b> <code>.sv</code> files in <code>…SIMPLE_ACCEL_RTL/</code>:
+    <code>MAC.sv, array.sv, delay_pipe.sv, input_buf.sv, output_skewbuf.sv, a_mem.sv, weight_mem.sv,
+    outmem.sv, controller.sv, agu.sv, wrapper_array_buf.sv, wrapper_mem_arr_buf.sv,
+    wrapper_full_system.sv</code></li>
+<li><code>FPGA_IMPL/rtl/vio_debug_top.sv</code></li>
+</ul>
+<p>Tick <b>Copy sources into project</b> if you want the project self-contained. Click <i>Finish</i>.</p>
+
+<div class="note"><b>Check the file type</b>
+In the <i>Sources</i> pane, confirm every file shows as <b>SystemVerilog</b>, not Verilog. If any is
+mis-typed, right-click → <i>Set File Type → SystemVerilog</i>. Symptom of getting this wrong: a flood of
+syntax errors on <code>logic</code>, <code>always_ff</code>, or the unpacked-array port
+<code>result [0:3]</code>.</div>
+
+<p><b>Step 5.3 — Set the top module.</b><br>
+Right-click <code>vio_debug_top</code> in the <i>Sources</i> hierarchy → <b>Set as Top</b>. It turns bold.
+At this point the hierarchy will show <code>vio_0</code> and <code>ila_0</code> as <i>missing</i> — that is
+expected; you generate them next.</p>
+
+<p><b>Step 5.4 — Add the constraints.</b><br>
+<i>Add Sources → Add or create constraints → Add Files</i> → <code>FPGA_IMPL/vio_debug.xdc</code>.</p>
+</div>
+
+<h2>6. Generating the VIO core</h2>
+
+<p><i>Flow Navigator → IP Catalog</i> → search <code>VIO</code> → double-click <b>VIO (Virtual Input/Output)</b>.</p>
+
+<h3>6.1 General Options tab</h3>
+<table>
+<thead><tr><th style="width:34%">Field</th><th style="width:18%">Value</th><th>Note</th></tr></thead>
+<tbody>
+<tr><td>Component Name</td><td><code>vio_0</code></td><td><b>Must</b> match the instance name used in <code>vio_debug_top.sv</code>.</td></tr>
+<tr><td>Input Probe Count</td><td><b>6</b></td><td>Ports <code>probe_in0 … probe_in5</code></td></tr>
+<tr><td>Output Probe Count</td><td><b>11</b></td><td>Ports <code>probe_out0 … probe_out10</code></td></tr>
+</tbody>
+</table>
+
+<h3>6.2 PROBE_IN Ports tab — widths</h3>
+<table class="mono">
+<thead><tr><th style="width:14%">Port</th><th style="width:9%">Width</th><th style="width:24%">Signal</th><th>What you read on the dashboard</th></tr></thead>
+<tbody>
+<tr><td>probe_in0</td><td>1</td><td>busy</td><td>0 = the accelerator is idle and will honour host writes</td></tr>
+<tr><td>probe_in1</td><td>1</td><td>done_sticky</td><td>1 = a job has completed since the last <code>start</code></td></tr>
+<tr><td>probe_in2</td><td>3</td><td>phase</td><td>Frozen at 0 (IDLE) whenever you look — the job is 170 ns long</td></tr>
+<tr><td>probe_in3</td><td>128</td><td>o_rdata</td><td><b>This is where you read results.</b> The stored result word selected by <code>host_o_addr</code> — persistent, readable any time after the job.</td></tr>
+<tr><td>probe_in4</td><td>128</td><td>result_flat</td><td><b>Will always read 0 here — see §11.7.</b> It is a live bus valid for only 4 clocks out of a 170 ns job, so VIO can never catch it. Meaningful only on the ILA (probe8).</td></tr>
+<tr><td>probe_in5</td><td>16</td><td>done_count</td><td>Total jobs completed since reset — the cheapest "did it run?" check</td></tr>
+</tbody>
+</table>
+
+<h3>6.3 PROBE_OUT Ports tab — widths and initial values</h3>
+<table class="mono">
+<thead><tr><th style="width:13%">Port</th><th style="width:8%">Width</th><th style="width:12%">Init</th><th style="width:24%">Signal</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td>probe_out0</td><td>1</td><td>0</td><td>vio_start_lvl</td><td>0→1 launches one job</td></tr>
+<tr><td>probe_out1</td><td>8</td><td><b>0x04</b></td><td>vio_num_vectors</td><td>Pre-set to 4 so the T5 demo works out of the box</td></tr>
+<tr><td>probe_out2</td><td>8</td><td>0x00</td><td>vio_act_base</td><td>First <code>a_mem</code> address</td></tr>
+<tr><td>probe_out3</td><td>8</td><td>0x00</td><td>vio_out_base</td><td>First <code>output_mem</code> address</td></tr>
+<tr><td>probe_out4</td><td>32</td><td>0</td><td>vio_w_wdata</td><td>Weight word (four int8 lanes)</td></tr>
+<tr><td>probe_out5</td><td>2</td><td>0</td><td>vio_w_addr</td><td>Weight row 0–3</td></tr>
+<tr><td>probe_out6</td><td>1</td><td>0</td><td>vio_w_we_lvl</td><td>0→1 commits one weight word</td></tr>
+<tr><td>probe_out7</td><td>32</td><td>0</td><td>vio_a_wdata</td><td>Activation word (four int8 lanes)</td></tr>
+<tr><td>probe_out8</td><td>8</td><td>0</td><td>vio_a_addr</td><td>Activation index 0–255</td></tr>
+<tr><td>probe_out9</td><td>1</td><td>0</td><td>vio_a_we_lvl</td><td>0→1 commits one activation word</td></tr>
+<tr><td>probe_out10</td><td>8</td><td>0</td><td>vio_o_addr</td><td>Which result word <code>o_rdata</code> shows</td></tr>
+</tbody>
+</table>
+
+<p>Click <b>OK</b> → <b>Generate</b> → <i>Out of context per IP</i> (the default) → <i>Generate</i>.</p>
+
+<div class="warn"><b>Why is the activation address 8 bits but the weight address only 2?</b>
+This looks like an inconsistency the first time you see the dashboard — both matrices are 4×4, and for
+this demo you write exactly four words to each. It is not a mistake, and it is not something you should
+"fix". The two address buses are sized for the <b>memories behind them</b>, and those memories differ
+in depth by 64×:
+<table style="margin:6px 0 2px 0">
+<thead><tr><th style="width:16%">Probe</th><th style="width:9%">Width</th><th style="width:20%">Memory</th><th style="width:14%">Geometry</th><th>Why that depth</th></tr></thead>
+<tbody>
+<tr><td><code>vio_w_addr</code></td><td><b>2</b></td><td><code>weight_mem</code></td><td>4 × 32</td><td>Holds <b>one whole matrix, once</b>. The array has ROWS = 4 rows; each 32-bit word packs the four int8 weights of one row. Four rows ⇒ four words ⇒ 2 address bits. Weights are loaded into the 16 PEs once per job and stay resident. A deeper weight memory would be dead silicon.</td></tr>
+<tr><td><code>vio_a_addr</code></td><td><b>8</b></td><td><code>a_mem</code></td><td>256 × 32</td><td>Holds a <b>whole stream</b> of activation vectors. 256 words = up to 256 vectors multiplied against a <b>single</b> weight load without reloading weights.</td></tr>
+</tbody>
+</table>
+That asymmetry <i>is</i> the weight-stationary argument, made concrete in the port widths: weight
+traffic is ROWS × COLS bytes <b>per job</b>, activation traffic is ROWS bytes <b>per vector</b>. You pay
+the weight-load cost once and amortise it over many activation rows. An 8-bit weight address would be
+64× wider than anything the design can use; a 2-bit activation address would cap you at four vectors
+and throw away the entire economic point of the architecture.
+<br><br>
+<code>vio_o_addr</code> is likewise <b>8</b> bits — <code>output_mem</code> is 256 × 128, mirroring
+<code>a_mem</code>'s depth, because the design produces one result vector per activation vector.</div>
+
+<div class="note"><b>Initial values matter</b>
+A VIO <code>probe_out</code> comes up at its configured initial value after configuration, and Vivado's
+dashboard <i>also</i> re-applies stored values when you reopen it. Setting
+<code>probe_out1 = 0x04</code> means a freshly programmed board is already configured for a
+four-vector job — one less thing to get wrong. Leave every command bit
+(<code>probe_out0/6/9</code>) at <b>0</b> so nothing fires at power-up.</div>
+
+<h2>7. Generating the ILA core</h2>
+
+<p><i>IP Catalog</i> → search <code>ILA</code> → double-click <b>ILA (Integrated Logic Analyzer)</b>.</p>
+
+<h3>7.1 General Options tab</h3>
+<table>
+<thead><tr><th style="width:34%">Field</th><th style="width:20%">Value</th><th>Note</th></tr></thead>
+<tbody>
+<tr><td>Component Name</td><td><code>ila_0</code></td><td>Must match the instance name.</td></tr>
+<tr><td>Monitor Type</td><td><b>Native</b></td><td>Not AXI — we probe raw signals, not a bus interface.</td></tr>
+<tr><td>Number of Probes</td><td><b>10</b></td><td><code>probe0 … probe9</code></td></tr>
+<tr><td>Sample Data Depth</td><td><b>1024</b></td><td>10.24 µs of trace at 100 MHz. The job is only 17 cycles, so 1024 gives you generous pre- and post-trigger context. See the BRAM note below.</td></tr>
+<tr><td>Same Number of Comparators for All Probes</td><td>ticked</td><td>Simplest configuration; 1 comparator per probe is enough for the triggers in section 14.</td></tr>
+<tr><td>Trigger Out / Trigger In ports</td><td>unticked</td><td>Not needed — a single ILA, self-triggered.</td></tr>
+<tr><td>Input Pipe Stages</td><td>0</td><td>Timing has enormous margin here; extra pipe stages would only shift samples relative to each other and confuse the cycle map in section 13.</td></tr>
+<tr><td>Capture Control</td><td>optional</td><td>Tick it only if you want the storage qualifier described in section 14.3.</td></tr>
+</tbody>
+</table>
+
+<h3>7.2 Probe_Ports tab — widths</h3>
+<table class="mono">
+<thead><tr><th style="width:11%">Port</th><th style="width:8%">Width</th><th style="width:22%">Signal</th><th>Why it is worth a probe</th></tr></thead>
+<tbody>
+<tr><td>probe0</td><td>1</td><td>start_p</td><td><b>The trigger.</b> One clock wide, exactly once per dashboard click.</td></tr>
+<tr><td>probe1</td><td>1</td><td>busy</td><td>Marks the job window. Should be high for exactly 22 samples on a 4-vector job.</td></tr>
+<tr><td>probe2</td><td>1</td><td>done</td><td>The real 10 ns pulse — the ILA is the only thing fast enough to see it.</td></tr>
+<tr><td>probe3</td><td>3</td><td>phase</td><td>The centrepiece. Phase-length counting is the primary hardware/spec cross-check.</td></tr>
+<tr><td>probe4</td><td>1</td><td>w_we_p</td><td>Confirms the one-shot produced exactly one clock per weight write.</td></tr>
+<tr><td>probe5</td><td>1</td><td>a_we_p</td><td>Same for activation writes.</td></tr>
+<tr><td>probe6</td><td>8</td><td>vio_a_addr</td><td>Which activation slot the last write targeted.</td></tr>
+<tr><td>probe7</td><td>128</td><td>o_rdata</td><td>Result read-back path.</td></tr>
+<tr><td>probe8</td><td>128</td><td>result_flat</td><td><b>The live result bus.</b> Watch C0…C3 emerge one per clock during DRAIN.</td></tr>
+<tr><td>probe9</td><td>16</td><td>done_count</td><td>Increments by exactly 1 inside the window — proves one job, not a burst.</td></tr>
+</tbody>
+</table>
+
+<p>Click <b>OK</b> → <b>Generate</b>.</p>
+
+<div class="tip"><b>Sizing the trace buffer</b>
+Total probe width = 1+1+1+3+1+1+8+128+128+16 = <b>288 bits</b>. At depth 1024 that is
+288 × 1024 = 294 912 bits ≈ <b>8 BRAM36</b> on <code>xc7z020</code> (140 available), plus a little for the
+trigger logic. If you are tight on block RAM, or you only care about the job itself, drop
+<b>Sample Data Depth to 256</b> — the whole 17-cycle job still fits with room to spare, and the cost
+falls to ~2 BRAM36. Alternatively drop <code>probe7</code> (<code>o_rdata</code>), since you can read the
+same data from the VIO dashboard after the run.</div>
+
+<h2 class="pb">8. Probing internal nets without editing the RTL</h2>
+
+<p>The ILA instantiated in <code>vio_debug_top</code> can only see signals visible at the harness level.
+To watch what happens <i>inside</i> the accelerator — the AGU's <code>wload</code> and
+<code>valid_in</code> strobes, the address counters, the partial sums crossing the PE array — you need
+netlist nets. Since the RTL must not be edited, there are two non-invasive routes.</p>
+
+<h3>8.1 Route A — the Set Up Debug wizard <span class="tag alt">RECOMMENDED FOR EXPLORING</span></h3>
+<ol>
+<li>Run <b>Synthesis</b> once and <i>Open Synthesized Design</i>.</li>
+<li>In the <b>Netlist</b> pane, expand <code>vio_debug_top → u_acc</code>. Right-click nets of interest —
+    <code>agu_wload</code>, <code>agu_valid_in</code>, <code>agu_out_we</code>,
+    <code>agu_w_addr[1:0]</code>, <code>agu_act_addr[7:0]</code>, <code>agu_out_addr[7:0]</code> — and
+    choose <b>Mark Debug</b>.</li>
+<li><i>Tools → Set Up Debug</i> → <i>Next</i> → review the net list → <i>Next</i> → confirm the
+    <b>debug clock domain is <code>clk</code></b> for every net → set <b>sample depth 1024</b> →
+    <i>Next</i> → <i>Finish</i>.</li>
+<li>Vivado writes <code>create_debug_core</code> / <code>connect_debug_port</code> commands into your
+    XDC. Save it. This inserts a <i>second</i> ILA (<code>u_ila_0</code>) alongside your instantiated
+    <code>ila_0</code>; both appear in the Hardware Manager as separate dashboards.</li>
+<li>Re-run <b>Synthesis → Implementation → Generate Bitstream</b>.</li>
+</ol>
+
+<h3>8.2 Route B — <code>MARK_DEBUG</code> from the XDC <span class="tag">RECOMMENDED FOR REPEATABILITY</span></h3>
+<p>The wizard's output is verbose and tied to one particular netlist. For a setup you want to
+reproduce, put the marking in your own constraints file instead. <code>vio_debug.xdc</code> ships with
+these lines commented out:</p>
+<pre><code>set_property MARK_DEBUG true [get_nets u_acc/agu_wload]
+set_property MARK_DEBUG true [get_nets u_acc/agu_valid_in]
+set_property MARK_DEBUG true [get_nets u_acc/agu_out_we]
+set_property MARK_DEBUG true [get_nets {u_acc/agu_w_addr[*]}]
+set_property MARK_DEBUG true [get_nets {u_acc/agu_act_addr[*]}]
+set_property MARK_DEBUG true [get_nets {u_acc/agu_out_addr[*]}]</code></pre>
+
+<div class="warn"><b>Find the real net names first — do not guess</b>
+Synthesis renames, merges and absorbs nets. Before uncommenting anything, open the Synthesized Design
+and run these in the Tcl console:
+<pre style="margin-top:5px;margin-bottom:0"><code>get_nets -hierarchical *agu_wload*
+get_nets -hierarchical *agu_valid_in*
+get_nets -hierarchical *agu_out_we*</code></pre>
+Paste back whatever they actually return. An empty result means the net was optimized into its
+consumer — see the next box.</div>
+
+<div class="note"><b>Preserve hierarchy so the names survive</b>
+<i>Settings → Synthesis → -flatten_hierarchy</i> → set to <b><code>none</code></b>. The default
+(<code>rebuilt</code>) flattens for optimization and then reconstructs names, which is usually good
+enough but occasionally loses a net. Setting <code>none</code> guarantees the hierarchical names above
+resolve. It does cost some QoR — with a measured baseline of WNS +1.279 ns (§15) there is room for that,
+but check timing after changing it rather than assuming. If a specific net still disappears, add
+<code>set_property KEEP true [get_nets …]</code> or
+<code>set_property DONT_TOUCH true [get_cells u_acc/u_agu]</code>.</div>
+
+<h3>8.3 What is worth probing inside the design</h3>
+<table>
+<thead><tr><th style="width:26%">Net (inside <code>u_acc</code>)</th><th>What it proves</th></tr></thead>
+<tbody>
+<tr><td><code>agu_wload</code></td><td>High for exactly 4 cycles during WLOAD, then low. Together with <code>agu_w_addr</code> it demonstrates the <b>bottom-first</b> weight ordering on real silicon.</td></tr>
+<tr><td><code>agu_w_addr[1:0]</code></td><td>Counts <b>3, 2, 1, 0</b> during WLOAD — the single most misunderstood behaviour in the design.</td></tr>
+<tr><td><code>agu_valid_in</code></td><td>High for exactly <code>num_vectors</code> cycles during COMPUTE, one activation vector per clock.</td></tr>
+<tr><td><code>agu_act_addr[7:0]</code></td><td>Walks <code>act_base</code>, <code>act_base+1</code>, … Confirms <code>act_base</code> is honoured.</td></tr>
+<tr><td><code>agu_out_we</code> / <code>agu_out_addr</code></td><td>Four write strobes landing at <b>STORE_LATENCY = 8</b> cycles after each activation address was issued — i.e. inside DRAIN. This is the timing derivation made visible.</td></tr>
+<tr><td><code>u_acc/u_datapath/…/psum_out_bottom</code></td><td>Deep inside the array: the partial sums leaving the bottom PE row. Expensive in probes; only worth it if you are debugging the array itself rather than the system.</td></tr>
+</tbody>
+</table>
+
+<h2 class="pb">8A. How the VIO and ILA get wired in, and how the build is staged</h2>
+
+<p>Sections 6 and 7 told you which boxes to tick in the IP wizards, and section 4 showed
+<code>vio_debug_top.sv</code> instantiating <code>vio_0</code> and <code>ila_0</code> by name. What
+neither explained is the part that confuses almost everyone the first time: <b>you never instantiate the
+debug hub, you never write a single line of JTAG logic, and you never connect the cores to the outside
+world — yet the Hardware Manager finds them.</b> This section explains exactly what Vivado does on your
+behalf, at which stage of the build it does it, and how to verify each step.</p>
+
+<h3>8A.1 There are two completely different ways a debug core enters a design</h3>
+
+<p>Both end up in the same place. Confusing them is the source of most "why is my ILA not there"
+questions.</p>
+
+<table>
+<thead><tr><th style="width:22%"></th><th style="width:39%">Path A — RTL instantiation <span class="tag alt">USED HERE</span></th>
+<th>Path B — netlist insertion (<code>MARK_DEBUG</code> / <i>Set Up Debug</i>)</th></tr></thead>
+<tbody>
+<tr><td><b>How the core is created</b></td>
+    <td>You generate <code>vio_0</code> / <code>ila_0</code> from the IP catalog, then write
+    <code>vio_0 u_vio (...)</code> in your HDL.</td>
+    <td>You mark nets for debug and run <i>Tools → Set Up Debug</i>. Vivado creates the core itself, in
+    the netlist, after synthesis.</td></tr>
+<tr><td><b>Where the connections are described</b></td>
+    <td><b>In your source.</b> <code>.probe_in0(busy)</code>, <code>.probe_out0(vio_start_lvl)</code> — the
+    port map you wrote in <code>vio_debug_top.sv</code>.</td>
+    <td><b>In an auto-generated XDC.</b> <code>create_debug_core</code>, <code>create_debug_port</code>,
+    <code>connect_debug_port</code> commands the wizard writes for you.</td></tr>
+<tr><td><b>Visible in the RTL hierarchy?</b></td><td>Yes — <code>u_vio</code>, <code>u_ila</code> appear in the Sources tree.</td>
+    <td>No. The core exists only from <code>opt_design</code> onward.</td></tr>
+<tr><td><b>Requires re-synthesis to change</b></td><td>Yes — you edited HDL.</td>
+    <td>Yes if the marks are on RTL nets (the <code>MARK_DEBUG</code> property is applied during synthesis), no if you only re-run the wizard on an existing synthesized netlist.</td></tr>
+<tr><td><b>Best for</b></td><td>A permanent, scripted, reproducible harness — a bring-up rig you will use many times. <b>Also the only way to get a VIO's <code>probe_out</code> to drive logic</b>, because outputs must be connected to something in your design.</td>
+    <td>Opportunistic debugging: "I need to see this net, once." Also the only non-invasive way to probe <b>inside</b> a module you are not allowed to edit — which is why section 8 uses it for the AGU nets.</td></tr>
+</tbody>
+</table>
+
+<div class="note"><b>This project deliberately uses both</b>
+Path A for the harness — the VIO and ILA are instantiated in <code>vio_debug_top.sv</code>, so the whole
+rig is reproducible from source and can be version-controlled. Path B for the internal AGU nets, because
+the 13 RTL files must never be edited and <code>(* mark_debug *)</code> cannot be added to them. The two
+mechanisms coexist in one build without any special handling.</div>
+
+<h3>8A.2 Path A in detail — what "generating the IP" actually produces</h3>
+
+<p>When you click <i>OK</i> in the VIO wizard, Vivado writes an <b><code>.xci</code></b> file — the IP
+configuration. <i>Generate Output Products</i> then turns that configuration into real files:</p>
+
+<table class="mono">
+<thead><tr><th style="width:30%">Artefact</th><th>What it is and who consumes it</th></tr></thead>
+<tbody>
+<tr><td><code>vio_0.xci</code></td><td>The IP definition — every parameter you set (probe counts, widths, initial values). <b>This is the file to keep in version control</b>; everything else is regenerable.</td></tr>
+<tr><td><code>vio_0_stub.v</code></td><td>An empty module with the right port list. Lets the top level elaborate and synthesize while the real contents are compiled separately.</td></tr>
+<tr><td><code>vio_0.veo</code> / <code>.vho</code></td><td>A copy-paste instantiation template. This is where the exact port names in section 4's instantiation came from.</td></tr>
+<tr><td><code>vio_0.dcp</code></td><td><b>The synthesized checkpoint.</b> By default IP is synthesized <b>Out-Of-Context (OOC)</b> — as its own little run, before and independently of your top-level synthesis.</td></tr>
+<tr><td><code>vio_0_ooc.xdc</code></td><td>Constraints scoped to the IP itself — its internal clocking and any false paths it needs. You never edit this.</td></tr>
+</tbody>
+</table>
+
+<p>The binding is <b>by module name</b>, and that is the whole trick. Your HDL says
+<code>vio_0 u_vio (...)</code>; the IP produced a module called <code>vio_0</code>; the elaborator
+matches them. If you rename the IP component in the wizard to anything other than <code>vio_0</code>,
+the instantiation in <code>vio_debug_top.sv</code> becomes a <b>black box</b> and the design will
+synthesize with an "unresolved module" warning and then behave as if the VIO were not there.</p>
+
+<div class="warn"><b>The single most common Path A failure</b>
+The component names in the wizard must be exactly <code>vio_0</code> and <code>ila_0</code>, because
+that is what <code>vio_debug_top.sv</code> instantiates. If the Sources tree shows those instances with a
+black-box icon, or synthesis warns about an unresolved black box, the IP was never generated or was
+generated under a different name. <b>Do not proceed to implementation</b> — the build will complete and
+the dashboards will simply be absent.</div>
+
+<h3>8A.3 What is genuinely automatic — the debug hub</h3>
+
+<p>Search <code>vio_debug_top.sv</code> for a JTAG port, a TAP controller, or anything named
+<code>dbg_hub</code>. There is nothing. The module has <b>one port: <code>clk</code></b>. And yet the
+Hardware Manager talks to both cores over the programming cable. Here is the missing piece:</p>
+
+<div class="ascii">
+  WHAT YOU WROTE                          WHAT VIVADO ADDS DURING opt_design
+  ─────────────────────────────           ────────────────────────────────────────────────
+                                          ┌─────────────────────────────────────────┐
+   vio_debug_top                          │            (auto-inserted)              │
+   ├── u_vio  : vio_0     ◄───────────────┼──── sl_iport / sl_oport ────┐           │
+   ├── u_ila  : ila_0     ◄───────────────┼──── sl_iport / sl_oport ──┐ │           │
+   ├── u_os_* : oneshot                   │                           ▼ ▼           │
+   ├── u_acc  : accelerator_system_top    │                     ┌──────────┐        │
+   └── (POR, done_sticky, result_flat)    │        clk ────────►│ dbg_hub  │        │
+                                          │                     └────┬─────┘        │
+                                          │                          │ BSCANE2      │
+                                          │                          ▼ (USER1 chain)│
+                                          │                 ┌──────────────────┐    │
+                                          │                 │ device JTAG TAP  │    │
+                                          │                 └────────┬─────────┘    │
+                                          └──────────────────────────┼──────────────┘
+                                                                     ▼
+                                                        TDI/TDO/TCK/TMS package pins
+                                                        → USB programming cable (J17)
+                                                        → Vivado Hardware Manager
+</div>
+
+<table>
+<thead><tr><th style="width:26%">Mechanism</th><th>What happens, and why you never see it in your source</th></tr></thead>
+<tbody>
+<tr><td><b>The hub interface on each core</b></td>
+    <td>Every Xilinx debug core carries a dedicated hub-side interface (the <code>sl_iport</code> /
+    <code>sl_oport</code> ports) in addition to the <code>probe*</code> ports you connected. The IP wizard
+    does not show it and the instantiation template omits it, because <b>you are not meant to connect
+    it</b> — the tool does.</td></tr>
+<tr><td><b>Hub insertion</b></td>
+    <td>During <code>opt_design</code>, Vivado scans the netlist for debug cores whose hub interface is
+    unconnected. If it finds any and there is no hub yet, it <b>instantiates <code>dbg_hub</code> and
+    wires every core to it</b>. This is why the hub appears in the implemented netlist but in no source
+    file and in no Sources-tree entry.</td></tr>
+<tr><td><b>The JTAG connection</b></td>
+    <td>The hub instantiates a <b><code>BSCANE2</code></b> primitive — the fabric's tap into the device's
+    boundary-scan chain — on user scan chain <b>1</b> by default (<code>C_USER_SCAN_CHAIN</code>). No
+    package pins are consumed: the JTAG pins are dedicated configuration pins that exist whether you use
+    them or not. <b>This is precisely why a VIO/ILA design needs only one user pin.</b></td></tr>
+<tr><td><b>Clock selection</b></td>
+    <td>The hub needs a fabric clock to run its side of the transfer. Vivado picks the clock of the debug
+    cores it found. When there is any doubt — and there often is — you pin it down explicitly:
+    <code>connect_debug_port dbg_hub/clk [get_nets clk]</code>, exactly as <code>vio_debug.xdc</code>
+    does.</td></tr>
+<tr><td><b>Frequency declaration</b></td>
+    <td>The hub must know how fast that clock runs so it can size the JTAG-to-fabric handshake. It does
+    <b>not</b> infer this from <code>create_clock</code>. You tell it:
+    <code>C_CLK_INPUT_FREQ_HZ 100000000</code> and <code>C_ENABLE_CLK_DIVIDER false</code>. Getting this
+    wrong is the number-one cause of <i>"The debug hub core was not detected"</i> — see section 16.</td></tr>
+<tr><td><b>Probe map export</b></td>
+    <td>Only the hardware knows probe <i>indices</i>; only the netlist knows net <i>names</i>. At
+    bitstream time Vivado writes the mapping to a <b><code>.ltx</code></b> file. Without it, Hardware
+    Manager sees anonymous cores and can label nothing.</td></tr>
+</tbody>
+</table>
+
+<div class="tip"><b>One hub, one scan chain</b>
+A design has <b>exactly one <code>dbg_hub</code></b> serving all debug cores, however many you
+instantiate. If you ever add a JTAG-to-AXI master or a second debug infrastructure, they must sit on
+<i>different</i> user scan chains (<code>C_USER_SCAN_CHAIN</code> 1 vs 2 vs 3), or they will fight over
+the same BSCAN resource and neither will enumerate.</div>
+
+<h3>8A.4 Path B in detail — what <i>Set Up Debug</i> writes for you</h3>
+
+<p>When you right-click a net → <i>Mark Debug</i> and run the wizard, Vivado does not edit your RTL. It
+appends Tcl to a constraints file. The generated commands look like this, and reading them demystifies
+the whole flow:</p>
+
+<pre><code>create_debug_core u_ila_0 ila                                  ;# make an ILA in the netlist
+set_property C_DATA_DEPTH        1024   [get_debug_cores u_ila_0]
+set_property C_TRIGIN_EN         false  [get_debug_cores u_ila_0]
+set_property ALL_PROBE_SAME_MU   true   [get_debug_cores u_ila_0]
+connect_debug_port u_ila_0/clk [get_nets clk]                  ;# the capture clock
+
+create_debug_port  u_ila_0 probe                               ;# add a probe port
+set_property port_width 8 [get_debug_ports u_ila_0/probe0]
+connect_debug_port u_ila_0/probe0 [get_nets {u_acc/agu_w_addr[0] u_acc/agu_w_addr[1]}]</code></pre>
+
+<table>
+<thead><tr><th style="width:26%">Command</th><th>Effect</th></tr></thead>
+<tbody>
+<tr><td><code>create_debug_core</code></td><td>Creates the core object. It does not exist in any HDL file — it is a netlist object.</td></tr>
+<tr><td><code>create_debug_port</code></td><td>Adds a probe port to that core and sets its width.</td></tr>
+<tr><td><code>connect_debug_port</code></td><td>Attaches the port to real nets, <b>by netlist name</b>. This is why <code>-flatten_hierarchy none</code> matters (section 8): flattening renames or dissolves the hierarchical nets you are trying to reference.</td></tr>
+<tr><td><code>set_property MARK_DEBUG true [get_nets …]</code></td><td>The lighter-weight alternative used in <code>vio_debug.xdc</code>: it just tags nets as debug-worthy and preserves them from optimisation, leaving the core creation to the wizard or to a later run.</td></tr>
+</tbody>
+</table>
+
+<div class="warn"><b>Why marking a net can change your results — and why it usually should not</b>
+Nets that feed nothing get optimised away. <code>MARK_DEBUG</code> forces them to survive, which can
+change how the surrounding logic is mapped. That is a deliberate, accepted cost of observability — but it
+means <b>a design with debug marks is not bit-identical to the same design without them</b>. Always
+re-run the timing check after adding probes rather than assuming the previous result still holds.</div>
+
+<h3>8A.5 The build pipeline, stage by stage</h3>
+
+<p>This is what actually happens between clicking <i>Run Synthesis</i> and holding a working
+<code>.bit</code>. The debug-relevant events are called out at each stage.</p>
+
+<table>
+<thead><tr><th style="width:5%">#</th><th style="width:20%">Stage</th><th style="width:22%">Tcl command</th><th>What it does — and what happens to the debug cores</th></tr></thead>
+<tbody>
+<tr><td>0</td><td><b>IP generation</b></td><td><code>generate_target</code> / <code>synth_ip</code></td>
+    <td>Runs <b>before and independently of</b> your design. Each IP is synthesized out-of-context into
+    its own <code>.dcp</code>. Consequence: <b>changing your RTL does not re-synthesize the VIO</b>, and
+    re-configuring the VIO does not re-synthesize your RTL. They meet later.</td></tr>
+<tr><td>1</td><td><b>Elaboration</b></td><td><code>synth_design -rtl</code></td>
+    <td>Builds the RTL-level hierarchy. <code>u_vio</code> and <code>u_ila</code> resolve to the IP
+    <b>stubs</b> — correct ports, empty insides. This is the first place a name mismatch shows up.</td></tr>
+<tr><td>2</td><td><b>Synthesis</b></td><td><code>synth_design</code></td>
+    <td>Maps your logic to LUTs, flip-flops, carry chains, BRAM and DSP. The IP instances remain
+    <b>black boxes</b>. Any <code>MARK_DEBUG</code> properties are applied here, which is why marked nets
+    survive optimisation. <b>Output:</b> a post-synthesis checkpoint. Utilisation reported here does
+    <i>not</i> yet include the debug cores.</td></tr>
+<tr><td>3</td><td><b>Link / open the design</b></td><td><code>link_design</code></td>
+    <td>The first step of implementation. Vivado <b>stitches the IP <code>.dcp</code> files into the
+    black-box holes</b>. From this moment the VIO and ILA are real gates in the netlist. This is the
+    "meeting point" of the two independent synthesis runs.</td></tr>
+<tr><td>4</td><td><b>Optimisation</b></td><td><code>opt_design</code></td>
+    <td><b>The stage that matters most here.</b> Logic optimisation runs, and — via
+    <code>implement_debug_core</code> — Vivado <b>inserts <code>dbg_hub</code>, connects every debug core
+    to it, instantiates the <code>BSCANE2</code>, and applies your <code>C_CLK_INPUT_FREQ_HZ</code> /
+    <code>C_USER_SCAN_CHAIN</code> properties</b>. If your XDC's <code>get_debug_cores dbg_hub</code>
+    block runs at the right moment, this is when it takes effect.</td></tr>
+<tr><td>5</td><td><b>Placement</b></td><td><code>place_design</code></td>
+    <td>Every cell gets a physical site — including the ILA's capture BRAMs and the hub. The debug cores
+    are now competing for the <b>same silicon and the same routing channels</b> as the logic they observe.
+    This is the mechanism behind the timing cost discussed in section 15.</td></tr>
+<tr><td>6</td><td><b>Physical optimisation</b></td><td><code>phys_opt_design</code></td>
+    <td>Post-placement timing fixes: replication of high-fan-out drivers, critical-cell re-placement.
+    Optional, and worth enabling if the debug build is tight on slack.</td></tr>
+<tr><td>7</td><td><b>Routing</b></td><td><code>route_design</code></td>
+    <td>Real wires. <b>The first point at which timing numbers are sign-off quality</b> — everything
+    before this is an estimate. Hold violations are fixed here automatically.</td></tr>
+<tr><td>8</td><td><b>Reports</b></td><td><code>report_timing_summary</code>, <code>report_utilization</code>, <code>report_drc</code></td>
+    <td>Run on the routed design. <b>WNS, WHS and WPWS must all be positive with 0 failing endpoints</b>
+    (section 15, and <code>timing.pdf</code> for the full treatment).</td></tr>
+<tr><td>9</td><td><b>Bitstream</b></td><td><code>write_bitstream</code></td>
+    <td>Produces <code>vio_debug_top.bit</code> — <b>and</b>, because debug cores are present, also writes
+    the probes file <code>vio_debug_top.ltx</code> (<code>write_debug_probes</code>). Both land in
+    <code>&lt;project&gt;.runs/impl_1/</code>.</td></tr>
+<tr><td>10</td><td><b>Program</b></td><td><code>program_hw_devices</code></td>
+    <td>Configures the PL. Hardware Manager reads the <code>.ltx</code>, discovers the hub, enumerates
+    the cores, and creates <code>hw_vio_1</code> and <code>hw_ila_1</code> with your net names attached
+    to the probes.</td></tr>
+</tbody>
+</table>
+
+<div class="note"><b>The two facts worth memorising from that table</b>
+<b class="inl">(1) The debug hub is created at <code>opt_design</code>, not in your source and not at
+synthesis.</b> That is why searching the RTL for it finds nothing, why post-synthesis utilisation does
+not show it, and why debug-hub properties must be applied to the implemented design rather than to the
+elaborated one.<br>
+<b class="inl">(2) The <code>.bit</code> and the <code>.ltx</code> are a matched pair.</b> The bitstream
+carries the hardware; the <code>.ltx</code> carries the names. Program with a stale <code>.ltx</code> and
+you get dashboards with wrong or missing probe labels; program without one and you get no dashboards at
+all, even though the cores are physically present and running.</div>
+
+<h3>8A.6 Where everything lands on disk</h3>
+
+<pre><code>&lt;project&gt;/
+├── &lt;project&gt;.srcs/sources_1/
+│   ├── imports/          ← the 13 RTL files + vio_debug_top.sv
+│   └── ip/vio_0/vio_0.xci, ip/ila_0/ila_0.xci     ← IP configuration (version-control THIS)
+├── &lt;project&gt;.srcs/constrs_1/imports/vio_debug.xdc
+├── &lt;project&gt;.gen/sources_1/ip/vio_0/            ← generated: stub, .veo template, _ooc.xdc
+├── &lt;project&gt;.runs/vio_0_synth_1/vio_0.dcp       ← the OOC synthesized IP
+├── &lt;project&gt;.runs/synth_1/vio_debug_top.dcp     ← post-synthesis (IP still black boxes)
+└── &lt;project&gt;.runs/impl_1/
+    ├── vio_debug_top_routed.dcp                  ← post-route: the sign-off checkpoint
+    ├── vio_debug_top.bit                         ← the bitstream
+    ├── vio_debug_top.ltx                         ← THE PROBES FILE — Program Device needs this
+    └── *_timing_summary_routed.rpt               ← WNS / WHS / WPWS live here</code></pre>
+
+<h3>8A.7 Verifying the wiring at each stage</h3>
+
+<table>
+<thead><tr><th style="width:22%">After this stage</th><th style="width:34%">Run this</th><th>You should see</th></tr></thead>
+<tbody>
+<tr><td>IP generation</td><td>Sources tree, IP Sources view</td><td><code>vio_0</code> and <code>ila_0</code> present, <b>not</b> shown as black boxes.</td></tr>
+<tr><td>Synthesis</td><td><code>get_cells -hier -filter {REF_NAME =~ *vio*}</code></td><td>The VIO instance exists in the netlist.</td></tr>
+<tr><td>Synthesis</td><td><code>get_cells -hier u_os_start</code></td><td>The <code>oneshot</code> instances survived — critical, see section 4.</td></tr>
+<tr><td>Synthesis</td><td><code>get_nets -hier -filter {MARK_DEBUG}</code></td><td>Every net you marked in the XDC, and nothing you did not.</td></tr>
+<tr><td><code>opt_design</code> / open implemented design</td><td><code>get_debug_cores</code></td>
+    <td><b><code>dbg_hub</code>, <code>u_ila</code>, <code>u_vio</code></b> — this is the proof the automatic hub insertion happened.</td></tr>
+<tr><td>Implemented design</td><td><code>get_property C_CLK_INPUT_FREQ_HZ [get_debug_cores dbg_hub]</code></td><td><code>100000000</code>. If it reads something else, your XDC block did not run.</td></tr>
+<tr><td>Implemented design</td><td><code>report_timing_summary</code></td><td>WNS, WHS, WPWS positive; 0 failing endpoints.</td></tr>
+<tr><td>Bitstream</td><td>File listing of <code>impl_1/</code></td><td>Both <code>.bit</code> <b>and</b> <code>.ltx</code> present, with the same timestamp.</td></tr>
+<tr><td>Programming</td><td>Hardware pane</td><td><code>hw_vio_1</code> and <code>hw_ila_1</code> under <code>xc7z020_1</code>.</td></tr>
+<tr><td>Connected</td><td><code>accel_probes</code> (section 12)</td><td>17 probes with the widths of sections 6 and 7 — 6 IN, 11 OUT.</td></tr>
+</tbody>
+</table>
+
+<h3>8A.8 The same build without the GUI</h3>
+
+<p>Every stage above is a Tcl command, which is what makes the whole flow reproducible. A minimal
+non-project script for this design:</p>
+
+<pre><code>create_project -in_memory -part xc7z020clg484-1
+
+read_verilog -sv [glob &lt;RTL_DIR&gt;/*.sv]
+read_verilog -sv FPGA_IMPL/rtl/vio_debug_top.sv
+read_ip      vio_0/vio_0.xci
+read_ip      ila_0/ila_0.xci
+synth_ip     [get_ips]                       ;# stage 0 — OOC synthesis of the debug cores
+read_xdc     FPGA_IMPL/vio_debug.xdc
+
+synth_design -top vio_debug_top -part xc7z020clg484-1   ;# stages 1-2
+opt_design                                              ;# stages 3-4  ← dbg_hub inserted HERE
+place_design                                            ;# stage 5
+phys_opt_design                                         ;# stage 6
+route_design                                            ;# stage 7
+
+report_timing_summary -file timing_summary_routed.rpt   ;# stage 8 — sign-off numbers
+report_utilization    -file utilization_routed.rpt
+report_drc            -file drc_routed.rpt
+
+write_bitstream    -force vio_debug_top.bit             ;# stage 9
+write_debug_probes -force vio_debug_top.ltx             ;# the probes file, explicitly</code></pre>
+
+<div class="tip"><b>Sanity-check you can run in ten seconds</b>
+Open the implemented design and type <code>get_debug_cores</code>. If the answer includes
+<code>dbg_hub</code>, the automatic wiring worked and any remaining problem is on the host side — cable,
+drivers, <code>.ltx</code>, or JTAG frequency. If <code>dbg_hub</code> is absent, the problem is in the
+build, and the usual cause is that the IP was a black box all along (section 8A.2).</div>
+
+<h2>9. Constraints, synthesis, implementation, bitstream</h2>
+
+<h3>9.1 The constraints file</h3>
+<p><code>vio_debug.xdc</code> is short because there is exactly one physical pin:</p>
+<pre><code>set_property -dict {PACKAGE_PIN Y9 IOSTANDARD LVCMOS33} [get_ports clk]
+create_clock -name sys_clk -period 10.000 [get_ports clk]
+
+set_property BITSTREAM.GENERAL.UNCONSTRAINEDPINS {Allow} [current_design]
+
+if {[llength [get_debug_cores -quiet dbg_hub]]} {
+    set_property C_CLK_INPUT_FREQ_HZ   100000000 [get_debug_cores dbg_hub]
+    set_property C_ENABLE_CLK_DIVIDER  false     [get_debug_cores dbg_hub]
+    set_property C_USER_SCAN_CHAIN     1         [get_debug_cores dbg_hub]
+    connect_debug_port dbg_hub/clk [get_nets clk]
+}</code></pre>
+
+<div class="warn"><b>Verify the clock pin against the Digilent master XDC</b>
+<code>Y9</code> is the 100 MHz PL oscillator on the widely used ZedBoard rev C/D master constraints.
+Board revisions differ. Download the official <code>zedboard_master.xdc</code> for <i>your</i> revision
+and confirm the <code>PACKAGE_PIN</code> and <code>IOSTANDARD</code> before you build. A wrong clock pin
+produces a bitstream that programs successfully and then does absolutely nothing — the hardest kind of
+failure to diagnose.</div>
+
+<div class="note"><b>The debug-hub clock block is the single most valuable constraint here</b>
+Vivado auto-inserts a <code>dbg_hub</code> to bridge JTAG to your VIO and ILA. If it does not know the
+clock frequency it guesses, and the Hardware Manager then reports
+<i>"The debug hub core was not detected"</i> — you get a programmed device with no dashboards at all.
+Setting <code>C_CLK_INPUT_FREQ_HZ</code> to the real 100 MHz and disabling the clock divider fixes the
+overwhelming majority of these cases.</div>
+
+<h3>9.2 Build</h3>
+<ol>
+<li><b>Run Synthesis</b> (<i>Flow Navigator → Run Synthesis</i> → OK). Expect zero errors. Warnings
+    about the unconnected <code>btnl/btnr</code>-style ports do not apply here — <code>vio_debug_top</code>
+    has one port.</li>
+<li><b>Run Implementation</b> → OK.</li>
+<li><b>Check timing.</b> <i>Reports → Timing → Report Timing Summary</i>. <b>WNS must be positive.</b>
+    For reference, the accelerator alone synthesizes to <b>WNS +1.279 ns</b> at 100 MHz (§15) — a
+    working margin, but not a huge one, and the debug cores you are adding will eat into it. Check your
+    <code>create_clock</code> first because that is cheap to verify, but treat a negative WNS as a real
+    result rather than assuming it must be a constraint typo.</li>
+<li><b>Generate Bitstream</b> → OK.</li>
+</ol>
+
+<div class="tip"><b>If timing fails</b>
+You have an easy escape here that most designs do not: <b>none of the four interface methods depends on
+throughput.</b> Add an MMCM and clock the fabric at 50 MHz, which doubles the available period and makes
+the problem disappear. Remember to update <code>C_CLK_INPUT_FREQ_HZ</code> on the debug hub to match, or
+you will trade a timing failure for a "debug hub not detected". Reducing the ILA sample depth also helps,
+since it frees both block RAM and the routing around it.</div>
+
+<h2>10. Programming the board and opening the dashboards</h2>
+
+<ol>
+<li>Power the board, connect the micro-USB to <b>J17</b>.</li>
+<li><i>Flow Navigator → <b>Open Hardware Manager</b></i> → <b>Open Target → Auto Connect</b>.</li>
+<li>The <i>Hardware</i> pane shows the chain: <code>localhost → xilinx_tcf → arm_dap_0</code> and
+    <code>xc7z020_1</code>.</li>
+<li>Right-click <b><code>xc7z020_1</code></b> → <b>Program Device</b>. The <code>.bit</code> path and the
+    matching <code>.ltx</code> <i>debug probes file</i> are pre-filled — <b>both must be present</b>.
+    Click <b>Program</b>.</li>
+<li>After a few seconds the Hardware pane grows two children under the device:
+    <b><code>hw_vio_1</code></b> and <b><code>hw_ila_1</code></b> (plus <code>hw_ila_2</code> if you also
+    used the Set Up Debug wizard). Double-click each to open its dashboard.</li>
+</ol>
+
+<div class="warn"><b>The <code>.ltx</code> file is not optional</b>
+The probes file maps probe indices to signal names. Without it the dashboards show anonymous
+<code>probe_out4</code>-style entries, or refuse to open. Vivado writes it next to the bitstream during
+implementation. If the field is blank, browse to
+<code>&lt;project&gt;.runs/impl_1/vio_debug_top.ltx</code>.</div>
+
+<h3>10.1 Setting up the VIO dashboard</h3>
+<ol>
+<li>In the <b>hw_vio_1</b> window, click the <b>+</b> in the <i>VIO Probes</i> pane → <b>Select All</b> → OK.</li>
+<li>For each 32-bit and 128-bit probe, right-click → <i>Radix</i> → <b>Hex</b>. For
+    <code>done_count</code> choose <b>Unsigned Decimal</b>.</li>
+<li>For the output probes you will type into (<code>vio_w_wdata</code>, <code>vio_a_wdata</code>,
+    <code>vio_w_addr</code>, <code>vio_a_addr</code>, <code>vio_o_addr</code>,
+    <code>vio_num_vectors</code>), the <b>Value</b> column becomes an editable text box.</li>
+<li>For the 1-bit command probes (<code>vio_start_lvl</code>, <code>vio_w_we_lvl</code>,
+    <code>vio_a_we_lvl</code>), right-click → <b>Toggle Button</b> so you get a clickable switch.</li>
+<li>Confirm the refresh mode: the small circular-arrow icon should show <i>auto-refresh</i>, or click it
+    manually before each read.</li>
+</ol>
+
+<div class="tip"><b>Save the dashboard</b>
+Once the probes, radixes and toggle buttons are arranged, use <i>File → Save Constraints</i> (or export
+the dashboard) so this layout is restored the next time you open the Hardware Manager. Rebuilding it by
+hand every session is tedious and error-prone.</div>
+
+<h2 class="pb">11. Running the demo from the VIO dashboard (manual)</h2>
+
+<p>This is the T5 golden case — the same vectors the simulation regression checks, so a mismatch here is
+unambiguously a hardware or setup problem, not a modelling question.</p>
+
+<pre><code>     A (4x4)              W (4x4)                 C = A x W (4x4)
+  [ 1 0 0 0 ]        [  1  2  3  4 ]           [  1  2  3  4 ]
+  [ 0 1 0 0 ]   x    [  5  6  7  8 ]     =     [  5  6  7  8 ]
+  [ 0 0 1 0 ]        [  9 10 11 12 ]           [  9 10 11 12 ]
+  [ 1 1 1 1 ]        [ 13 14 15 16 ]           [ 28 32 36 40 ]</code></pre>
+
+<h3>11.1 Step 1 — confirm the accelerator is idle</h3>
+<p>On the dashboard: <code>busy</code> must read <b>0</b>. If it does not, the reset never released or a
+command bit is stuck high — see section 16.</p>
+
+<h3>11.2 Step 2 — write the four weight words</h3>
+<p>For each row: type <code>vio_w_wdata</code>, type <code>vio_w_addr</code>, then click
+<code>vio_w_we_lvl</code> to <b>1</b> and back to <b>0</b>. The 0→1 edge produces exactly one clock of
+<code>host_w_we</code>; returning to 0 re-arms the one-shot for the next write.</p>
+<table class="mono">
+<thead><tr><th style="width:14%">vio_w_addr</th><th style="width:20%">vio_w_wdata</th><th style="width:26%">Weight row</th><th>Byte breakdown (lane 0 = low byte = column 0)</th></tr></thead>
+<tbody>
+<tr><td>0</td><td>0x04030201</td><td>W[0] = 1 2 3 4</td><td><code>04</code>=W[0][3] <code>03</code>=W[0][2] <code>02</code>=W[0][1] <code>01</code>=W[0][0]</td></tr>
+<tr><td>1</td><td>0x08070605</td><td>W[1] = 5 6 7 8</td><td><code>08 07 06 05</code></td></tr>
+<tr><td>2</td><td>0x0C0B0A09</td><td>W[2] = 9 10 11 12</td><td><code>0C 0B 0A 09</code></td></tr>
+<tr><td>3</td><td>0x100F0E0D</td><td>W[3] = 13 14 15 16</td><td><code>10 0F 0E 0D</code></td></tr>
+</tbody>
+</table>
+
+<div class="tip"><b>Write the rows in natural order 0, 1, 2, 3</b>
+Do <i>not</i> reverse them. The bottom-first shift into the array is performed by the AGU during WLOAD
+(it counts <code>w_addr</code> down 3, 2, 1, 0). Reversing them here produces a wrong answer that still
+looks structurally plausible.</div>
+
+<h3>11.3 Step 3 — write the four activation words</h3>
+<p>Same procedure with <code>vio_a_wdata</code>, <code>vio_a_addr</code>, <code>vio_a_we_lvl</code>.</p>
+<table class="mono">
+<thead><tr><th style="width:14%">vio_a_addr</th><th style="width:20%">vio_a_wdata</th><th style="width:26%">Activation row</th><th>Byte breakdown (lane 0 = low byte = array row 0)</th></tr></thead>
+<tbody>
+<tr><td>0</td><td>0x00000001</td><td>A[0] = 1 0 0 0</td><td><code>00</code>=A[0][3] <code>00</code> <code>00</code> <code>01</code>=A[0][0]</td></tr>
+<tr><td>1</td><td>0x00000100</td><td>A[1] = 0 1 0 0</td><td><code>00 00 01 00</code></td></tr>
+<tr><td>2</td><td>0x00010000</td><td>A[2] = 0 0 1 0</td><td><code>00 01 00 00</code></td></tr>
+<tr><td>3</td><td>0x01010101</td><td>A[3] = 1 1 1 1</td><td><code>01 01 01 01</code></td></tr>
+</tbody>
+</table>
+
+<h3>11.4 Step 4 — configure and launch</h3>
+<ol>
+<li><code>vio_num_vectors</code> = <b>4</b> (already the initial value if you followed section 6.3)</li>
+<li><code>vio_act_base</code> = <b>0</b>, <code>vio_out_base</code> = <b>0</b></li>
+<li>Note the current <code>done_count</code>.</li>
+<li>Click <code>vio_start_lvl</code> to <b>1</b>, then back to <b>0</b>.</li>
+</ol>
+<p>The job runs in <b>17 clocks = 170 ns</b>. It is over long before the next JTAG transaction lands.</p>
+
+<h3>11.5 Step 5 — confirm it ran</h3>
+<ul>
+<li><code>done_sticky</code> = <b>1</b></li>
+<li><code>done_count</code> incremented by <b>exactly 1</b> — this is what proves the one-shot works. If
+    it jumped by thousands, <code>vio_start_lvl</code> is being held high or the <code>oneshot</code> was
+    optimized away.</li>
+<li><code>busy</code> = <b>0</b> again</li>
+</ul>
+
+<h3>11.6 Step 6 — read the results</h3>
+<p>Set <code>vio_o_addr</code> to 0, 1, 2, 3 in turn and read <code>o_rdata</code>. The SRAM has one clock
+of read latency; a JTAG round trip is six orders of magnitude longer, so no wait is needed.</p>
+<table class="mono">
+<thead><tr><th style="width:12%">vio_o_addr</th><th style="width:42%">o_rdata (128-bit hex)</th><th>Decodes to C row</th></tr></thead>
+<tbody>
+<tr><td>0</td><td>0000_0004_0000_0003_0000_0002_0000_0001</td><td>[&nbsp;&nbsp;1&nbsp;&nbsp;&nbsp;2&nbsp;&nbsp;&nbsp;3&nbsp;&nbsp;&nbsp;4&nbsp;]</td></tr>
+<tr><td>1</td><td>0000_0008_0000_0007_0000_0006_0000_0005</td><td>[&nbsp;&nbsp;5&nbsp;&nbsp;&nbsp;6&nbsp;&nbsp;&nbsp;7&nbsp;&nbsp;&nbsp;8&nbsp;]</td></tr>
+<tr><td>2</td><td>0000_000C_0000_000B_0000_000A_0000_0009</td><td>[&nbsp;&nbsp;9&nbsp;&nbsp;10&nbsp;&nbsp;11&nbsp;&nbsp;12&nbsp;]</td></tr>
+<tr><td>3</td><td>0000_0028_0000_0024_0000_0020_0000_001C</td><td>[&nbsp;28&nbsp;&nbsp;32&nbsp;&nbsp;36&nbsp;&nbsp;40&nbsp;]</td></tr>
+</tbody>
+</table>
+<p class="small">Read the 128-bit word right to left: bits [31:0] are column 0. Row 3 is the interesting
+one — the all-ones activation row yields the column sums <code>28 32 36 40</code>, and
+<code>0x1C 0x20 0x24 0x28</code> = 28 32 36 40.</p>
+
+<h3>11.7 <code>result_flat</code> reads all zeros — this is correct, not a fault</h3>
+
+<div class="warn"><b>Do not read results from <code>result_flat</code> on the VIO dashboard. It will always be 0.</b>
+This is the single most common confusion with this harness, and it is a property of the architecture,
+not a bug in the design, the harness or the probe.</div>
+
+<p>There are two different result paths, and only one of them is observable from VIO:</p>
+
+<table>
+<thead><tr><th style="width:20%">Probe</th><th style="width:22%">What it is</th><th style="width:20%">Valid when</th><th>Readable from VIO?</th></tr></thead>
+<tbody>
+<tr><td><code>o_rdata</code><br><span class="small">probe_in3</span></td>
+    <td><b>Stored</b> result — a registered read port on <code>output_mem</code></td>
+    <td><b>Persistently</b>, any time after the job, for as long as you leave the memory alone</td>
+    <td><b>YES — this is where you read results.</b> Set <code>vio_o_addr</code>, read <code>o_rdata</code>.</td></tr>
+<tr><td><code>result_flat</code><br><span class="small">probe_in4</span></td>
+    <td><b>Live</b> combinational bus straight off the de-skew buffer, ahead of the output SRAM</td>
+    <td>For <b>four clocks total</b> — samples 13–16 of a 17-clock job</td>
+    <td><b>NO.</b> Use the ILA (probe8).</td></tr>
+</tbody>
+</table>
+
+<h4>Why it is exactly zero rather than stale garbage</h4>
+<p>Walk the timeline. The four result vectors cross <code>result_flat</code> during DRAIN and are
+captured into <code>output_mem</code> by the AGU's write strobes. After the last one, the array keeps
+draining: <code>valid_in</code> is 0, so each PE takes the pass-through path
+(<code>psum_q &lt;= psum_in</code>) rather than accumulating, and the north edge is driven with zeros
+because <code>wload_q</code> is 0. Those zeros march south one row per clock, clearing the weight residue out of the <code>psum_q</code> registers as the first activations enter behind them.
+Within a few cycles of DONE the entire fabric — and therefore <code>result_flat</code> — has settled to
+<b>0</b>, and it stays there until the next job.</p>
+
+<p>Now compare the timescales:</p>
+<pre><code>window in which result_flat carries data :   4 clocks   =    40 ns
+whole job                               :  17 clocks   =   170 ns
+one JTAG round trip to refresh the VIO  :             ~   1-10 ms
+
+                       ratio  ~ 1 : 100 000+</code></pre>
+
+<p>VIO samples when <i>you</i> click refresh. The probability of that landing inside a 40 ns window is
+effectively zero, and even if it did, VIO has no trigger — it cannot wait for the interesting moment.
+So the dashboard shows the settled value, which is 0. <b>A VIO probe on a live datapath bus is the
+wrong instrument.</b> That is precisely the division of labour between the two cores: VIO is for
+<i>state you can take your time over</i>, the ILA is for <i>events</i>.</p>
+
+<div class="tip"><b>So why is <code>result_flat</code> wired to the VIO at all?</b>
+Honestly, mostly for symmetry with the ILA probe list and as a sanity anchor — an all-zero reading
+confirms the fabric drained cleanly, which is a real (if weak) health signal. If you find it more
+confusing than useful, delete <code>probe_in4</code> from the VIO instantiation and drop
+<i>Input Probe Count</i> from 6 to 5. Nothing else in this document depends on it. Keep it on the
+<b>ILA</b> (probe8) — there it is one of the most valuable signals you have, because that is where you
+watch C0…C3 emerge one per clock (§13.3).</div>
+
+<div class="note"><b>The same reasoning applies to <code>phase</code> and <code>busy</code></b>
+<code>phase</code> will read <b>0 (IDLE)</b> and <code>busy</code> will read <b>0</b> every single time
+you look, for the same reason — the job is over 170 ns after you launch it. They are on the VIO so you
+can confirm the accelerator is <i>idle and ready</i> before loading, not so you can watch a job
+progress. To watch a job progress you need the ILA. The probes that <i>are</i> meaningful on the VIO
+after a run are <code>done_sticky</code> and <code>done_count</code>, and they are meaningful precisely
+because the harness added hardware to <b>latch</b> transient events into persistent state.</div>
+
+<h2>12. Running the demo from Tcl (scripted)</h2>
+
+<p>Twenty-four dashboard clicks per run gets old fast, and a mis-click is indistinguishable from a
+hardware bug. <code>FPGA_IMPL/vio_demo.tcl</code> does the whole sequence and checks all sixteen results
+against the golden model.</p>
+
+<pre><code># in the Hardware Manager Tcl console, AFTER Program Device
+cd C:/Users/VLSI/Desktop/systolic_array_multiplier/FPGA_IMPL
+source vio_demo.tcl
+accel_demo</code></pre>
+
+<p>Expected output:</p>
+<pre><code>=== 4x4 systolic accelerator :: VIO demo (T5 golden case) ===
+  loading weights...
+  loading activations...
+  running (num_vectors = 4, 17 clocks = 170 ns)...
+  job done  (done_count 1 , was 0)
+
+  C = A x W :
+    [      1      2      3      4 ]   OK
+    [      5      6      7      8 ]   OK
+    [      9     10     11     12 ]   OK
+    [     28     32     36     40 ]   OK
+
+  PASS -- hardware matches the simulation golden model.</code></pre>
+
+<h3>12.1 The Tcl primitives it is built from</h3>
+<table class="mono">
+<thead><tr><th style="width:38%">Command</th><th>Effect</th></tr></thead>
+<tbody>
+<tr><td>get_hw_vios</td><td>Returns the VIO core objects on the connected device</td></tr>
+<tr><td>get_hw_probes -of_objects $vio</td><td>Returns every probe; filter with <code>-filter {NAME =~ *pattern*}</code></td></tr>
+<tr><td>set_property OUTPUT_VALUE_RADIX HEX $p</td><td>Sets how <code>OUTPUT_VALUE</code> is interpreted</td></tr>
+<tr><td>set_property OUTPUT_VALUE 04030201 $p</td><td>Stages a new value locally — <b>does not reach the device yet</b></td></tr>
+<tr><td>commit_hw_vio $p</td><td><b>Pushes</b> the staged value over JTAG. Forgetting this is the #1 scripting mistake.</td></tr>
+<tr><td>refresh_hw_vio $vio</td><td><b>Pulls</b> current probe_in values from the device</td></tr>
+<tr><td>get_property INPUT_VALUE $p</td><td>Reads the cached snapshot — meaningless without a preceding refresh</td></tr>
+</tbody>
+</table>
+
+<div class="note"><b>Probe names vary between Vivado versions</b>
+Vivado names each <code>hw_probe</code> after the net attached to the VIO port, but the exact string
+differs by version — <code>vio_w_wdata</code> in some, a hierarchical
+<code>vio_debug_top_i/vio_w_wdata</code> in others. The script therefore resolves a probe by
+<b>exact match on the last path component first</b>, falling back to a substring match, and
+<b>always filtering by direction</b> so a value or radix call can never land on the wrong probe. On
+ambiguity it lists the candidates instead of silently picking one. Run <code>accel_probes</code> at
+any time to print the actual names, widths and directions.</div>
+
+<h3>12.2 Individual entry points</h3>
+<pre><code>accel_probes                 # list probe names / widths / directions
+accel_write_w 0 04030201     # one weight word     (2-bit addr, hex data)
+accel_write_a 3 01010101     # one activation word (8-bit addr, hex data)
+accel_run 4                  # num_vectors=4, poll done_sticky
+accel_read 3                 # -> {28 32 36 40}, col0 first, sign-extended int32
+accel_demo                   # the whole T5 sequence with pass/fail checking</code></pre>
+
+<h3>12.3 Sweeping — what scripting really unlocks</h3>
+<p>The design supports up to <b>256</b> activation vectors against a single weight load (that
+amortisation is the entire economic point of a weight-stationary array). Loading 256 vectors by hand is
+not realistic; from Tcl it is a loop:</p>
+<pre><code>for {set i 0} {$i &lt; 64} {incr i} {
+    accel_write_a $i [format %08X [expr {($i &amp; 0xFF) * 0x01010101}]]
+}
+accel_run 64                                  ;# 64 + 13 = 77 clocks = 770 ns
+for {set i 0} {$i &lt; 64} {incr i} { puts "row $i : [accel_read $i]" }</code></pre>
+<p class="small">This is the one place the 8-bit <code>vio_a_addr</code> earns its width — see the box
+in §6.3.</p>
+
+<h3>12.4 If the script errors — what each failure means</h3>
+
+<div class="warn"><b>Corrected in this edition: a real lane-ordering bug</b>
+The first edition's <code>accel_read</code> unpacked the 128-bit word into
+<code>{col3 col2 col1 col0}</code> while <code>accel_demo</code> compared against a golden
+<code>{col0 col1 col2 col3}</code>. The result was <b>MISMATCH reported on all four rows even when the
+hardware was perfectly correct</b> — you would have seen <code>[4 3 2 1]</code> where the golden says
+<code>[1 2 3 4]</code>. If your output was a <b>reversed but otherwise correct</b> matrix, that was this
+bug and not your board. Fixed by walking the hex chunks from the end backwards.</div>
+
+<table>
+<thead><tr><th style="width:31%">Error / symptom</th><th style="width:30%">Cause</th><th>Fix</th></tr></thead>
+<tbody>
+<tr><td><code>No hardware target open</code></td><td>The script was sourced before connecting</td><td><i>Open Hardware Manager → Open Target → Auto Connect</i> first, then <code>source vio_demo.tcl</code>.</td></tr>
+<tr><td><code>No VIO core found</code></td><td>Bitstream not programmed, <code>.ltx</code> missing, or the wrong device in the chain was programmed</td><td>Program <b><code>xc7z020_1</code></b>, not <code>arm_dap_0</code>. Confirm the <i>Debug probes file</i> field pointed at <code>vio_debug_top.ltx</code>. Confirm <code>hw_vio_1</code> is visible in the Hardware pane.</td></tr>
+<tr><td><code>No OUTPUT probe matching 'vio_start_lvl'</code></td><td>Your Vivado named the probes differently, or the harness was edited</td><td>Run <code>accel_probes</code> and use the names it prints. The lookup already tries exact-tail then substring, so this means the string genuinely is not there.</td></tr>
+<tr><td><code>Ambiguous OUTPUT probe …</code></td><td>Two probes share the substring</td><td>Pass a longer, more specific name — the message lists every candidate.</td></tr>
+<tr><td><code>ERROR: [Labtools 27-*] … not a valid property</code> on <code>OUTPUT_VALUE</code></td><td>The resolved probe is an <b>input</b>; inputs have no <code>OUTPUT_VALUE</code></td><td>Fixed in this edition — every lookup now filters by <code>DIRECTION</code>. If you adapted the script, keep that filter.</td></tr>
+<tr><td>Values written but nothing happens</td><td><code>set_property</code> without <code>commit_hw_vio</code></td><td><code>set_property</code> only stages locally. <b><code>commit_hw_vio</code> is what drives JTAG.</b> The #1 scripting mistake.</td></tr>
+<tr><td>Reads return the same stale value forever</td><td><code>get_property INPUT_VALUE</code> without <code>refresh_hw_vio</code></td><td><code>INPUT_VALUE</code> is a cached snapshot. Refresh <b>pulls</b> from the device first.</td></tr>
+<tr><td><code>accel_run</code> times out</td><td><code>start</code> never pulsed, or the job never completed</td><td>Check <code>done_count</code> before and after. If it did not move, the one-shot never fired — verify <code>vio_start_lvl</code> actually toggled 0→1→0 and that <code>busy</code> was 0 beforehand.</td></tr>
+<tr><td>Results are a <b>reversed</b> matrix</td><td>The lane-order bug above</td><td>Use this edition's <code>accel_read</code>.</td></tr>
+<tr><td>Results are all <b>0</b></td><td>Host writes were masked, or you read <code>result_flat</code> instead of <code>o_rdata</code></td><td>See §11.7. Read via <code>vio_o_addr</code> → <code>o_rdata</code>.</td></tr>
+<tr><td>Short values decode wrong</td><td>Vivado drops leading zeros in <code>INPUT_VALUE</code></td><td>Fixed — <code>accel_read</code> now left-pads to 32 hex characters before slicing.</td></tr>
+</tbody>
+</table>
+
+<div class="tip"><b>Debug the script one layer at a time</b>
+When something misbehaves, work bottom-up rather than re-running <code>accel_demo</code>:
+<pre style="margin:5px 0 0 0"><code>accel_probes                      ;# 1. are the probes there, right widths, right directions?
+accel_get busy BINARY             ;# 2. can I read at all?  should be 0
+accel_get done_count              ;# 3. note the value
+accel_write_w 0 04030201          ;# 4. can I write?
+accel_run 4                       ;# 5. did done_count increment by exactly 1?
+accel_read 0                      ;# 6. does the unpacking look sane?</code></pre></div>
+
+<h2 class="pb">13. Reading the ILA waveform — the expected cycle map</h2>
+
+<p>This is what Method 2 exists for. The design has <b>fixed, derivable latency and no back-pressure
+anywhere</b>, so every number below is a hard constant you can check the silicon against.</p>
+
+<h3>13.1 Arm and capture</h3>
+<ol>
+<li>Open the <b>hw_ila_1</b> dashboard.</li>
+<li>In <i>Trigger Setup</i>, click <b>+</b> and add <code>probe0</code> (<code>start_p</code>).</li>
+<li>Set the condition to <code>== 1</code>.</li>
+<li>In <i>Settings</i>, set <b>Trigger position in window</b> to <b>64</b> (so you capture 64 samples of
+    context before the launch — enough to see the last host write land).</li>
+<li>Click <b>Run Trigger</b> (▶). Status goes to <i>Waiting for Trigger</i>.</li>
+<li>Cause a run: click <code>vio_start_lvl</code> 0→1→0 on the VIO dashboard, or call
+    <code>accel_run 4</code> from Tcl.</li>
+<li>The waveform fills instantly.</li>
+</ol>
+
+<h3>13.2 The cycle map for a four-vector job</h3>
+<p>Let <b>sample 0</b> be the sample in which <code>start_p</code> is high. With
+<code>num_vectors = 4</code>:</p>
+
+<table class="mono">
+<thead><tr><th style="width:13%">Sample</th><th style="width:10%">phase</th><th style="width:9%">busy</th><th style="width:9%">Cycles</th><th>What is happening</th></tr></thead>
+<tbody>
+<tr><td>0</td><td>0 IDLE</td><td>0</td><td>1</td><td><code>start_p</code> = 1. The FSM samples it (it is only sampled in IDLE).</td></tr>
+<tr><td>1 – 4</td><td>1 WLOAD</td><td>1</td><td><b>4</b> = ROWS</td><td>Weight rows shifted into the array's north edge, <b>bottom-first</b>: the AGU drives <code>w_addr</code> = 3, 2, 1, 0 with <code>wload</code> = 1.</td></tr>
+<tr><td>5 – 8</td><td>2 COMPUTE</td><td>1</td><td><b>4</b> = num_vectors</td><td>One dense activation vector per clock, <code>valid_in</code> = 1. <code>act_addr</code> walks <code>act_base</code>+0…3. <b>COMPUTE follows WLOAD directly</b> — there is no FLUSH phase.</td></tr>
+<tr><td>9 – 16</td><td>3 DRAIN</td><td>1</td><td><b>8</b> = STORE_LATENCY</td><td>The last vector is still in flight through the array and the de-skew pipe. The four result writes land at samples 13–16; the weight residue left by WLOAD clears the result bus at sample 12.</td></tr>
+<tr><td>17</td><td>4 DONE</td><td><b>0</b></td><td>1</td><td><code>done</code> pulses for exactly one clock. Note <code>busy</code> is <b>already low</b>.</td></tr>
+<tr><td>18 →</td><td>0 IDLE</td><td>0</td><td>—</td><td><code>done_count</code> has incremented by 1; <code>done_sticky</code> is set.</td></tr>
+<tr><td colspan="5"><b>Weight reuse:</b> if no <code>host_w_we</code> has occurred since the previous job, WLOAD is skipped entirely — samples 1–4 are COMPUTE, DRAIN runs 5–12, DONE at 13. The ILA is the easiest place to see this: the <code>phase</code> probe goes 0 → 2 with no 1 in between.</td></tr>
+</tbody>
+</table>
+
+<p><b>Total = 4 + 4 + 8 + 1 = 17 = num_vectors + 13</b> (13 clocks when the weight load is skipped). Counting the phase-enable widths on the
+waveform and getting 4 / N / 8 / 1 is the strongest single confirmation that the hardware matches the
+specification.</p>
+
+<h3>13.3 Result checkpoints</h3>
+<p>Two derived latencies govern when data appears. Both are measured from the cycle in which the
+activation <i>address</i> is issued:</p>
+
+<table>
+<thead><tr><th style="width:22%">Constant</th><th style="width:10%">Value</th><th style="width:34%">Derivation</th><th>Observable as</th></tr></thead>
+<tbody>
+<tr><td>L1 result latency</td><td>6</td><td>ROWS+COLS−2 &nbsp;(3 down a column, +<i>c</i> east, +(COLS−1−<i>c</i>) de-skew — the <i>c</i> terms cancel)</td><td>Independent of column: all four lanes align on the same clock.</td></tr>
+<tr><td><b>L2 result latency</b></td><td><b>7</b></td><td>1 (a_mem read) + 6</td><td><code>result_flat</code> (probe8) shows C<sub>i</sub> around sample 18+<i>i</i> → samples <b>18, 19, 20, 21</b>.</td></tr>
+<tr><td><b>STORE_LATENCY</b></td><td><b>8</b></td><td>result latency + 1 (strobe one cycle after data is observable)</td><td><code>out_we</code> fires around samples <b>19, 20, 21, 22</b> — all four inside DRAIN, which is exactly why DRAIN is 8 cycles long.</td></tr>
+</tbody>
+</table>
+
+<p>On <code>result_flat</code> (probe8) you should see, one per clock:</p>
+<pre><code>C0 = 0000_0004 0000_0003 0000_0002 0000_0001   ->  [  1  2  3  4 ]
+C1 = 0000_0008 0000_0007 0000_0006 0000_0005   ->  [  5  6  7  8 ]
+C2 = 0000_000C 0000_000B 0000_000A 0000_0009   ->  [  9 10 11 12 ]
+C3 = 0000_0028 0000_0024 0000_0020 0000_001C   ->  [ 28 32 36 40 ]</code></pre>
+
+<div class="warn"><b>Allow ±1 sample when matching these against the ILA</b>
+The design documentation distinguishes carefully between a value <i>issued</i> at cycle <i>n</i> (the
+value the <i>n</i>-th edge samples) and <i>observed</i> at cycle <i>n</i> (the value just after that edge).
+Conflating the two caused two of the three historical defects found during verification. The ILA
+registers its probes, so a given sample index may sit one clock either side of the "issued" convention
+used in the table. <b>Phase lengths (4/6/N/8/1) are exact and unambiguous — anchor on those.</b> Treat
+the result-checkpoint sample numbers as ±1 and check the <i>spacing</i> (one clock apart, four in a row)
+rather than the absolute index.</div>
+
+<h3>13.4 What a healthy capture looks like</h3>
+<ul>
+<li><code>start_p</code> — a single 1-clock spike, never a plateau.</li>
+<li><code>busy</code> — high for exactly 22 samples, then low <i>before</i> <code>done</code> fires.</li>
+<li><code>phase</code> — the staircase 0→1→2→3→4→5→0 with widths 1/4/6/4/8/1.</li>
+<li><code>done</code> — one 1-clock spike at sample 17 (13 if WLOAD was skipped).</li>
+<li><code>done_count</code> — increments by exactly 1 within the window.</li>
+<li><code>result_flat</code> — quiet until the first result lands, then four distinct values
+    on four consecutive clocks late in the run.</li>
+<li><code>w_we_p</code> / <code>a_we_p</code> — if the trigger window reaches back far enough, single
+    1-clock spikes only. Any plateau means a one-shot was optimized away.</li>
+</ul>
+
+<h2>14. Trigger recipes</h2>
+
+<table>
+<thead><tr><th style="width:24%">Goal</th><th style="width:34%">Trigger setup</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td>Capture a whole job <span class="small">(default)</span></td><td><code>probe0 (start_p) == 1</code>, trigger position 64</td><td>The canonical capture. 64 samples of pre-trigger context show the last host write landing.</td></tr>
+<tr><td>Capture the completion</td><td><code>probe2 (done) == 1</code>, trigger position 900</td><td>Puts the trigger near the end of the window so almost all 1024 samples are <i>pre</i>-trigger — you see the entire job leading up to <code>done</code> plus the host writes before it.</td></tr>
+<tr><td>Catch a specific phase</td><td><code>probe3 (phase) == 3</code> <span class="small">(COMPUTE)</span></td><td>Useful when sweeping <code>num_vectors</code> and you only care about the streaming window.</td></tr>
+<tr><td>Catch a wrong answer</td><td>Trigger comparator on <code>probe8 (result_flat)</code> ≠ expected</td><td>Requires the probe to be wide enough for a comparator; set the compare value in the trigger pane. The killer application for the ILA — freeze the exact cycle where hardware diverges from the golden model.</td></tr>
+<tr><td>Watch back-to-back jobs</td><td><code>probe9 (done_count) == 2</code></td><td>Confirms the FSM cleanly accepts a fresh job after the previous one, and that <code>start</code> is genuinely ignored while busy.</td></tr>
+<tr><td>Prove <code>num_vectors = 0</code> does not hang</td><td><code>probe0 == 1</code>, with <code>vio_num_vectors</code> set to 0</td><td>The FSM must exit WLOAD straight to DRAIN, skipping COMPUTE. Total job = 0 + 13 = 13 clocks (or 9 if the weight load is also skipped). Without the guard, COMPUTE would sit for 256 cycles issuing garbage writes.</td></tr>
+</tbody>
+</table>
+
+<h3>14.1 Multi-condition triggers</h3>
+<p>Change <i>Trigger Mode</i> from <code>BASIC_ONLY</code> to <code>BASIC_OR_TRIG_IN</code> or use the
+<b>Advanced Trigger</b> state machine for sequences. A useful one here: <i>"trigger when
+<code>phase</code> enters DRAIN <b>and</b> <code>result_flat</code> is still zero"</i> catches a
+de-skew-depth bug, one of the failure modes the design's own coverage notes flag as capable of going
+silently wrong.</p>
+
+<h3>14.2 Trigger position</h3>
+<p>The <i>Trigger position in window</i> field decides how the 1024 samples are split between pre- and
+post-trigger. Since the whole job is 17 samples, almost any position works; the value only matters when
+you want to see what happened <i>before</i> the trigger.</p>
+
+<h3>14.3 Capture control (storage qualification)</h3>
+<p>If you enabled <i>Capture Control</i> when generating the ILA, you can set a storage condition such as
+<code>busy == 1</code>, so the buffer only stores samples during jobs. With a 17-cycle job and a
+1024-sample buffer, this lets one capture hold <b>~44 consecutive jobs</b> back to back — the fastest way
+to spot an intermittent failure across a sweep.</p>
+
+<h2>15. Resource and timing — measured</h2>
+
+<p>The figures below are <b>measured</b>, not estimated: out-of-context synthesis of
+<code>accelerator_system_top</code> alone (no VIO, no ILA, no debug hub) for
+<code>xc7z020clg484-1</code> in <b>Vivado 2020.1</b>, constrained at 100 MHz. Synthesis completed with
+<b>0 errors, 0 warnings and 0 critical warnings</b>.</p>
+
+<table>
+<thead><tr><th style="width:26%">Resource</th><th style="width:14%">Used</th><th style="width:14%">Available</th><th style="width:10%">%</th><th>Note</th></tr></thead>
+<tbody>
+<tr><td>Slice LUTs</td><td><b>1 564</b></td><td>53 200</td><td>2.94</td><td>1 524 as logic + 40 as memory</td></tr>
+<tr><td>Slice Registers</td><td><b>792</b></td><td>106 400</td><td>0.74</td><td></td></tr>
+<tr><td>Block RAM Tile</td><td><b>2.5</b></td><td>140</td><td>1.79</td><td><code>output_mem</code> (32 kbit) + <code>a_mem</code> (8 kbit)</td></tr>
+<tr><td>DSPs</td><td><b>0</b></td><td>220</td><td>0.00</td><td>The sixteen 8×8 signed multipliers mapped to fabric logic, not DSP48E1 slices</td></tr>
+<tr><td>LUT as Memory</td><td>40</td><td>17 400</td><td>0.23</td><td><code>weight_mem</code> 4×32 as distributed RAM — as predicted, a deeper weight memory would be dead silicon</td></tr>
+</tbody>
+</table>
+
+<h3>15.1 Timing — read this carefully</h3>
+<pre><code>Constraint : create_clock -period 10.000   (100 MHz)
+WNS  = +1.279 ns        0 failing endpoints of 1305
+WHS  = +0.263 ns        0 failing endpoints of 1305
+WPWS = +3.750 ns        0 failing endpoints of  838</code></pre>
+
+<div class="warn"><b>Correction to the first edition</b>
+This document previously described the timing margin as "ample" and "enormous", and advised that a
+negative WNS should make you suspect the constraint rather than the design. <b>That was overstated.</b>
++1.279 ns on a 10 ns period is a <b>~13% margin</b> — comfortable and passing, but not enormous. Two
+things can erode it:
+<ul style="margin:4px 0 0 0">
+<li>These are <b>post-synthesis</b> numbers. Place-and-route adds real routing delay, and
+    post-synthesis estimates on 7-series are generally optimistic relative to post-route.</li>
+<li>This build contains <b>no debug logic</b>. Adding the VIO, the ILA and the auto-inserted debug hub
+    consumes LUTs, registers, block RAM and — more importantly — routing resources near your logic.</li>
+</ul>
+So treat a negative WNS in <i>your</i> build as a genuine result worth investigating, not as an
+automatic sign of a bad constraint. Check the constraint first because it is cheap to check, but do not
+dismiss the design.</div>
+
+<h4>15.1.1 The debug build, measured post-implementation</h4>
+<p>The figures above are the accelerator <i>alone</i>. The build you actually program — the full
+<code>vio_debug_top</code> with the VIO, the ILA and the auto-inserted <code>dbg_hub</code> — reports the
+following Design Timing Summary:</p>
+<table>
+<thead><tr><th style="width:20%"></th><th style="width:27%">Setup</th><th style="width:27%">Hold</th><th>Pulse Width</th></tr></thead>
+<tbody>
+<tr><td><b>Worst slack</b></td><td>WNS <b>+0.714 ns</b></td><td>WHS <b>+0.045 ns</b></td><td>WPWS <b>+3.750 ns</b></td></tr>
+<tr><td><b>Total slack</b></td><td>TNS 0.000 ns</td><td>THS 0.000 ns</td><td>TPWS 0.000 ns</td></tr>
+<tr><td><b>Failing endpoints</b></td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td><b>Total endpoints</b></td><td>5 181</td><td>5 181</td><td>2 950</td></tr>
+</tbody>
+</table>
+<p><b>"All user specified timing constraints are met."</b> — a clean pass, with roughly 7 % margin on the
+10 ns period. The endpoint count rising from 1 305 to 5 181 is the debug infrastructure becoming real
+flip-flops at <code>link_design</code>/<code>opt_design</code> (§8A.5), and the ~0.565 ns of setup slack
+between the two builds is the price of observability. <b>Full treatment of setup, hold, slack, WNS and
+closure is in <code>timing.pdf</code>.</b></p>
+
+<h3>15.2 Cost of the debug cores</h3>
+<table>
+<thead><tr><th style="width:26%">Core</th><th style="width:20%">Cost</th><th>Note</th></tr></thead>
+<tbody>
+<tr><td><code>ila_0</code> at depth 1024</td><td>≈ 8 BRAM36</td><td>288 probe bits × 1024 = 294 912 bits; BRAM36 = 36 864 bits. This is <b>more than 3× the accelerator's own memory footprint</b> — the analyzer is bigger than the thing it analyses.</td></tr>
+<tr><td><code>ila_0</code> at depth 256</td><td>≈ 2 BRAM36</td><td><b>Recommended.</b> The whole job is 17 clocks; 256 samples is ample and saves 6 BRAM36.</td></tr>
+<tr><td><code>vio_0</code></td><td>Negligible</td><td>Registers plus JTAG glue.</td></tr>
+<tr><td><code>dbg_hub</code></td><td>Small, auto-inserted</td><td>You do not instantiate it; Vivado adds it when any debug core is present.</td></tr>
+</tbody>
+</table>
+
+<div class="tip"><b>Reproduce these numbers yourself</b>
+<pre style="margin:5px 0 0 0"><code>create_project -in_memory -part xc7z020clg484-1
+foreach f [glob &lt;RTL_DIR&gt;/*.sv] { read_verilog -sv $f }
+read_xdc clk_only.xdc                    ;# just: create_clock -period 10.000 [get_ports clk]
+synth_design -top accelerator_system_top -part xc7z020clg484-1 -mode out_of_context
+report_utilization
+report_timing_summary</code></pre></div>
+
+<h2 class="pb">16. Troubleshooting</h2>
+
+<table>
+<thead><tr><th style="width:26%">Symptom</th><th style="width:30%">Most likely cause</th><th>Fix</th></tr></thead>
+<tbody>
+<tr><td><b>"The debug hub core was not detected"</b> in Hardware Manager</td><td>The debug hub does not know its clock frequency, or the JTAG clock is too fast relative to the design clock</td><td>Confirm the <code>dbg_hub</code> block in <code>vio_debug.xdc</code> ran. Set <code>C_CLK_INPUT_FREQ_HZ 100000000</code> and <code>C_ENABLE_CLK_DIVIDER false</code>. Also try lowering the JTAG frequency: right-click the target → <i>Open Target Properties</i> → reduce <code>Frequency</code> to 6 MHz or less.</td></tr>
+<tr><td>No <code>hw_vio_1</code> / <code>hw_ila_1</code> under the device</td><td>The <code>.ltx</code> probes file was not loaded with the bitstream</td><td>Re-run <i>Program Device</i> and set the <i>Debug probes file</i> field to <code>&lt;project&gt;.runs/impl_1/vio_debug_top.ltx</code>.</td></tr>
+<tr><td>Device does not appear at all under Auto Connect</td><td>Cable drivers, wrong USB port, or boot-mode jumpers</td><td>Use <b>J17</b> (not J14). Confirm <code>PGOOD</code> is lit. Set <code>JP7–JP11</code> to JTAG (all GND). Reinstall Vivado's cable drivers.</td></tr>
+<tr><td><code>busy</code> reads 1 forever</td><td>Reset never released, or <code>start</code> is stuck high</td><td>The POR is 65 536 clocks — it releases in 655 µs, so this is not a wait problem. Check <code>vio_start_lvl</code> is 0 on the dashboard, and confirm the <code>oneshot</code> instances survived synthesis (search the netlist for <code>u_os_start</code>).</td></tr>
+<tr><td><code>done_count</code> jumps by thousands per click</td><td>The one-shot was optimized away, or you edited it out</td><td>Confirm <code>oneshot</code> is present. Check the elaborated design shows <code>start_p</code> driven by a flop, not directly by the VIO.</td></tr>
+<tr><td><code>done_sticky</code> never sets</td><td><code>num_vectors</code> is fine but the job never launched — <code>start</code> arrived while <code>busy</code> was high, so it was ignored</td><td>Read <code>busy</code> first; it must be 0 before you click start. Also confirm <code>done_count</code> did not move.</td></tr>
+<tr><td>All results read 0</td><td>Host writes were masked because <code>busy</code> was 1, or the writes never pulsed</td><td>Re-load with <code>busy == 0</code>. Add the ILA trigger on <code>w_we_p == 1</code> and confirm you see exactly four 1-clock spikes.</td></tr>
+<tr><td>Results are a <b>transposed</b> or scrambled matrix</td><td>Lane order wrong in the packed word</td><td>Lane 0 is the <b>low</b> byte. <code>weight_mem[r]</code> lane <i>c</i> = W[r][c]; <code>a_mem[i]</code> lane <i>r</i> = A[i][r]. Re-check against Appendix A.</td></tr>
+<tr><td>Row 3 reads <code>28 32 36 40</code> but rows 0–2 are wrong</td><td>Weight rows written in reverse order</td><td>Write <code>weight_mem[0..3]</code> in <b>natural</b> order. The bottom-first shift is the AGU's job. Row 3 (all-ones activation) is the column sum and is insensitive to row permutation — which is exactly why this failure hides there.</td></tr>
+<tr><td>Results read as <code>X</code> or garbage in simulation but fine on hardware</td><td>The memories have no reset; unwritten addresses return X in simulation</td><td>Expected behaviour. Write every address you intend to read.</td></tr>
+<tr><td>ILA triggers continuously, waveform unusable</td><td><code>start</code> held high (one-shot bypassed)</td><td>Same fix as the <code>done_count</code> row above.</td></tr>
+<tr><td>A <code>MARK_DEBUG</code> constraint errors with "no nets matched"</td><td>Synthesis renamed or absorbed the net</td><td>Set <i>-flatten_hierarchy</i> to <code>none</code>, then discover the real name with <code>get_nets -hierarchical *pattern*</code> in the Synthesized Design.</td></tr>
+<tr><td>Bitstream generation fails on unconstrained PS pins</td><td>PL-only Zynq DRC</td><td><code>set_property BITSTREAM.GENERAL.UNCONSTRAINEDPINS {Allow} [current_design]</code> — already in <code>vio_debug.xdc</code>.</td></tr>
+<tr><td>Elaboration error on <code>vio_0</code> / <code>ila_0</code></td><td>Generated probe widths do not match the instantiation</td><td>Re-customize the IP and align every width with the tables in sections 6.2, 6.3 and 7.2.</td></tr>
+<tr><td>Syntax errors on <code>logic</code> / <code>always_ff</code></td><td>Files added as Verilog, not SystemVerilog</td><td>Right-click each source → <i>Set File Type → SystemVerilog</i>.</td></tr>
+</tbody>
+</table>
+
+<h2>17. Extending the harness</h2>
+
+<table>
+<thead><tr><th style="width:26%">Extension</th><th>How</th></tr></thead>
+<tbody>
+<tr><td><b>Long streaming jobs</b></td><td><code>a_mem</code> holds 256 vectors against a single weight load. Script the loads (section 12.3) and set <code>num_vectors</code> up to 255. Once the pipe is full it is one vector per clock — measure it with an ILA capture over <code>busy</code>.</td></tr>
+<tr><td><b><code>act_base</code> / <code>out_base</code> isolation</b></td><td>Load two independent activation blocks at different bases, run two jobs with different <code>out_base</code>, and confirm neither disturbs the other. This mirrors a check the simulation regression already performs.</td></tr>
+<tr><td><b>Adversarial arbitration test</b></td><td>Hold <code>vio_a_we_lvl</code> and <code>vio_w_we_lvl</code> toggling with garbage data while a job runs, and confirm the results are bit-identical. Port arbitration should mask every one of them. The simulation regression does this with <code>0xDEADBEEF</code> / <code>0xBAADF00D</code>.</td></tr>
+<tr><td><b>Add the array internals to the ILA</b></td><td>Section 8. Probing <code>psum_out_bottom</code> lets you literally watch the diagonal wavefront cross the array on silicon.</td></tr>
+<tr><td><b>Combine with Method 1</b></td><td>Build <code>fpga_top</code> (switches + LEDs) as the top and add ILA/VIO to it. You then get the standalone board demo <i>and</i> cycle-accurate visibility of the same run.</td></tr>
+<tr><td><b>Move to Method 3</b></td><td>For a text console over the USB-UART instead of a dashboard, see the companion <code>USB_UART.pdf</code>. The two are complementary: UART gives comfortable data entry, VIO+ILA gives cycle-level visibility.</td></tr>
+</tbody>
+</table>
+
+<h2 class="pb">18. Writing an XDC for any design — a general guide</h2>
+
+<p>Everything up to here has been specific to this accelerator. This section is not: it is a
+self-contained guide to writing Xilinx Design Constraints for <b>any</b> architecture on <b>any</b>
+7-series or UltraScale part. The accelerator's own <code>vio_debug.xdc</code> is a deliberately tiny
+example — one pin, one clock — so it teaches almost nothing about the general problem. Most designs need
+far more.</p>
+
+<div class="note"><b>The mental model that makes XDC make sense</b>
+An XDC file is <b>not</b> a configuration file. It is a <b>Tcl script</b> that Vivado executes top to
+bottom against an in-memory netlist. Three consequences follow, and nearly every beginner XDC bug traces
+to forgetting one of them:
+<ol style="margin:4px 0 0 0">
+<li><b>Order matters.</b> Later commands overwrite earlier ones. Two <code>create_clock</code>s on the
+    same port means the second wins silently.</li>
+<li><b>Objects must exist when the line runs.</b> <code>get_ports</code> can only find a port that
+    survived synthesis. If it was optimized away, <code>get_ports</code> returns empty and the
+    <code>set_property</code> silently does nothing.</li>
+<li><b>An empty <code>get_*</code> is not an error by default.</b> This is the single biggest trap —
+    see §18.8.</li>
+</ol></div>
+
+<h3>18.1 The five jobs an XDC does</h3>
+<table>
+<thead><tr><th style="width:5%">#</th><th style="width:20%">Job</th><th style="width:28%">Commands</th><th>Required?</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><b>Define clocks</b></td><td><code>create_clock</code>, <code>create_generated_clock</code></td><td><b>Always.</b> Without this, nothing is timed and every path reports as unconstrained.</td></tr>
+<tr><td>2</td><td><b>Place and configure I/O</b></td><td><code>PACKAGE_PIN</code>, <code>IOSTANDARD</code>, <code>DRIVE</code>, <code>SLEW</code>, <code>PULLUP</code></td><td><b>Always</b>, for every top-level port that reaches a pin.</td></tr>
+<tr><td>3</td><td><b>Constrain I/O timing</b></td><td><code>set_input_delay</code>, <code>set_output_delay</code></td><td>Whenever an interface must meet timing against something off-chip.</td></tr>
+<tr><td>4</td><td><b>Declare timing exceptions</b></td><td><code>set_false_path</code>, <code>set_multicycle_path</code>, <code>set_max_delay</code>, <code>set_clock_groups</code></td><td>Whenever the default single-cycle assumption is wrong — CDC, resets, quasi-static config.</td></tr>
+<tr><td>5</td><td><b>Set bitstream / config properties</b></td><td><code>BITSTREAM.*</code>, <code>CONFIG_VOLTAGE</code>, <code>CFGBVS</code></td><td>Often required for the bitstream to generate or the device to boot.</td></tr>
+</tbody>
+</table>
+
+<h3>18.2 Clocks — get this right first</h3>
+<p>Every other timing constraint is meaningless without a clock definition. <b>Constrain the source, not
+the net.</b></p>
+<pre><code># --- a primary clock arriving on a package pin ---
+create_clock -name sys_clk -period 10.000 [get_ports clk]          ;# 100 MHz, 50% duty
+
+# --- explicit duty cycle / phase if not 50% ---
+create_clock -name odd_clk -period 8.000 -waveform {0.000 3.000} [get_ports clk2]
+
+# --- a differential pair: constrain the P side only ---
+create_clock -name ref_clk -period 5.000 [get_ports clk_p]
+
+# --- clocks OUT of an MMCM/PLL: do NOT hand-write these ---
+#     Vivado derives them automatically from the primary clock.
+#     Only use create_generated_clock for dividers you built in fabric:
+create_generated_clock -name clk_div2 -source [get_pins reg/C] -divide_by 2 [get_pins div_reg/Q]</code></pre>
+
+<div class="warn"><b>Three clock mistakes that cost days</b>
+<ul style="margin:4px 0 0 0">
+<li><b>Hand-writing generated clocks for MMCM/PLL outputs.</b> Vivado already creates them. Adding your
+    own produces two overlapping definitions and nonsensical timing. Run <code>report_clocks</code> and
+    look before you write.</li>
+<li><b>Constraining a clock <i>net</i> instead of the source port/pin.</b> Use
+    <code>[get_ports clk]</code> or <code>[get_pins …/O]</code>, not the buffer output net.</li>
+<li><b>Forgetting a clock entirely.</b> Unconstrained paths are simply <i>not analysed</i>. Timing then
+    "passes" while being completely unverified — the most dangerous possible outcome. Always run
+    <code>check_timing</code>.</li>
+</ul></div>
+
+<h3>18.3 I/O placement and standards</h3>
+<pre><code># preferred: one -dict per port, both properties together
+set_property -dict {PACKAGE_PIN Y9  IOSTANDARD LVCMOS33} [get_ports clk]
+
+# buses need per-bit constraints; note the braces around the index
+set_property -dict {PACKAGE_PIN T22 IOSTANDARD LVCMOS33} [get_ports {led[0]}]
+set_property -dict {PACKAGE_PIN T21 IOSTANDARD LVCMOS33} [get_ports {led[1]}]
+
+# drive strength and slew (outputs only) - reduce both to cut ground bounce
+set_property DRIVE 8    [get_ports {led[*]}]
+set_property SLEW  SLOW [get_ports {led[*]}]
+
+# internal pull-up/down for a floating input
+set_property PULLUP true [get_ports btn_n]</code></pre>
+
+<div class="warn"><b><code>IOSTANDARD</code> is not cosmetic — it is bank-wide and it is physical</b>
+Every I/O bank has one <code>VCCO</code> supply, fixed by the board. Every pin in that bank must use an
+<code>IOSTANDARD</code> compatible with it. Assigning <code>LVCMOS33</code> to a pin in a 1.8 V bank is a
+DRC error at best and, if forced through, can damage hardware. <b>This is why you take pin assignments
+from the board vendor's master XDC rather than inventing them.</b> Note in this project's own files that
+the ZedBoard's LEDs are <code>LVCMOS33</code> while its switches and buttons are <code>LVCMOS25</code> —
+different banks, different supplies.</div>
+
+<h3>18.4 Where pin names actually come from</h3>
+<ol>
+<li><b>The board vendor's master XDC.</b> Digilent, Avnet, Xilinx and others publish one per board, with
+    every pin listed and commented out. <b>Download it, uncomment what you need, rename the ports to
+    match your top module.</b> This is the correct workflow — never transcribe pin numbers from a PDF by
+    hand.</li>
+<li><b>Board files.</b> If installed, selecting the board in the New Project wizard lets IP Integrator
+    auto-assign board interfaces.</li>
+<li><b>The package file</b> (<code>&lt;part&gt;_pkg.txt</code>) for raw pin/bank/supply data.</li>
+</ol>
+
+<div class="tip"><b>Check the board revision</b>
+Pinouts change between board revisions. The ZedBoard is a good example — this project's own XDC carries
+an explicit warning to verify <code>PACKAGE_PIN</code> and <code>IOSTANDARD</code> against the master XDC
+for <i>your</i> revision. A wrong clock pin produces a bitstream that programs successfully and then does
+nothing at all, which is the hardest class of failure to diagnose.</div>
+
+<h3>18.5 I/O timing — the part most designs get wrong</h3>
+<p>Placing a pin says <i>where</i> a signal goes, not <i>when</i> it is valid. For any interface that must
+meet timing against an external device, you must model the outside world.</p>
+<pre><code># SYSTEM-SYNCHRONOUS INPUT: external device and FPGA share a clock.
+# Numbers come from the OTHER device's datasheet plus board trace delay.
+set_input_delay  -clock sys_clk -max 4.0 [get_ports {data_in[*]}]
+set_input_delay  -clock sys_clk -min 1.0 [get_ports {data_in[*]}]
+
+# OUTPUT: -max is the downstream device's setup requirement + trace delay,
+#         -min is negative of its hold requirement.
+set_output_delay -clock sys_clk -max 3.0 [get_ports {data_out[*]}]
+set_output_delay -clock sys_clk -min -1.0 [get_ports {data_out[*]}]
+
+# SOURCE-SYNCHRONOUS: the clock travels WITH the data. Create a virtual
+# clock for the external domain and reference that instead.
+create_clock -name virt_src_clk -period 10.000
+set_input_delay -clock virt_src_clk -max 2.0 [get_ports {src_data[*]}]
+
+# Genuinely asynchronous or quasi-static pins (a DIP switch, a reset button)
+# have no meaningful timing relationship - say so explicitly:
+set_false_path -from [get_ports {sw[*]}]
+set_false_path -from [get_ports rst_btn]</code></pre>
+
+<div class="note"><b>Why this project's XDC has none of these</b>
+<code>vio_debug_top</code> has exactly one port — the clock. There is no data I/O to constrain, which is
+why <code>vio_debug.xdc</code> is three lines long. <code>fpga_top</code> (Method 1) does have switches,
+buttons and LEDs, but they are human-speed and asynchronous, so the correct constraint for them is
+<code>set_false_path</code>, not an input/output delay. <b>Do not take the brevity of these files as a
+model for a real interface.</b> A DDR, Ethernet or ADC interface needs every one of the constraints
+above, taken from the peer device's datasheet.</div>
+
+<h3>18.6 Timing exceptions — and the discipline to use them sparingly</h3>
+<table>
+<thead><tr><th style="width:26%">Command</th><th style="width:32%">Use when</th><th>Danger</th></tr></thead>
+<tbody>
+<tr><td><code>set_clock_groups -asynchronous</code></td><td>Two clock domains have <b>no</b> phase relationship</td><td><b>The right tool for CDC.</b> Cleaner and safer than scattering <code>set_false_path</code>. Does not remove the need for real synchronizers.</td></tr>
+<tr><td><code>set_false_path</code></td><td>A path is logically impossible or genuinely doesn't matter</td><td>Turns timing analysis <b>off</b> for that path. Over-use is how designs "pass" timing and then fail in hardware.</td></tr>
+<tr><td><code>set_multicycle_path</code></td><td>Logic is genuinely given N clocks to settle</td><td>Must constrain <b>both</b> setup and hold — <code>-setup N</code> then <code>-hold N-1</code>. Doing only setup is a classic silent hold violation.</td></tr>
+<tr><td><code>set_max_delay -datapath_only</code></td><td>Async crossing that still needs a bounded skew</td><td>Preferred over a blanket false path for CDC data buses handed across by a handshake.</td></tr>
+</tbody>
+</table>
+
+<pre><code># the standard, safe CDC pattern
+set_clock_groups -asynchronous \
+    -group [get_clocks clk_100] \
+    -group [get_clocks clk_50]
+
+# a 2-cycle path, done properly - BOTH lines or you have a hold bug
+set_multicycle_path 2 -setup -from [get_cells slow/*] -to [get_cells dest/*]
+set_multicycle_path 1 -hold  -from [get_cells slow/*] -to [get_cells dest/*]
+
+# bounded async crossing (better than a false path for data)
+set_max_delay 5.0 -datapath_only -from [get_cells src_reg] -to [get_cells dst_reg]</code></pre>
+
+<div class="warn"><b>An exception is a promise you are making to the tool</b>
+Every exception tells Vivado "do not check this". If the promise is wrong, the tool cannot catch the bug
+and you will find it as intermittent hardware misbehaviour that no simulation reproduces. Write the
+<i>reason</i> in a comment beside every exception. If you cannot state the reason, you do not yet know
+whether the exception is safe.</div>
+
+<h3>18.7 Configuration and bitstream properties</h3>
+<pre><code># Required on many 7-series boards or bitstream generation errors out:
+set_property CFGBVS VCCO        [current_design]
+set_property CONFIG_VOLTAGE 3.3 [current_design]
+
+# Allow unconstrained pins (PL-only Zynq, or during early bring-up).
+# Use deliberately - it silences a DRC that is usually telling you something.
+set_property BITSTREAM.GENERAL.UNCONSTRAINEDPINS {Allow} [current_design]
+
+# Faster configuration from SPI flash
+set_property BITSTREAM.CONFIG.SPI_BUSWIDTH 4      [current_design]
+set_property BITSTREAM.CONFIG.CONFIGRATE    33    [current_design]
+
+# Drive unused I/O to a defined state instead of leaving them floating
+set_property BITSTREAM.CONFIG.UNUSEDPIN PULLDOWN [current_design]</code></pre>
+
+<h3>18.8 The empty-object trap — the most important thing in this section</h3>
+
+<div class="warn"><b>A constraint on an object that does not exist does nothing, and by default does not fail</b>
+<pre style="margin:5px 0"><code>set_property PACKAGE_PIN Y9 [get_ports clck]     ;# typo: "clck"</code></pre>
+<code>get_ports</code> returns an empty list, <code>set_property</code> applies to nothing, you get a
+warning buried in a log of hundreds, and the build completes. The pin is never assigned. Your design is
+silently wrong.</div>
+
+<p>Defend against it in three ways:</p>
+<pre><code># 1. Promote the warning to an error while developing
+set_msg_config -id "Vivado 12-508" -new_severity ERROR   ;# "No objects matched"
+
+# 2. Assert explicitly for critical objects
+if {[llength [get_ports -quiet clk]] == 0} { error "PORT clk NOT FOUND - check top module" }
+
+# 3. Never use -quiet to hide a problem. It suppresses the warning too.</code></pre>
+
+<p>Then <b>always</b> run these three after implementation:</p>
+<table>
+<thead><tr><th style="width:30%">Command</th><th>What it catches</th></tr></thead>
+<tbody>
+<tr><td><code>check_timing</code></td><td>Unconstrained clocks, missing I/O delays, unclocked registers — <b>run this first, every time</b></td></tr>
+<tr><td><code>report_clocks</code></td><td>Every clock Vivado <i>believes</i> exists, including ones it derived. Compare against what you intended.</td></tr>
+<tr><td><code>report_cdc</code></td><td>Unsafe clock-domain crossings</td></tr>
+<tr><td><code>report_timing_summary</code></td><td>WNS/WHS and, crucially, the <b>count of unconstrained paths</b></td></tr>
+<tr><td><code>report_exceptions</code></td><td>Exceptions that overlap, conflict, or match nothing</td></tr>
+</tbody>
+</table>
+
+<h3>18.9 Organising constraints on a real project</h3>
+<p>One monolithic XDC becomes unmaintainable. Split by concern, and control the order — remember the file
+is executed sequentially:</p>
+<pre><code>constraints/
+├── 01_clocks.xdc        create_clock, create_generated_clock, clock groups
+├── 02_pins.xdc          PACKAGE_PIN + IOSTANDARD (from the board master XDC)
+├── 03_io_timing.xdc     set_input_delay / set_output_delay
+├── 04_exceptions.xdc    false paths, multicycles, max_delay  (MUST come after clocks)
+└── 05_bitstream.xdc     CFGBVS, CONFIG_VOLTAGE, BITSTREAM.*</code></pre>
+
+<p>Set <code>PROCESSING_ORDER</code> when a file must run at a specific stage:</p>
+<pre><code>set_property PROCESSING_ORDER EARLY [get_files 01_clocks.xdc]
+set_property PROCESSING_ORDER LATE  [get_files 04_exceptions.xdc]</code></pre>
+
+<p>Constraints can also be <b>scoped</b> to a module — essential for reusable IP, so an instance's
+constraints follow it wherever it is instantiated:</p>
+<pre><code>set_property SCOPED_TO_REF  my_uart_core [get_files uart_timing.xdc]
+set_property SCOPED_TO_CELLS u_uart_inst  [get_files uart_timing.xdc]</code></pre>
+
+<h3>18.10 A skeleton to start any new design from</h3>
+<pre><code>##=====================================================================
+## &lt;design&gt;.xdc  --  &lt;board&gt;, part &lt;partnumber&gt;
+## Pin assignments taken from &lt;vendor&gt; master XDC rev &lt;X&gt;. VERIFY.
+##=====================================================================
+
+## ---- 1. CLOCKS ------------------------------------------------------
+create_clock -name sys_clk -period 10.000 [get_ports clk]
+# derived MMCM/PLL clocks are created automatically - do not redefine
+
+## ---- 2. CLOCK RELATIONSHIPS -----------------------------------------
+# set_clock_groups -asynchronous -group [get_clocks sys_clk] \
+#                                -group [get_clocks other_clk]
+
+## ---- 3. PINS --------------------------------------------------------
+set_property -dict {PACKAGE_PIN &lt;PIN&gt; IOSTANDARD &lt;STD&gt;} [get_ports clk]
+# ... one line per port; buses need {name[i]} per bit
+
+## ---- 4. I/O TIMING --------------------------------------------------
+# set_input_delay  -clock sys_clk -max &lt;t&gt; [get_ports {din[*]}]
+# set_output_delay -clock sys_clk -max &lt;t&gt; [get_ports {dout[*]}]
+# async / human-speed pins:
+# set_false_path -from [get_ports {sw[*]}]
+
+## ---- 5. EXCEPTIONS (comment the REASON for every one) ---------------
+# set_false_path -from [get_cells cfg_reg*]   ;# quasi-static config
+
+## ---- 6. BITSTREAM / CONFIG ------------------------------------------
+set_property CFGBVS VCCO        [current_design]
+set_property CONFIG_VOLTAGE 3.3 [current_design]
+
+## ---- 7. DEBUG (only while debugging) --------------------------------
+# set_property C_CLK_INPUT_FREQ_HZ 100000000 [get_debug_cores dbg_hub]
+# set_property C_ENABLE_CLK_DIVIDER false     [get_debug_cores dbg_hub]</code></pre>
+
+<h3>18.11 Checklist before you trust a build</h3>
+<table>
+<thead><tr><th style="width:6%">✓</th><th>Check</th></tr></thead>
+<tbody>
+<tr><td>☐</td><td>Every clock is defined — <code>report_clocks</code> shows what you expect and nothing extra</td></tr>
+<tr><td>☐</td><td><code>check_timing</code> reports no unconstrained endpoints and no missing I/O delays</td></tr>
+<tr><td>☐</td><td>Every top-level port has both <code>PACKAGE_PIN</code> and <code>IOSTANDARD</code></td></tr>
+<tr><td>☐</td><td>Every <code>IOSTANDARD</code> is compatible with its bank's <code>VCCO</code> on the real board</td></tr>
+<tr><td>☐</td><td>Pin assignments came from the vendor master XDC for <b>your board revision</b></td></tr>
+<tr><td>☐</td><td>No <code>get_*</code> returned empty — search the log for "No objects matched"</td></tr>
+<tr><td>☐</td><td>Every timing exception has a comment stating why it is safe</td></tr>
+<tr><td>☐</td><td>Every <code>set_multicycle_path -setup</code> has a matching <code>-hold</code></td></tr>
+<tr><td>☐</td><td>Asynchronous domains are handled with <code>set_clock_groups</code>, and real synchronizers exist in the RTL</td></tr>
+<tr><td>☐</td><td><b>WNS and WHS both positive</b>, with <b>zero</b> unconstrained paths</td></tr>
+<tr><td>☐</td><td><code>report_cdc</code> shows no unsafe crossings</td></tr>
+</tbody>
+</table>
+
+<div class="tip"><b>The one habit worth forming</b>
+Run <code>check_timing</code> and read the "unconstrained" counts <i>before</i> you look at WNS. A design
+with WNS +2 ns and 4 000 unconstrained endpoints is in far worse shape than one with WNS +0.1 ns and
+zero. Slack on paths nobody analysed is not slack — it is ignorance with a positive number attached.</div>
+
+<h2 class="pb">Appendix A — data packing reference</h2>
+
+<h3>A.1 The three word formats</h3>
+<pre><code>weight_mem[r]  bits  [31:24] [23:16] [15:8] [7:0]
+                     W[r][3] W[r][2] W[r][1] W[r][0]        int8, lane c = COLUMN c
+
+a_mem[i]       bits  [31:24] [23:16] [15:8] [7:0]
+                     A[i][3] A[i][2] A[i][1] A[i][0]        int8, lane r = ROW r
+
+output_mem[i]  bits  [127:96] [95:64] [63:32] [31:0]
+                     C[i][3]  C[i][2] C[i][1] C[i][0]       int32, lane c = COLUMN c</code></pre>
+
+<h3>A.2 Packing an arbitrary matrix by hand</h3>
+<p>For a signed byte <i>v</i>, the hex nibble pair is <i>v</i> for 0…127 and <i>v</i>+256 for −128…−1.</p>
+<pre><code>word = (byte3 &lt;&lt; 24) | (byte2 &lt;&lt; 16) | (byte1 &lt;&lt; 8) | byte0</code></pre>
+<p>Worked example using the architecture document's reference matrices:</p>
+<pre><code>                            lane order in the word:  [b3][b2][b1][b0]
+W = [  2  -1   3   0 ]      row 0 -> 00 03 FF 02  ->  weight_mem[0] = 0x0003FF02
+    [  1   4  -2   5 ]      row 1 -> 05 FE 04 01  ->  weight_mem[1] = 0x05FE0401
+    [ -3   2   1   1 ]      row 2 -> 01 01 02 FD  ->  weight_mem[2] = 0x010102FD
+    [  0   1   2  -4 ]      row 3 -> FC 02 01 00  ->  weight_mem[3] = 0xFC020100
+
+A = [  1   2   3   4 ]      A0    -> 04 03 02 01  ->  a_mem[0]      = 0x04030201
+    [  5  -1   0   2 ]      A1    -> 02 00 FF 05  ->  a_mem[1]      = 0x0200FF05
+    [ -2   3   1   1 ]      A2    -> 01 01 03 FE  ->  a_mem[2]      = 0x010103FE
+
+expected C = [ -5  17  10  -3 ]   -> o_rdata = FFFF_FFFD 0000_000A 0000_0011 FFFF_FFFB
+             [  9  -7  21 -13 ]   -> o_rdata = FFFF_FFF3 0000_0015 FFFF_FFF9 0000_0009
+             [ -4  17  -9  12 ]   -> o_rdata = 0000_000C FFFF_FFF7 0000_0011 FFFF_FFFC</code></pre>
+<p class="small">Note the sign extension: negative int32 results appear as <code>FFFF_FFxx</code>. The Tcl
+helper <code>accel_read</code> sign-extends for you.</p>
+
+<h3>A.3 T5 golden case quick card</h3>
+<table class="mono">
+<thead><tr><th style="width:8%">Step</th><th style="width:22%">Probe</th><th style="width:22%">Value</th><th>Then</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>vio_w_wdata / vio_w_addr</td><td>04030201 / 0</td><td>toggle vio_w_we 0→1→0</td></tr>
+<tr><td>2</td><td>vio_w_wdata / vio_w_addr</td><td>08070605 / 1</td><td>toggle vio_w_we 0→1→0</td></tr>
+<tr><td>3</td><td>vio_w_wdata / vio_w_addr</td><td>0C0B0A09 / 2</td><td>toggle vio_w_we 0→1→0</td></tr>
+<tr><td>4</td><td>vio_w_wdata / vio_w_addr</td><td>100F0E0D / 3</td><td>toggle vio_w_we 0→1→0</td></tr>
+<tr><td>5</td><td>vio_a_wdata / vio_a_addr</td><td>00000001 / 0</td><td>toggle vio_a_we 0→1→0</td></tr>
+<tr><td>6</td><td>vio_a_wdata / vio_a_addr</td><td>00000100 / 1</td><td>toggle vio_a_we 0→1→0</td></tr>
+<tr><td>7</td><td>vio_a_wdata / vio_a_addr</td><td>00010000 / 2</td><td>toggle vio_a_we 0→1→0</td></tr>
+<tr><td>8</td><td>vio_a_wdata / vio_a_addr</td><td>01010101 / 3</td><td>toggle vio_a_we 0→1→0</td></tr>
+<tr><td>9</td><td>vio_num_vectors</td><td>04</td><td>act_base = out_base = 0</td></tr>
+<tr><td>10</td><td>vio_start</td><td>0→1→0</td><td>done_sticky must go to 1</td></tr>
+<tr><td>11</td><td>vio_o_addr = 0…3</td><td>read o_rdata</td><td>expect 1 2 3 4 / 5 6 7 8 / 9 10 11 12 / 28 32 36 40</td></tr>
+</tbody>
+</table>
+
+<h2 class="pb">Appendix B — full source listing of <code>vio_debug_top.sv</code></h2>
+
+<pre><code>`timescale 1ns/1ps
+//=====================================================================
+// vio_debug_top.sv  --  VIO + ILA debug harness for the 4x4 systolic
+//                       accelerator (Method 2, ZedBoard xc7z020clg484-1)
+//
+// The ONLY external pin is the 100 MHz PL oscillator (Y9).  Every input
+// to the accelerator comes from a Vivado VIO core over JTAG, and every
+// output goes back to the same VIO dashboard.  An ILA captures the run
+// cycle-by-cycle.  accelerator_system_top is instantiated UNMODIFIED.
+//=====================================================================
+module vio_debug_top (
+    input logic clk                       // 100 MHz PL oscillator, pin Y9
+);
+    //-----------------------------------------------------------------
+    // Power-on reset: hold rst_n low for 65536 clocks (~655 us).
+    //-----------------------------------------------------------------
+    logic [15:0] por = '0;
+    logic        rst_n;
+    always_ff @(posedge clk)
+        if (!(&amp;por)) por &lt;= por + 1'b1;
+    assign rst_n = &amp;por;
+
+    //-----------------------------------------------------------------
+    // VIO probe_out -> levels driven from the Hardware Manager dashboard
+    //-----------------------------------------------------------------
+    logic        vio_start_lvl;      // probe_out0
+    logic [7:0]  vio_num_vectors;    // probe_out1
+    logic [7:0]  vio_act_base;       // probe_out2
+    logic [7:0]  vio_out_base;       // probe_out3
+    logic [31:0] vio_w_wdata;        // probe_out4
+    logic [1:0]  vio_w_addr;         // probe_out5
+    logic        vio_w_we_lvl;       // probe_out6
+    logic [31:0] vio_a_wdata;        // probe_out7
+    logic [7:0]  vio_a_addr;         // probe_out8
+    logic        vio_a_we_lvl;       // probe_out9
+    logic [7:0]  vio_o_addr;         // probe_out10
+
+    //-----------------------------------------------------------------
+    // Level -> single-cycle pulse
+    //-----------------------------------------------------------------
+    logic start_p, w_we_p, a_we_p;
+    oneshot u_os_start (.clk(clk), .rst_n(rst_n), .lvl(vio_start_lvl), .pulse(start_p));
+    oneshot u_os_wwe   (.clk(clk), .rst_n(rst_n), .lvl(vio_w_we_lvl),  .pulse(w_we_p));
+    oneshot u_os_awe   (.clk(clk), .rst_n(rst_n), .lvl(vio_a_we_lvl),  .pulse(a_we_p));
+
+    //-----------------------------------------------------------------
+    // The accelerator (LEVEL 3) -- instantiated unmodified
+    //-----------------------------------------------------------------
+    logic [127:0]       o_rdata;
+    logic [2:0]         phase;
+    logic               busy, done;
+    logic signed [31:0] result [0:3];
+
+    accelerator_system_top u_acc (
+        .clk          (clk),
+        .rst_n        (rst_n),
+        .start        (start_p),
+        .num_vectors  (vio_num_vectors),
+        .act_base     (vio_act_base),
+        .out_base     (vio_out_base),
+        .host_a_we    (a_we_p),
+        .host_a_addr  (vio_a_addr),
+        .host_a_wdata (vio_a_wdata),
+        .host_w_we    (w_we_p),
+        .host_w_addr  (vio_w_addr),
+        .host_w_wdata (vio_w_wdata),
+        .host_o_addr  (vio_o_addr),
+        .o_rdata      (o_rdata),
+        .phase        (phase),
+        .busy         (busy),
+        .done         (done),
+        .result       (result)
+    );
+
+    //-----------------------------------------------------------------
+    // Sticky done + completed-job counter
+    //-----------------------------------------------------------------
+    logic        done_sticky;
+    logic [15:0] done_count;
+    always_ff @(posedge clk) begin
+        if (!rst_n) begin
+            done_sticky &lt;= 1'b0;
+            done_count  &lt;= '0;
+        end else begin
+            if      (start_p) done_sticky &lt;= 1'b0;   // arm for the new job
+            else if (done)    done_sticky &lt;= 1'b1;   // latch the 10 ns pulse
+            if (done) done_count &lt;= done_count + 1'b1;
+        end
+    end
+
+    // `result` is an unpacked array; flatten it so VIO/ILA can probe it.
+    logic [127:0] result_flat;
+    assign result_flat = {result[3], result[2], result[1], result[0]};
+
+    //-----------------------------------------------------------------
+    // VIO  (generate as "vio_0")
+    //-----------------------------------------------------------------
+    vio_0 u_vio (
+        .clk        (clk),
+        .probe_in0  (busy),            // 1
+        .probe_in1  (done_sticky),     // 1
+        .probe_in2  (phase),           // 3
+        .probe_in3  (o_rdata),         // 128
+        .probe_in4  (result_flat),     // 128
+        .probe_in5  (done_count),      // 16
+        .probe_out0 (vio_start_lvl),   // 1
+        .probe_out1 (vio_num_vectors), // 8   initial value 0x04
+        .probe_out2 (vio_act_base),    // 8
+        .probe_out3 (vio_out_base),    // 8
+        .probe_out4 (vio_w_wdata),     // 32
+        .probe_out5 (vio_w_addr),      // 2
+        .probe_out6 (vio_w_we_lvl),    // 1
+        .probe_out7 (vio_a_wdata),     // 32
+        .probe_out8 (vio_a_addr),      // 8
+        .probe_out9 (vio_a_we_lvl),    // 1
+        .probe_out10(vio_o_addr)       // 8
+    );
+
+    //-----------------------------------------------------------------
+    // ILA  (generate as "ila_0"), trigger on probe0 == 1
+    //-----------------------------------------------------------------
+    ila_0 u_ila (
+        .clk    (clk),
+        .probe0 (start_p),      // 1   &lt;- trigger on this
+        .probe1 (busy),         // 1
+        .probe2 (done),         // 1
+        .probe3 (phase),        // 3
+        .probe4 (w_we_p),       // 1
+        .probe5 (a_we_p),       // 1
+        .probe6 (vio_a_addr),   // 8
+        .probe7 (o_rdata),      // 128
+        .probe8 (result_flat),  // 128
+        .probe9 (done_count)    // 16
+    );
+endmodule
+
+
+//=====================================================================
+// oneshot -- convert a VIO probe_out level into a single-clock pulse on
+// its rising edge.  Without this, a held-high `start` relaunches the
+// 17-cycle job ~4 million times per second and the ILA never settles.
+//=====================================================================
+module oneshot (
+    input  logic clk,
+    input  logic rst_n,
+    input  logic lvl,
+    output logic pulse
+);
+    logic lvl_q;
+    always_ff @(posedge clk) begin
+        if (!rst_n) begin
+            lvl_q &lt;= 1'b0;
+            pulse &lt;= 1'b0;
+        end else begin
+            lvl_q &lt;= lvl;
+            pulse &lt;= lvl &amp; ~lvl_q;
+        end
+    end
+endmodule</code></pre>
+
+<hr>
+<p class="small">
+<b>Design reference:</b> <code>context_mkdwn/</code> — chunk 07 (controller FSM), chunk 11 (L3 wrapper and
+host protocol), chunk 12 (dataflow and timing derivations), chunk 13 (worked example / T5 golden case),
+chunk 06 (memory word and lane layout).<br>
+<b>Functional baseline:</b> 11/11 testbenches, 3 680 checks, 0 mismatches (<code>verification_recheck/</code>).<br>
+<b>Companion document:</b> <code>USB_UART.pdf</code> — Method 3, the text console over the on-board USB-UART.
+</p>
+
+</body>
+</html>

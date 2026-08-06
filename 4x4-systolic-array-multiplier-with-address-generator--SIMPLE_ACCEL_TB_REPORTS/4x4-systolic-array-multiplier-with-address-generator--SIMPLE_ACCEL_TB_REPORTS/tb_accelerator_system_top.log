@@ -1,0 +1,275 @@
+﻿Reading pref.tcl
+
+# 2021.1
+
+# vsim -c tb_accelerator_system_top -do "run -all; quit -f" 
+# Start time: 17:37:37 on Jul 30,2026
+# ** Note: (vsim-3812) Design is being optimized...
+# ** Warning: C:\Users\nanda\Desktop\verification_individual\design_rtl\input_buf.sv(7): (vopt-13314) Defaulting port 'dense_a_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\nanda\Desktop\verification_individual\design_rtl\input_buf.sv(8): (vopt-13314) Defaulting port 'dense_valid_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\nanda\Desktop\verification_individual\design_rtl\array.sv(14): (vopt-13314) Defaulting port 'a_in_left' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\nanda\Desktop\verification_individual\design_rtl\array.sv(15): (vopt-13314) Defaulting port 'valid_in_left' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\nanda\Desktop\verification_individual\design_rtl\array.sv(18): (vopt-13314) Defaulting port 'psum_in_top' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\nanda\Desktop\verification_individual\design_rtl\output_skewbuf.sv(7): (vopt-13314) Defaulting port 'psum_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\nanda\Desktop\verification_individual\design_rtl\wrapper_array_buf.sv(48): (vopt-13314) Defaulting port 'dense_a_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\nanda\Desktop\verification_individual\design_rtl\wrapper_array_buf.sv(49): (vopt-13314) Defaulting port 'dense_valid_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\nanda\Desktop\verification_individual\design_rtl\wrapper_array_buf.sv(52): (vopt-13314) Defaulting port 'psum_in_top' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Note: (vsim-12126) Error and warning message counts have been restored: Errors=0, Warnings=9.
+# //  Questa Sim-64
+# //  Version 2021.1 win64 Jan 19 2021
+# //
+# //  Copyright 1991-2021 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  QuestaSim and its associated documentation contain trade
+# //  secrets and commercial or financial information that are the property of
+# //  Mentor Graphics Corporation and are privileged, confidential,
+# //  and exempt from disclosure under the Freedom of Information Act,
+# //  5 U.S.C. Section 552. Furthermore, this information
+# //  is prohibited from disclosure under the Trade Secrets Act,
+# //  18 U.S.C. Section 1905.
+# //
+# Loading sv_std.std
+# Loading work.tb_accelerator_system_top(fast)
+# run -all
+# =====================================================================
+#  tb_accelerator_system_top  --  LEVEL 3 (the entire design)
+# =====================================================================
+#  DUT           : accelerator_system_top (wrapper_full_system.sv)
+#  Contains      : controller + agu + accelerator_top
+#  Sequenced by  : the DESIGN.  This testbench only loads matrices,
+#                  pulses start, waits for done, and reads results.
+#                  It never drives an address or strobe during a run.
+# 
+#  PORT ARBITRATION UNDER TEST
+#    busy=0  host owns all three SRAM ports
+#    busy=1  AGU owns them; host write strobes are masked off
+# 
+#  TEST PLAN
+#    T1  reset state: IDLE, not busy, not done
+#    T2  run 1: clean 8-vector job -> output_mem == C = Aa x W
+#    T4  run 2: identical job while the host HAMMERS both write ports
+#        with garbage.  Results must be bit-identical to run 1.
+#    T5  run 1's output block must still be intact (out_base isolation)
+#    T6  run 3: act_base points at a second activation block
+#    T7  run 4: num_vectors=3 writes exactly 3 words, not 4
+#    T8  a rerun cross-checks the live result bus against memory
+# =====================================================================
+# 
+#   -----------------------------------------------------------------
+#   T1 : reset state
+#   -----------------------------------------------------------------
+#     phase=IDLE  busy=0  done=0
+# 
+#   -----------------------------------------------------------------
+#   HOST PRELOAD (while !busy)
+#   -----------------------------------------------------------------
+#     weight matrix W -> weight_mem[r] = weight row r:
+#        addr | wdata      | decoded cols 0..3
+#       ------+------------+--------------------------
+#           0 | 0x1c9c7ce7 |  -25  124 -100   28
+#           1 | 0xc416a7e8 |  -24  -89   22  -60
+#           2 | 0xfbf85900 |    0   89   -8   -5
+#           3 | 0xa5fca211 |   17  -94   -4  -91
+#     activation block A at a_mem[0..7]:
+#        addr | wdata      | decoded rows 0..3
+#       ------+------------+--------------------------
+#           0 | 0x86de90de |  -34 -112  -34 -122
+#           1 | 0x1e974fcd |  -51   79 -105   30
+#           2 | 0x52b29e2c |   44  -98  -78   82
+#           3 | 0xe1029931 |   49 -103    2  -31
+#           4 | 0x4811142f |   47   20   17   72
+#           5 | 0x7182f51d |   29  -11 -126  113
+#           6 | 0x38397e15 |   21  126   57   56
+#           7 | 0xe1b818a1 |  -95   24  -72  -31
+#     activation block B at a_mem[64..71]:
+#          64 | 0x14831796 | -106   23 -125   20
+#          65 | 0xacffb25c |   92  -78   -1  -84
+#          66 | 0xad9b85e4 |  -28 -123 -101  -83
+#          67 | 0x888cc018 |   24  -64 -116 -120
+#          68 | 0xd72d0f35 |   53   15   45  -41
+#          69 | 0xc18298c1 |  -63 -104 -126  -63
+#          70 | 0xab5e8f53 |   83 -113   94  -85
+#          71 | 0xf881817a |  122 -127 -127   -8
+# 
+#     GOLDEN Ca = Aa x W                    GOLDEN Cb = Ab x W
+#       vec |        c0        c1        c2        c3 |        c0        c1        c2        c3
+#     ------+-----------------------------------+-----------------------------------
+#         0 |      1464     14194      1696     17040 |      2438    -28196     12026     -5543
+#         1 |      -111    -25520      7558     -8373 |     -1856     26157    -10572     14905
+#         2 |      2646      -472     -6260        40 |      2241      6288      1234     14654
+#         3 |       720     18335     -7058     10363 |     -1104      9628     -2400     16012
+#         4 |      -431     -1207     -4684     -6521 |     -2382     13096     -5166      4090
+#         5 |      1460    -17261     -2586     -8181 |      3000     -3848      5272     10839
+#         6 |     -2597     -8801        -8    -12353 |      -808     36705    -11198     16369
+#         7 |      1272    -17410     10728      -919 |      -138     15880    -13946     12399
+#     T1 ends: 3 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T2 : run 1: clean job, host quiet
+#   -----------------------------------------------------------------
+#     command: num_vectors=8  act_base=0  out_base=0                                      
+#        cycle | phase    | busy done
+#       -------+----------+-----------
+#            0 | WLOAD    |   1    0
+#            4 | FLUSH    |   1    0   (WLOAD lasted 4 cycles)
+#           10 | COMPUTE  |   1    0   (FLUSH lasted 6 cycles)
+#           18 | DRAIN    |   1    0   (COMPUTE lasted 8 cycles)
+#           26 | DONE     |   0    1   (DRAIN lasted 8 cycles)
+#       job completed in 27 cycles from the start edge
+#     reading output_mem[0..7] and comparing against Ca = Aa x W:
+#        addr |        col0        col1        col2        col3 | vs golden
+#       ------+-------------------------------------------------+----------
+#           0 |        1464       14194        1696       17040 |       ok
+#           1 |        -111      -25520        7558       -8373 |       ok
+#           2 |        2646        -472       -6260          40 |       ok
+#           3 |         720       18335       -7058       10363 |       ok
+#           4 |        -431       -1207       -4684       -6521 |       ok
+#           5 |        1460      -17261       -2586       -8181 |       ok
+#           6 |       -2597       -8801          -8      -12353 |       ok
+#           7 |        1272      -17410       10728        -919 |       ok
+#     T2 ends: 38 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T4 : run 2: host hammers both write ports
+#   -----------------------------------------------------------------
+#     The host now drives host_w_we=1 with 0xDEADBEEF and
+#     host_a_we=1 with 0xBAADF00D on EVERY cycle of the job.
+#     If the arbiter leaked, the weight matrix would be destroyed
+#     and the results would differ from run 1.
+#     command: num_vectors=8  act_base=0  out_base=32   [host will hammer both write ports]      cycle | phase    | busy done
+#        cycle | phase    | busy done
+#       -------+----------+-----------
+#            0 | WLOAD    |   1    0
+#            4 | FLUSH    |   1    0   (WLOAD lasted 4 cycles)
+#           10 | COMPUTE  |   1    0   (FLUSH lasted 6 cycles)
+#           18 | DRAIN    |   1    0   (COMPUTE lasted 8 cycles)
+#           26 | DONE     |   0    1   (DRAIN lasted 8 cycles)
+#       job completed in 27 cycles from the start edge
+#     reading output_mem[32..39] and comparing against Ca = Aa x W:
+#        addr |        col0        col1        col2        col3 | vs golden
+#       ------+-------------------------------------------------+----------
+#          32 |        1464       14194        1696       17040 |       ok
+#          33 |        -111      -25520        7558       -8373 |       ok
+#          34 |        2646        -472       -6260          40 |       ok
+#          35 |         720       18335       -7058       10363 |       ok
+#          36 |        -431       -1207       -4684       -6521 |       ok
+#          37 |        1460      -17261       -2586       -8181 |       ok
+#          38 |       -2597       -8801          -8      -12353 |       ok
+#          39 |        1272      -17410       10728        -919 |       ok
+#     T4 ends: 38 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T5 : run 1's block survived run 2
+#   -----------------------------------------------------------------
+#     reading output_mem[0..7] and comparing against Ca = Aa x W:
+#        addr |        col0        col1        col2        col3 | vs golden
+#       ------+-------------------------------------------------+----------
+#           0 |        1464       14194        1696       17040 |       ok
+#           1 |        -111      -25520        7558       -8373 |       ok
+#           2 |        2646        -472       -6260          40 |       ok
+#           3 |         720       18335       -7058       10363 |       ok
+#           4 |        -431       -1207       -4684       -6521 |       ok
+#           5 |        1460      -17261       -2586       -8181 |       ok
+#           6 |       -2597       -8801          -8      -12353 |       ok
+#           7 |        1272      -17410       10728        -919 |       ok
+#     T5 ends: 32 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T6 : run 3: act_base selects block B
+#   -----------------------------------------------------------------
+#     command: num_vectors=8  act_base=64  out_base=96                                            cycle | phase    | busy done
+#        cycle | phase    | busy done
+#       -------+----------+-----------
+#            0 | WLOAD    |   1    0
+#            4 | FLUSH    |   1    0   (WLOAD lasted 4 cycles)
+#           10 | COMPUTE  |   1    0   (FLUSH lasted 6 cycles)
+#           18 | DRAIN    |   1    0   (COMPUTE lasted 8 cycles)
+#           26 | DONE     |   0    1   (DRAIN lasted 8 cycles)
+#       job completed in 27 cycles from the start edge
+#     reading output_mem[96..103] and comparing against Cb = Ab x W:
+#        addr |        col0        col1        col2        col3 | vs golden
+#       ------+-------------------------------------------------+----------
+#          96 |        2438      -28196       12026       -5543 |       ok
+#          97 |       -1856       26157      -10572       14905 |       ok
+#          98 |        2241        6288        1234       14654 |       ok
+#          99 |       -1104        9628       -2400       16012 |       ok
+#         100 |       -2382       13096       -5166        4090 |       ok
+#         101 |        3000       -3848        5272       10839 |       ok
+#         102 |        -808       36705      -11198       16369 |       ok
+#         103 |        -138       15880      -13946       12399 |       ok
+#     T6 ends: 38 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T7 : run 4: num_vectors=3 writes exactly 3 words
+#   -----------------------------------------------------------------
+#     sampling output_mem[163] BEFORE the run: 0xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+#     command: num_vectors=3  act_base=0  out_base=160                                            cycle | phase    | busy done
+#        cycle | phase    | busy done
+#       -------+----------+-----------
+#            0 | WLOAD    |   1    0
+#            4 | FLUSH    |   1    0   (WLOAD lasted 4 cycles)
+#           10 | COMPUTE  |   1    0   (FLUSH lasted 6 cycles)
+#           13 | DRAIN    |   1    0   (COMPUTE lasted 3 cycles)
+#           21 | DONE     |   0    1   (DRAIN lasted 8 cycles)
+#       job completed in 22 cycles from the start edge
+#     the three words that should have been written:
+#        addr |        col0        col1        col2        col3 | vs golden
+#       ------+-------------------------------------------------+----------
+#         160 |        1464       14194        1696       17040 |       ok
+#         161 |        -111      -25520        7558       -8373 |       ok
+#         162 |        2646        -472       -6260          40 |       ok
+#     sampling output_mem[163] AFTER  the run: 0xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+#     the fourth word must be byte-identical to the pre-run sample.
+#     T7 ends: 19 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T8 : live result bus agrees with memory
+#   -----------------------------------------------------------------
+#     rerunning job 1 while watching the live result bus;
+#     every golden row must appear on it, not only in memory.
+#       live bus carried golden row 0 : 1464 14194 1696 17040
+#       live bus carried golden row 1 : -111 -25520 7558 -8373
+#       live bus carried golden row 2 : 2646 -472 -6260 40
+#       live bus carried golden row 3 : 720 18335 -7058 10363
+#       live bus carried golden row 4 : -431 -1207 -4684 -6521
+#       live bus carried golden row 5 : 1460 -17261 -2586 -8181
+#       live bus carried golden row 6 : -2597 -8801 -8 -12353
+#       live bus carried golden row 7 : 1272 -17410 10728 -919
+#     golden rows observed on the live bus: 8 (need >= 8)
+#     reading output_mem[0..7] and comparing against Ca = Aa x W:
+#        addr |        col0        col1        col2        col3 | vs golden
+#       ------+-------------------------------------------------+----------
+#           0 |        1464       14194        1696       17040 |       ok
+#           1 |        -111      -25520        7558       -8373 |       ok
+#           2 |        2646        -472       -6260          40 |       ok
+#           3 |         720       18335       -7058       10363 |       ok
+#           4 |        -431       -1207       -4684       -6521 |       ok
+#           5 |        1460      -17261       -2586       -8181 |       ok
+#           6 |       -2597       -8801          -8      -12353 |       ok
+#           7 |        1272      -17410       10728        -919 |       ok
+#     T8 ends: 33 checks, 0 errors  [PASS]
+# 
+#   =================================================================
+#    SECTION SUMMARY : tb_accelerator_system_top
+#   =================================================================
+#    SEC    DESCRIPTION                                     CHECKS  ERRORS  STATUS
+#    ------ ---------------------------------------------- ------- -------  ------
+#    T1     reset state                                          3       0  PASS
+#    T2     run 1: clean job, host quiet                        38       0  PASS
+#    T4     run 2: host hammers both write ports                38       0  PASS
+#    T5     run 1's block survived run 2                        32       0  PASS
+#    T6     run 3: act_base selects block B                     38       0  PASS
+#    T7     run 4: num_vectors=3 writes exactly 3 words         19       0  PASS
+#    T8     live result bus agrees with memory                  33       0  PASS
+#    ------ ---------------------------------------------- ------- -------
+#    TOTAL                                                     201       0
+#   =================================================================
+#    TOTALS: 201 checks, 0 errors
+#    simulated time : 2066 ns
+#    RESULT: PASS - tb_accelerator_system_top
+#   =================================================================
+# ** Note: $finish    : C:/Users/nanda/Desktop/verification_individual/test_benches/tb_accelerator_system_top.sv(523)
+#    Time: 2066 ns  Iteration: 0  Instance: /tb_accelerator_system_top
+# End time: 17:37:43 on Jul 30,2026, Elapsed time: 0:00:06
+# Errors: 0, Warnings: 9

@@ -1,0 +1,2061 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Architecture v2 (updated) - 4x4 Weight-Stationary Systolic Accelerator</title>
+<style>
+:root{
+  --bg:#ffffff; --fg:#15181d; --muted:#5d6673; --line:#e3e7ed; --line2:#cdd4de;
+  --panel:#f7f9fb; --panel2:#eef2f7; --code:#f4f6f9;
+  --accent:#0b5fd0; --accent-w:#e7f0fd;
+  --w:#1747c9;  --wbg:#e8eeff;
+  --a:#b4470b;  --abg:#fdefe4;
+  --p:#0d7a49;  --pbg:#e4f6ec;
+  --idle:#8a94a3; --warn:#9a6700; --bad:#b42318;
+  --mono:ui-monospace,"Cascadia Mono","SFMono-Regular",Consolas,"Liberation Mono",monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0f1216; --fg:#e6eaf0; --muted:#9aa5b4; --line:#242a33; --line2:#333b47;
+    --panel:#161b21; --panel2:#1c222a; --code:#141920;
+    --accent:#5aa2ff; --accent-w:#132234;
+    --w:#7fa8ff; --wbg:#16223c;
+    --a:#f0a06a; --abg:#33210f;
+    --p:#5ed49a; --pbg:#0f2a1e;
+    --idle:#6b7482; --warn:#e0b341; --bad:#f28b82;
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--bg); color:var(--fg);
+  font-family:var(--sans); font-size:16px; line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px; margin:0 auto; padding:0 28px 120px}
+header.masthead{
+  border-bottom:1px solid var(--line); padding:56px 0 34px; margin-bottom:34px;
+}
+.eyebrow{font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); font-weight:700; margin:0 0 12px}
+h1{font-size:clamp(28px,4.4vw,44px); line-height:1.14; margin:0 0 14px; letter-spacing:-.022em; font-weight:750}
+.sub{font-size:18px; color:var(--muted); margin:0 0 22px; max-width:74ch}
+.meta{display:flex; flex-wrap:wrap; gap:8px}
+.chip{
+  font-size:12.5px; font-family:var(--mono); background:var(--panel);
+  border:1px solid var(--line); border-radius:999px; padding:4px 12px; color:var(--muted);
+}
+.chip.ok{color:var(--p); border-color:var(--p); background:var(--pbg)}
+h2{font-size:26px; margin:56px 0 6px; letter-spacing:-.015em; font-weight:720; scroll-margin-top:20px}
+h2 .num{color:var(--accent); font-family:var(--mono); font-size:19px; margin-right:10px; font-weight:600}
+h3{font-size:19.5px; margin:34px 0 6px; letter-spacing:-.01em; font-weight:680}
+h4{font-size:16px; margin:24px 0 4px; font-weight:680; color:var(--fg)}
+h2+p,h3+p,h4+p{margin-top:8px}
+p{margin:0 0 15px; max-width:82ch}
+ul,ol{max-width:82ch; padding-left:24px; margin:0 0 15px}
+li{margin:5px 0}
+a{color:var(--accent); text-decoration:none; border-bottom:1px solid color-mix(in srgb, var(--accent) 35%, transparent)}
+a:hover{border-bottom-color:var(--accent)}
+code{font-family:var(--mono); font-size:.88em; background:var(--code); border:1px solid var(--line); border-radius:4px; padding:1px 5px}
+pre{
+  font-family:var(--mono); font-size:13px; line-height:1.62; background:var(--code);
+  border:1px solid var(--line); border-radius:8px; padding:16px 18px; overflow-x:auto; margin:0 0 18px;
+}
+pre code{background:none; border:0; padding:0; font-size:inherit}
+.cmt{color:var(--muted)}
+.kw{color:var(--accent); font-weight:600}
+.num2{color:var(--a)}
+table{border-collapse:collapse; width:100%; margin:0 0 20px; font-size:14.5px; display:block; overflow-x:auto}
+th,td{border:1px solid var(--line); padding:8px 12px; text-align:left; vertical-align:top}
+th{background:var(--panel); font-weight:650; font-size:13px; letter-spacing:.02em}
+tbody tr:nth-child(even){background:color-mix(in srgb, var(--panel) 55%, transparent)}
+td code{font-size:.9em}
+.note,.warnbox,.keybox{
+  border-left:3px solid var(--accent); background:var(--accent-w);
+  padding:14px 18px; border-radius:0 8px 8px 0; margin:0 0 20px; font-size:15px;
+}
+.note p:last-child,.warnbox p:last-child,.keybox p:last-child{margin-bottom:0}
+.warnbox{border-left-color:var(--warn); background:color-mix(in srgb, var(--warn) 10%, transparent)}
+.keybox{border-left-color:var(--p); background:var(--pbg)}
+.lbl{font-size:11.5px; text-transform:uppercase; letter-spacing:.1em; font-weight:750; display:block; margin-bottom:4px}
+.note .lbl{color:var(--accent)} .warnbox .lbl{color:var(--warn)} .keybox .lbl{color:var(--p)}
+.toc{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:20px 24px; margin:0 0 20px}
+.toc ol{columns:2; column-gap:44px; margin:0; padding-left:20px; font-size:14.5px}
+.toc li{margin:3px 0; break-inside:avoid}
+figure{margin:0 0 24px}
+figcaption{font-size:13.5px; color:var(--muted); margin-top:10px; max-width:82ch}
+figcaption b{color:var(--fg)}
+.diagram{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:20px; overflow-x:auto}
+.diagram svg{display:block; margin:0 auto; max-width:100%; height:auto}
+
+/* ---------- animation widget ---------- */
+.stage{
+  border:1px solid var(--line2); border-radius:12px; background:var(--panel);
+  margin:0 0 14px; overflow:hidden;
+}
+.stage-bar{
+  display:flex; flex-wrap:wrap; align-items:center; gap:10px;
+  padding:10px 14px; background:var(--panel2); border-bottom:1px solid var(--line);
+}
+.btn{
+  font:inherit; font-size:13px; font-weight:600; padding:5px 13px; border-radius:7px;
+  border:1px solid var(--line2); background:var(--bg); color:var(--fg); cursor:pointer;
+}
+.btn:hover{border-color:var(--accent); color:var(--accent)}
+.btn.primary{background:var(--accent); color:#fff; border-color:var(--accent)}
+.btn.primary:hover{filter:brightness(1.1); color:#fff}
+.cyc{font-family:var(--mono); font-size:14px; font-weight:700; padding:4px 10px; background:var(--bg); border:1px solid var(--line2); border-radius:7px}
+.phase{
+  font-family:var(--mono); font-size:12px; font-weight:700; letter-spacing:.08em;
+  padding:4px 11px; border-radius:999px; color:#fff; background:var(--idle);
+}
+.phase[data-p="WLOAD"]{background:var(--w)}
+.phase[data-p="FLUSH"]{background:var(--idle)}
+.phase[data-p="COMPUTE"]{background:var(--p)}
+.phase[data-p="DRAIN"]{background:var(--a)}
+.phase[data-p="DONE"]{background:var(--accent)}
+.spacer{flex:1}
+.stage-body{padding:18px 14px}
+.hint{font-size:12.5px; color:var(--muted); font-family:var(--mono)}
+input[type=range]{accent-color:var(--accent)}
+
+/* timeline */
+.tl{display:flex; height:22px; border-radius:6px; overflow:hidden; border:1px solid var(--line2); margin:0 14px 0 0; min-width:260px; flex:1}
+.tl div{display:flex; align-items:center; justify-content:center; font-size:10px; font-family:var(--mono); font-weight:700; color:#fff; opacity:.42; transition:opacity .15s}
+.tl div.on{opacity:1}
+.tl .t-w{background:var(--w)} .tl .t-f{background:var(--idle)} .tl .t-c{background:var(--p)} .tl .t-d{background:var(--a)} .tl .t-o{background:var(--accent)}
+
+/* array grid */
+.arrwrap{display:grid; grid-template-columns:auto auto 1fr; gap:0 10px; align-items:start; overflow-x:auto}
+.cellgrid{display:grid; grid-template-columns:repeat(4,minmax(84px,1fr)); gap:6px}
+.pe{
+  position:relative; background:var(--bg); border:1px solid var(--line2); border-radius:8px;
+  padding:20px 6px 6px; min-height:64px; text-align:center; transition:background .12s,border-color .12s;
+}
+.pe.acc{border-color:var(--p); background:var(--pbg); box-shadow:0 0 0 2px color-mix(in srgb,var(--p) 22%,transparent)}
+.pe.shift{border-color:var(--w); background:var(--wbg)}
+.pe .wq{position:absolute; top:3px; left:6px; font:600 10.5px var(--mono); color:var(--w)}
+.pe .aq{position:absolute; top:3px; right:6px; font:600 10.5px var(--mono); color:var(--a)}
+.pe .pq{font:700 15px var(--mono); color:var(--p); line-height:1.2}
+.pe .pq.zero{color:var(--muted); font-weight:500}
+.pe .tag{position:absolute; bottom:2px; right:5px; font:500 9px var(--mono); color:var(--muted)}
+.edge{display:grid; gap:6px; grid-template-columns:repeat(4,minmax(84px,1fr))}
+.eb{
+  background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:4px 2px;
+  text-align:center; font:600 12.5px var(--mono); min-height:26px;
+}
+.eb.w{color:var(--w); background:var(--wbg); border-color:color-mix(in srgb,var(--w) 30%,transparent)}
+.eb.p{color:var(--p)}
+.eb.hot{background:var(--pbg); border-color:var(--p); font-weight:700}
+.eb.dim{color:var(--muted); background:transparent}
+.rowlab{display:grid; gap:6px; font:600 11px var(--mono); color:var(--muted); text-align:right; padding-right:2px}
+.rowlab div{height:64px; display:flex; align-items:center; justify-content:flex-end}
+.wl{display:grid; gap:6px}
+.wl .cellv{
+  height:64px; display:flex; align-items:center; justify-content:center; min-width:52px;
+  background:var(--bg); border:1px solid var(--line); border-radius:6px;
+  font:700 13px var(--mono); color:var(--a);
+}
+.wl .cellv.off{color:var(--muted); font-weight:400; background:transparent}
+.wl .cellv.live{background:var(--abg); border-color:var(--a)}
+.colhdr{display:grid; grid-template-columns:repeat(4,minmax(84px,1fr)); gap:6px; font:600 11px var(--mono); color:var(--muted); text-align:center; margin-bottom:3px}
+.sect-lab{font:600 11px var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin:14px 0 4px}
+.legend{display:flex; flex-wrap:wrap; gap:14px; font-size:12px; color:var(--muted); margin-top:14px}
+.legend span{display:flex; align-items:center; gap:6px}
+.sw{width:11px; height:11px; border-radius:3px; display:inline-block}
+
+/* pipe animation */
+.pipeline{display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:center; padding:10px 0}
+.slot{
+  width:56px; height:46px; border:1px solid var(--line2); border-radius:8px; background:var(--bg);
+  display:flex; align-items:center; justify-content:center; font:700 15px var(--mono); position:relative;
+}
+.slot.stage{border-color:var(--accent)}
+.slot .cap{position:absolute; top:-17px; left:0; right:0; text-align:center; font:600 9.5px var(--mono); color:var(--muted)}
+.slot.din{border-style:dashed; color:var(--a)}
+.slot.dout{border-color:var(--p); color:var(--p); background:var(--pbg)}
+.arrow{color:var(--muted); font-size:17px}
+
+/* trace tables */
+.trace{max-height:430px; overflow:auto; border:1px solid var(--line); border-radius:9px; margin:0 0 22px}
+.trace table{margin:0; border:0; font-size:12.5px; font-family:var(--mono); display:table}
+.trace th{position:sticky; top:0; z-index:2; background:var(--panel2); font-family:var(--sans); border-top:0}
+.trace td,.trace th{padding:4px 9px; white-space:nowrap; border-color:var(--line)}
+.trace .hi{background:var(--pbg); font-weight:700; color:var(--p)}
+.trace .wl2{background:var(--wbg); color:var(--w)}
+.trace .mut{color:var(--muted)}
+.tcap{font-size:13px; color:var(--muted); margin:0 0 6px}
+
+.pill{display:inline-block; font:600 11px var(--mono); padding:2px 8px; border-radius:999px; border:1px solid var(--line2); color:var(--muted); background:var(--panel)}
+.pill.ok{color:var(--p); border-color:var(--p); background:var(--pbg)}
+.pill.bad{color:var(--bad); border-color:var(--bad)}
+.grid2{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:18px; margin:0 0 20px}
+.card{border:1px solid var(--line); border-radius:10px; padding:16px 18px; background:var(--panel)}
+.card h4{margin-top:0}
+.card p:last-child{margin-bottom:0}
+hr{border:0; border-top:1px solid var(--line); margin:44px 0}
+.foot{border-top:1px solid var(--line); margin-top:60px; padding-top:22px; font-size:13.5px; color:var(--muted)}
+.printonly{display:none}
+
+@media (max-width:760px){
+  .wrap{padding:0 16px 80px}
+  .toc ol{columns:1}
+  .cellgrid,.edge,.colhdr{grid-template-columns:repeat(4,minmax(66px,1fr))}
+}
+@media print{
+  :root{
+    --bg:#fff; --fg:#000; --muted:#444; --line:#bbb; --line2:#999;
+    --panel:#f6f6f6; --panel2:#eee; --code:#f6f6f6; --accent:#0b5fd0;
+    --wbg:#e8eeff; --abg:#fdefe4; --pbg:#e4f6ec;
+  }
+  body{font-size:10pt; line-height:1.48}
+  .wrap{max-width:none; padding:0}
+  .stage-bar .btn,.stage-bar input,.stage-bar .spacer,.stage-bar label{display:none !important}
+  /* nothing may be clipped on paper: every scroll container becomes a flow container */
+  table{display:table; overflow:visible; font-size:8.6pt; table-layout:fixed; word-break:break-word}
+  th,td{padding:4px 7px}
+  pre{overflow:visible; white-space:pre-wrap; word-break:break-word; font-size:8.4pt; line-height:1.5}
+  .diagram,.arrwrap,.trace,.pipeline{overflow:visible}
+  .trace{max-height:none; page-break-inside:auto}
+  .trace table{font-size:7.6pt; table-layout:auto}
+  .trace td,.trace th{white-space:normal; padding:2.5px 5px}
+  .trace th{position:static}
+  .cellgrid,.edge,.colhdr,.dsk{grid-template-columns:repeat(4,1fr)}
+  .pe{height:56px} .rowlab div,.wl .cellv{height:56px}
+  .pe .pq{font-size:12px}
+  .toc ol{columns:2}
+  h2{page-break-after:avoid; margin-top:24pt} h3,h4{page-break-after:avoid}
+  figure,.stage,.note,.warnbox,.keybox,.card,.grid2{page-break-inside:avoid}
+  pre,table{page-break-inside:auto}
+  .printonly{display:block}
+  a{color:#000; border:0}
+  header.masthead{padding-top:0}
+  @page{margin:15mm 12mm}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="masthead">
+  <p class="eyebrow">Technical Reference Â· Design &amp; Verification</p>
+  <h1>4Ã—4 Weight-Stationary Systolic Accelerator</h1>
+  <p class="sub">Complete architecture, RTL structure and cycle-level data flow of a 13-module
+  SystemVerilog matrix-multiply engine â€” with cycle-accurate animations of the delay pipes,
+  the skew buffers and the systolic array itself.</p>
+  <div class="meta">
+    <span class="chip">13 RTL modules</span>
+    <span class="chip">13 testbenches</span>
+    <span class="chip ok">13/13 PASS Â· 3 902 checks Â· 0 mismatches</span>
+    <span class="chip">int8 Ã— int8 â†’ int32</span>
+    <span class="chip">QuestaSim 2021.1</span>
+    <span class="chip">2026-07-30</span>
+  </div>
+</header>
+
+<div class="printonly note">
+  <span class="lbl">Reading this as a PDF</span>
+  <p>Every animated figure in the HTML edition is followed here by its <b>complete cycle-by-cycle
+  trace table</b>, generated by the same cycle-accurate model that drives the animation. Nothing is
+  lost â€” the tables contain every value the animation would show, for every clock edge. Open
+  <code>architecture_and_dataflow.html</code> to interact with them.</p>
+</div>
+
+<nav class="toc">
+  <ol>
+    <li><a href="#s1">What the design does</a></li>
+    <li><a href="#s2">Repository and module map</a></li>
+    <li><a href="#s3">Architecture: the three levels</a></li>
+    <li><a href="#s4">Word formats and data layout</a></li>
+    <li><a href="#s5">The processing element</a></li>
+    <li><a href="#s6">delay_pipe â€” animated</a></li>
+    <li><a href="#s7">The input skew buffer â€” animated</a></li>
+    <li><a href="#s8">The systolic array</a></li>
+    <li><a href="#s9">Matrix multiply, cycle by cycle â€” animated</a></li>
+    <li><a href="#s10">The output de-skew buffer</a></li>
+    <li><a href="#s11">The memories</a></li>
+    <li><a href="#s12">Control plane: FSM and AGU</a></li>
+    <li><a href="#s13">Timing derivations</a></li>
+    <li><a href="#s14">End-to-end data flow</a></li>
+    <li><a href="#s15">Verification summary</a></li>
+    <li><a href="#s16">Known limitations</a></li>
+  </ol>
+</nav>
+
+<!-- ============================================================ -->
+<h2 id="s1"><span class="num">1</span>What the design does</h2>
+
+<p>The accelerator computes <b>C = A Ã— W</b>, where <code>W</code> is a stationary 4Ã—4 matrix of
+8-bit signed integers and <code>A</code> is a stream of 4-element activation vectors. Each vector
+produces one 4-element result vector of 32-bit signed integers, at a throughput of
+<b>one vector per clock cycle</b> once the pipeline is full.</p>
+
+<p>It is a <i>weight-stationary</i> systolic array. That phrase describes the dataflow completely:</p>
+
+<div class="keybox">
+  <span class="lbl">The dataflow in one sentence</span>
+  <p><b>Weights enter from the north edge and stop; activations enter from the west and keep moving
+  east; partial sums flow south and leave the bottom edge.</b></p>
+</div>
+
+<p>The weight matrix is loaded once into the 16 processing elements â€” one 8-bit weight each â€” and
+then stays put. Activations stream through horizontally, and each processing element multiplies the
+activation passing through it by its resident weight and adds the result to the partial sum
+descending from above. By the time a partial sum leaves the bottom of a column it has accumulated
+all four products of a dot product.</p>
+
+<p>Nothing in the array is ever re-fetched from memory during compute. That is the entire point of
+the architecture: a weight is read from SRAM once and then used for every activation vector in the
+job. Memory bandwidth â€” not arithmetic â€” is what limits real machine-learning accelerators, so
+minimising re-fetch is what makes the design fast.</p>
+
+<h3>Key numbers</h3>
+<table>
+<thead><tr><th>Property</th><th>Value</th><th>Set by</th></tr></thead>
+<tbody>
+<tr><td>Array size</td><td>4 rows Ã— 4 columns = 16 processing elements</td><td><code>ROWS</code>, <code>COLS</code></td></tr>
+<tr><td>Operand format</td><td>int8 (signed, âˆ’128â€¦127)</td><td><code>DATA_W = 8</code></td></tr>
+<tr><td>Accumulator format</td><td>int32 (signed)</td><td><code>PSUM_W = 32</code></td></tr>
+<tr><td>Peak throughput</td><td>16 multiply-accumulates per clock</td><td>array size</td></tr>
+<tr><td>Compute throughput</td><td>1 activation vector (4 MACs Ã— 4 columns) per clock</td><td>no back-pressure</td></tr>
+<tr><td>Result latency</td><td>7 cycles from activation address to result on the bus</td><td><code>RESULT_LATENCY</code></td></tr>
+<tr><td>Store latency</td><td>8 cycles from activation address to write strobe</td><td><code>STORE_LATENCY</code></td></tr>
+<tr><td>Job length</td><td><code>num_vectors + 19</code> cycles</td><td>controller FSM</td></tr>
+<tr><td>Activation memory</td><td>256 words Ã— 32 bits (256 vectors)</td><td><code>A_ADDR_W = 8</code></td></tr>
+<tr><td>Weight memory</td><td>4 words Ã— 32 bits (one word per weight row)</td><td><code>W_ADDR_W = 2</code></td></tr>
+<tr><td>Output memory</td><td>256 words Ã— 128 bits</td><td><code>O_ADDR_W = 8</code></td></tr>
+</tbody>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="s2"><span class="num">2</span>Repository and module map</h2>
+
+<pre><code>verification_individual/
+â”œâ”€â”€ design_rtl/          13 synthesizable SystemVerilog files
+â”œâ”€â”€ test_benches/        13 testbenches + run_all_testbenches.ps1
+â”œâ”€â”€ indi_ver_rep/        verification report + raw QuestaSim transcripts
+â”œâ”€â”€ DOCS/                description index + detailed docs (this file lives here)
+â”œâ”€â”€ context_mkdwn/       derivations and design decisions
+â”œâ”€â”€ docs_images/         architecture_overview.jpeg
+â””â”€â”€ index.md             file locator</code></pre>
+
+<h3>The 13 RTL modules</h3>
+
+<table>
+<thead><tr><th>File</th><th>Module</th><th>Lines</th><th>Role</th></tr></thead>
+<tbody>
+<tr><td><code>MAC.sv</code></td><td><code>processing_element</code></td><td>57</td><td>One weight-stationary multiply-accumulate cell</td></tr>
+<tr><td><code>array.sv</code></td><td><code>systolic_array</code></td><td>63</td><td>4Ã—4 grid of PEs â€” pure interconnect, no arithmetic</td></tr>
+<tr><td><code>delay_pipe.sv</code></td><td><code>delay_pipe</code></td><td>31</td><td>Parameterised <i>N</i>-deep shift register; <code>DELAY=0</code> is a wire</td></tr>
+<tr><td><code>input_buf.sv</code></td><td><code>input_skew_buffer</code></td><td>35</td><td>Dense vector â†’ diagonal wavefront (row <i>r</i> delayed by <i>r</i>)</td></tr>
+<tr><td><code>output_skewbuf.sv</code></td><td><code>output_deskew_buffer</code></td><td>24</td><td>Removes the column staircase (column <i>c</i> delayed by <code>COLS-1-c</code>)</td></tr>
+<tr><td><code>a_mem.sv</code></td><td><code>a_mem</code></td><td>19</td><td>Activation SRAM, 256 Ã— 32</td></tr>
+<tr><td><code>weight_mem.sv</code></td><td><code>weight_mem</code></td><td>18</td><td>Weight SRAM, 4 Ã— 32</td></tr>
+<tr><td><code>outmem.sv</code></td><td><code>output_mem</code></td><td>18</td><td>Result SRAM, 256 Ã— 128</td></tr>
+<tr><td><code>controller.sv</code></td><td><code>controller</code></td><td>128</td><td>Phase FSM â€” owns durations, produces no addresses</td></tr>
+<tr><td><code>agu.sv</code></td><td><code>agu</code></td><td>114</td><td>Address generator â€” owns addresses, holds no policy</td></tr>
+<tr><td><code>wrapper_array_buf.sv</code></td><td><code>array_buf_top</code></td><td>100</td><td><b>Level 1</b> â€” skew + array + de-skew</td></tr>
+<tr><td><code>wrapper_mem_arr_buf.sv</code></td><td><code>accelerator_top</code></td><td>175</td><td><b>Level 2</b> â€” level 1 + the three SRAMs</td></tr>
+<tr><td><code>wrapper_full_system.sv</code></td><td><code>accelerator_system_top</code></td><td>205</td><td><b>Level 3</b> â€” level 2 + FSM + AGU + arbitration</td></tr>
+</tbody>
+</table>
+
+<div class="warnbox">
+  <span class="lbl">Filename â‰  module name</span>
+  <p>Eight files carry a module whose name differs from the filename. Search by module name and use
+  this table: <code>processing_element</code>â†’<code>MAC.sv</code>,
+  <code>systolic_array</code>â†’<code>array.sv</code>,
+  <code>input_skew_buffer</code>â†’<code>input_buf.sv</code>,
+  <code>output_deskew_buffer</code>â†’<code>output_skewbuf.sv</code>,
+  <code>output_mem</code>â†’<code>outmem.sv</code>,
+  <code>array_buf_top</code>â†’<code>wrapper_array_buf.sv</code>,
+  <code>accelerator_top</code>â†’<code>wrapper_mem_arr_buf.sv</code>,
+  <code>accelerator_system_top</code>â†’<code>wrapper_full_system.sv</code>.</p>
+</div>
+
+<h3>Instance hierarchy</h3>
+
+<pre><code>accelerator_system_top                    wrapper_full_system.sv     LEVEL 3
+â”œâ”€â”€ controller                            controller.sv
+â”œâ”€â”€ agu                                   agu.sv
+â””â”€â”€ accelerator_top                       wrapper_mem_arr_buf.sv     LEVEL 2
+    â”œâ”€â”€ a_mem                             a_mem.sv
+    â”œâ”€â”€ weight_mem                        weight_mem.sv
+    â”œâ”€â”€ output_mem                        outmem.sv
+    â””â”€â”€ array_buf_top                     wrapper_array_buf.sv       LEVEL 1
+        â”œâ”€â”€ input_skew_buffer             input_buf.sv
+        â”‚   â””â”€â”€ delay_pipe  Ã— 2Â·ROWS      delay_pipe.sv
+        â”œâ”€â”€ systolic_array                array.sv
+        â”‚   â””â”€â”€ processing_element Ã— 16   MAC.sv
+        â””â”€â”€ output_deskew_buffer          output_skewbuf.sv
+            â””â”€â”€ delay_pipe  Ã— COLS        delay_pipe.sv</code></pre>
+
+<p>Twelve <code>delay_pipe</code> instances exist in total: eight inside the input skew buffer (four
+for data, four for the matching valid bits) and four inside the de-skew buffer.</p>
+
+<!-- ============================================================ -->
+<h2 id="s3"><span class="num">3</span>Architecture: the three levels</h2>
+
+<p>Rather than one monolithic top module, the design closes at three abstraction levels, each in its
+own file. <b>Each level instantiates the level below rather than re-wiring the fabric.</b></p>
+
+<figure>
+<div class="diagram">
+<svg viewBox="0 0 900 520" role="img" aria-label="Block diagram of the three abstraction levels">
+  <defs>
+    <marker id="ah" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 Z" fill="currentColor"/>
+    </marker>
+    <style>
+      .bx{fill:var(--bg);stroke:var(--line2);stroke-width:1.4;rx:8}
+      .lv{fill:none;stroke:var(--accent);stroke-width:1.6;stroke-dasharray:6 4;rx:12}
+      .t{font:600 13px var(--sans);fill:var(--fg)}
+      .ts{font:500 11px var(--mono);fill:var(--muted)}
+      .tl2{font:700 11px var(--mono);fill:var(--accent);letter-spacing:.08em}
+      .ln{stroke:var(--muted);stroke-width:1.5;fill:none;color:var(--muted)}
+      .lnw{stroke:var(--w);stroke-width:2;fill:none;color:var(--w)}
+      .lna{stroke:var(--a);stroke-width:2;fill:none;color:var(--a)}
+      .lnp{stroke:var(--p);stroke-width:2;fill:none;color:var(--p)}
+    </style>
+  </defs>
+
+  <!-- level 3 frame -->
+  <rect class="lv" x="12" y="12" width="876" height="496"/>
+  <text class="tl2" x="26" y="32">LEVEL 3 â€” accelerator_system_top</text>
+
+  <!-- host -->
+  <rect class="bx" x="30" y="46" width="150" height="54"/>
+  <text class="t" x="105" y="68" text-anchor="middle">Host interface</text>
+  <text class="ts" x="105" y="86" text-anchor="middle">start / num_vectors</text>
+
+  <!-- controller -->
+  <rect class="bx" x="220" y="46" width="150" height="54"/>
+  <text class="t" x="295" y="68" text-anchor="middle">Control Unit (FSM)</text>
+  <text class="ts" x="295" y="86" text-anchor="middle">controller.sv</text>
+
+  <!-- agu -->
+  <rect class="bx" x="410" y="46" width="150" height="54"/>
+  <text class="t" x="485" y="68" text-anchor="middle">Address Generator</text>
+  <text class="ts" x="485" y="86" text-anchor="middle">agu.sv</text>
+
+  <!-- status -->
+  <rect class="bx" x="600" y="46" width="150" height="54"/>
+  <text class="t" x="675" y="68" text-anchor="middle">Status</text>
+  <text class="ts" x="675" y="86" text-anchor="middle">busy / done / phase</text>
+
+  <path class="ln" d="M180,73 H214" marker-end="url(#ah)"/>
+  <path class="ln" d="M370,73 H404" marker-end="url(#ah)"/>
+  <path class="ln" d="M560,73 H594" marker-end="url(#ah)"/>
+
+  <!-- level 2 frame -->
+  <rect class="lv" x="34" y="122" width="832" height="364" style="stroke:var(--p)"/>
+  <text class="tl2" x="48" y="142" style="fill:var(--p)">LEVEL 2 â€” accelerator_top</text>
+
+  <!-- memories -->
+  <rect class="bx" x="52" y="158" width="132" height="52"/>
+  <text class="t" x="118" y="180" text-anchor="middle">Weight memory</text>
+  <text class="ts" x="118" y="198" text-anchor="middle">4 Ã— 32b</text>
+
+  <rect class="bx" x="52" y="256" width="132" height="52"/>
+  <text class="t" x="118" y="278" text-anchor="middle">Activation memory</text>
+  <text class="ts" x="118" y="296" text-anchor="middle">256 Ã— 32b</text>
+
+  <rect class="bx" x="694" y="392" width="150" height="52"/>
+  <text class="t" x="769" y="414" text-anchor="middle">Output memory</text>
+  <text class="ts" x="769" y="432" text-anchor="middle">256 Ã— 128b</text>
+
+  <!-- level 1 frame -->
+  <rect class="lv" x="216" y="176" width="452" height="292" style="stroke:var(--a)"/>
+  <text class="tl2" x="230" y="196" style="fill:var(--a)">LEVEL 1 â€” array_buf_top</text>
+
+  <rect class="bx" x="232" y="256" width="92" height="52"/>
+  <text class="t" x="278" y="278" text-anchor="middle">Skew</text>
+  <text class="ts" x="278" y="296" text-anchor="middle">buffer</text>
+
+  <rect class="bx" x="360" y="212" width="170" height="150"/>
+  <text class="t" x="445" y="238" text-anchor="middle">4 Ã— 4 PE array</text>
+  <text class="ts" x="445" y="256" text-anchor="middle">16 Ã— processing_element</text>
+  <g>
+    <rect x="382" y="272" width="26" height="26" rx="4" fill="var(--wbg)" stroke="var(--w)"/>
+    <rect x="414" y="272" width="26" height="26" rx="4" fill="var(--wbg)" stroke="var(--w)"/>
+    <rect x="446" y="272" width="26" height="26" rx="4" fill="var(--wbg)" stroke="var(--w)"/>
+    <rect x="478" y="272" width="26" height="26" rx="4" fill="var(--wbg)" stroke="var(--w)"/>
+    <rect x="382" y="304" width="26" height="26" rx="4" fill="var(--wbg)" stroke="var(--w)"/>
+    <rect x="414" y="304" width="26" height="26" rx="4" fill="var(--wbg)" stroke="var(--w)"/>
+    <rect x="446" y="304" width="26" height="26" rx="4" fill="var(--wbg)" stroke="var(--w)"/>
+    <rect x="478" y="304" width="26" height="26" rx="4" fill="var(--wbg)" stroke="var(--w)"/>
+  </g>
+
+  <rect class="bx" x="566" y="256" width="92" height="52"/>
+  <text class="t" x="612" y="278" text-anchor="middle">De-skew</text>
+  <text class="ts" x="612" y="296" text-anchor="middle">buffer</text>
+
+  <rect class="bx" x="694" y="256" width="150" height="52"/>
+  <text class="t" x="769" y="278" text-anchor="middle">Output packing</text>
+  <text class="ts" x="769" y="296" text-anchor="middle">4 Ã— int32 â†’ 128b</text>
+
+  <!-- data arrows -->
+  <path class="lnw" d="M118,158 V150 H445 V206" marker-end="url(#ah)"/>
+  <text class="ts" x="300" y="145" style="fill:var(--w)">weights â€” north edge, during WLOAD</text>
+
+  <path class="lna" d="M184,282 H226" marker-end="url(#ah)"/>
+  <path class="lna" d="M324,282 H354" marker-end="url(#ah)"/>
+  <text class="ts" x="230" y="330" style="fill:var(--a)">activations â€” west edge, keep moving east</text>
+
+  <path class="lnp" d="M530,282 H560" marker-end="url(#ah)"/>
+  <path class="lnp" d="M658,282 H688" marker-end="url(#ah)"/>
+  <path class="lnp" d="M769,308 V386" marker-end="url(#ah)"/>
+  <text class="ts" x="545" y="248" style="fill:var(--p)">partial sums â€” south</text>
+
+  <!-- AGU address lines -->
+  <path class="ln" d="M485,100 V118 H118 V152" marker-end="url(#ah)" stroke-dasharray="4 3"/>
+  <path class="ln" d="M470,100 V128 H100 V250" marker-end="url(#ah)" stroke-dasharray="4 3"/>
+  <path class="ln" d="M500,100 V112 H862 V418 H850" marker-end="url(#ah)" stroke-dasharray="4 3"/>
+  <text class="ts" x="600" y="108">addresses + write strobe</text>
+</svg>
+</div>
+<figcaption><b>The three abstraction levels.</b> Level 1 is the compute fabric with no memory and no
+sequencing. Level 2 adds the three SRAMs, the control re-timing and the output packing. Level 3 adds
+the FSM, the address generator and the port arbitration that decides whether the host or the AGU
+drives the shared SRAM address ports.</figcaption>
+</figure>
+
+<h3>Why three levels instead of one</h3>
+
+<div class="grid2">
+  <div class="card">
+    <h4>They cannot drift apart</h4>
+    <p>The datapath verified by <code>tb_accelerator_top</code> is byte-for-byte the datapath running
+    inside <code>accelerator_system_top</code>, because level 3 <i>instantiates</i> level 2 rather
+    than re-declaring the same wires.</p>
+  </div>
+  <div class="card">
+    <h4>Failures localise instantly</h4>
+    <p>Levels 1 and 2 have their own passing testbenches. A failure that appears only at level 3 is
+    necessarily in the control plane â€” the FSM or the AGU â€” because everything below it is already
+    proven.</p>
+  </div>
+  <div class="card">
+    <h4>Each level is independently usable</h4>
+    <p>A user who wants to drive the fabric from their own sequencer instantiates level 1. A user who
+    wants the memories but their own control instantiates level 2. Neither is forced to take the FSM.</p>
+  </div>
+  <div class="card">
+    <h4>No file overwrites another</h4>
+    <p>Adding a fourth level means adding a fourth file that instantiates level 3. It never means
+    editing <code>wrapper_full_system.sv</code>. This is a hard rule in this repository.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="s4"><span class="num">4</span>Word formats and data layout</h2>
+
+<p>Three SRAMs, three packing conventions. Getting a lane index wrong here transposes a matrix
+silently, so the mapping is worth stating precisely.</p>
+
+<pre><code>a_mem word       [31:24][23:16][15:8][7:0]
+                  row 3  row 2  row 1 row 0      four int8 activations
+                  â†’ lane r feeds array ROW r
+
+weight_mem[r]    [31:24][23:16][15:8][7:0]
+                  col 3  col 2  col 1 col 0      four int8 weights of weight row r
+                  â†’ lane c feeds array COLUMN c
+                  â†’ address r holds weight row r
+
+output_mem word  [127:96][95:64][63:32][31:0]
+                  col 3   col 2  col 1  col 0    four int32 results
+                  â†’ lane c is the result of array COLUMN c</code></pre>
+
+<div class="note">
+  <span class="lbl">The mental model</span>
+  <p>An <code>a_mem</code> word is one <b>column vector</b> of <code>A</code> laid flat â€” one number
+  per array row. A <code>weight_mem</code> word is one <b>row</b> of <code>W</code> â€” one number per
+  array column. An <code>output_mem</code> word is one <b>row</b> of <code>C</code>. The arithmetic
+  the array performs is <code>C[i][c] = Î£<sub>r</sub> A[i][r] Â· W[r][c]</code>.</p>
+</div>
+
+<p>All three memories are the same single-port synchronous RAM primitive with three properties that
+propagate through the whole design:</p>
+
+<ol>
+  <li><b>One address port, shared by read and write.</b> A write cycle is not a read cycle. This is
+  what forces the port arbitration at level 3.</li>
+  <li><b>One clock of read latency.</b> <code>rdata</code> is registered. This is the entire reason
+  <code>accelerator_top</code> re-times <code>wload</code> and <code>valid_in</code>.</li>
+  <li><b>Read-before-write on an address collision.</b> Both statements are non-blocking, so a read
+  concurrent with a write to the same address returns the <i>old</i> contents.</li>
+</ol>
+
+<p>None of the memories has a reset. Reads of unwritten addresses return <code>X</code> in
+simulation.</p>
+
+<!-- ============================================================ -->
+<h2 id="s5"><span class="num">5</span>The processing element</h2>
+
+<p><code>MAC.sv</code> is where every arithmetic operation in the design happens. Sixteen instances
+form the array; everything else is wiring, buffering and sequencing.</p>
+
+<figure>
+<div class="diagram">
+<svg viewBox="0 0 640 400" role="img" aria-label="Internal structure of one processing element">
+  <defs>
+    <style>
+      .r{fill:var(--bg);stroke:var(--line2);stroke-width:1.4}
+      .reg{fill:var(--panel2);stroke:var(--fg);stroke-width:1.5}
+      .t2{font:600 12px var(--sans);fill:var(--fg)}
+      .s2{font:500 10.5px var(--mono);fill:var(--muted)}
+      .wln{stroke:var(--w);stroke-width:2;fill:none;color:var(--w)}
+      .aln{stroke:var(--a);stroke-width:2;fill:none;color:var(--a)}
+      .pln{stroke:var(--p);stroke-width:2;fill:none;color:var(--p)}
+    </style>
+  </defs>
+
+  <rect x="60" y="50" width="520" height="300" rx="12" fill="none" stroke="var(--line2)" stroke-dasharray="6 4"/>
+  <text class="s2" x="72" y="70">processing_element</text>
+
+  <!-- psum_in from north -->
+  <path class="pln" d="M320,18 V96" marker-end="url(#ah)"/>
+  <text class="s2" x="330" y="34" style="fill:var(--p)">psum_in [31:0]  (north)</text>
+  <text class="s2" x="330" y="48" style="fill:var(--w)">carries a WEIGHT while wload=1</text>
+
+  <!-- weight register -->
+  <rect class="reg" x="110" y="96" width="104" height="42" rx="6"/>
+  <text class="t2" x="162" y="114" text-anchor="middle">weight_q</text>
+  <text class="s2" x="162" y="130" text-anchor="middle">int8 register</text>
+  <path class="wln" d="M320,96 V80 H162 V90" marker-end="url(#ah)"/>
+  <text class="s2" x="196" y="76" style="fill:var(--w)">psum_in[7:0] when wload</text>
+
+  <!-- a_in -->
+  <path class="aln" d="M14,200 H108" marker-end="url(#ah)"/>
+  <text class="s2" x="18" y="192" style="fill:var(--a)">a_in [7:0]  (west)</text>
+
+  <!-- multiplier -->
+  <circle cx="250" cy="180" r="26" class="r"/>
+  <text class="t2" x="250" y="186" text-anchor="middle">Ã—</text>
+  <path class="wln" d="M162,138 V180 H222" marker-end="url(#ah)"/>
+  <path class="aln" d="M108,200 H130 V180 H222" marker-end="url(#ah)"/>
+
+  <!-- adder -->
+  <circle cx="360" cy="180" r="26" class="r"/>
+  <text class="t2" x="360" y="187" text-anchor="middle">+</text>
+  <path class="pln" d="M276,180 H332" marker-end="url(#ah)"/>
+  <text class="s2" x="284" y="172">product_ext</text>
+  <path class="pln" d="M320,96 V150 H360 V152" marker-end="url(#ah)"/>
+
+  <!-- mux for valid -->
+  <path d="M420,152 L448,164 L448,220 L420,232 Z" class="r"/>
+  <text class="s2" x="434" y="196" text-anchor="middle">mux</text>
+  <path class="pln" d="M386,180 H414" marker-end="url(#ah)"/>
+  <text class="s2" x="392" y="248">valid_in selects</text>
+  <path class="pln" d="M320,96 V264 H414 V220" marker-end="url(#ah)" stroke-dasharray="3 3"/>
+  <text class="s2" x="330" y="278">bypass: psum_in unchanged when !valid_in</text>
+
+  <!-- psum_q -->
+  <rect class="reg" x="470" y="164" width="90" height="42" rx="6"/>
+  <text class="t2" x="515" y="182" text-anchor="middle">psum_q</text>
+  <text class="s2" x="515" y="198" text-anchor="middle">int32 register</text>
+  <path class="pln" d="M448,186 H464" marker-end="url(#ah)"/>
+
+  <!-- output mux -->
+  <path d="M300,300 L328,312 L328,340 L300,352 Z" class="r"/>
+  <text class="s2" x="314" y="330" text-anchor="middle">wload</text>
+  <path class="pln" d="M515,206 V326 H334" marker-end="url(#ah)"/>
+  <path class="wln" d="M162,138 V326 H296" marker-end="url(#ah)"/>
+  <text class="s2" x="176" y="322" style="fill:var(--w)">weight_q â€” combinational path!</text>
+  <path class="pln" d="M300,326 H240 V382" marker-end="url(#ah)"/>
+  <text class="s2" x="150" y="392" style="fill:var(--p)">psum_out [31:0]  (south)</text>
+
+  <!-- a_q -->
+  <rect class="reg" x="470" y="96" width="90" height="42" rx="6"/>
+  <text class="t2" x="515" y="114" text-anchor="middle">a_q</text>
+  <text class="s2" x="515" y="130" text-anchor="middle">int8 register</text>
+  <path class="aln" d="M108,200 H130 V117 H464" marker-end="url(#ah)"/>
+  <path class="aln" d="M560,117 H626" marker-end="url(#ah)"/>
+  <text class="s2" x="566" y="108" style="fill:var(--a)">a_out (east)</text>
+</svg>
+</div>
+<figcaption><b>Inside one processing element.</b> Four registers (<code>weight_q</code>,
+<code>a_q</code>, <code>valid_q</code>, <code>psum_q</code>), one multiplier, one adder, and two
+multiplexers. The dashed line is the bypass path taken when <code>valid_in = 0</code>. The blue path
+from <code>weight_q</code> to <code>psum_out</code> is <b>combinational</b> â€” that single wire is
+what makes a whole column behave as a downward shift register during weight load.</figcaption>
+</figure>
+
+<h3>The source</h3>
+
+<pre><code><span class="cmt">// combinational</span>
+product_ext = 32'(weight_q * a_in);            <span class="cmt">// signed Ã— signed, sign-extended</span>
+adder_out   = psum_in + product_ext;
+
+<span class="cmt">// on every posedge (synchronous reset clears all four registers)</span>
+if (wload) weight_q &lt;= psum_in[7:0];           <span class="cmt">// capture weight from the shared bus</span>
+a_q        &lt;= a_in;
+valid_q    &lt;= valid_in;
+psum_q     &lt;= valid_in ? adder_out : psum_in;  <span class="cmt">// accumulate, or pass through</span>
+
+<span class="cmt">// outputs</span>
+a_out     = a_q;
+valid_out = valid_q;
+psum_out  = wload ? 32'(weight_q) : psum_q;    <span class="cmt">// combinational mux</span></code></pre>
+
+<h3>Three things worth understanding</h3>
+
+<h4>The vertical bus is time-multiplexed</h4>
+<p>During <code>wload</code> the northâ€“south bus carries weights; during compute it carries partial
+sums. That is why <code>psum_in</code> is 32 bits wide but only its low 8 bits are ever captured as a
+weight. Sharing one bus for both saves a second 8-bit vertical network across the whole array â€” a
+real area saving that costs one mux per PE.</p>
+
+<h4>During wload, psum_out is combinational off weight_q</h4>
+<p>This is the single most consequential line in the design. Because <code>psum_out</code> bypasses
+the <code>psum_q</code> register during weight load, each PE presents its <i>currently held</i>
+weight to the PE below. At the next clock edge, PE row <i>r</i> captures what PE row <i>r</i>âˆ’1 held
+<i>before</i> the edge â€” a non-blocking assignment, so the pre-edge value. A column is therefore a
+plain downward shift register, and <b>the value fed first travels furthest</b>.</p>
+
+<div class="warnbox">
+  <span class="lbl">Rule 1 â€” weight rows load bottom-first</span>
+  <p>To place weight row <i>r</i> into array row <i>r</i>, feed <code>W[ROWS-1]</code> first and
+  <code>W[0]</code> last. The AGU implements this by counting the weight address <b>down</b>: 3, 2, 1, 0.</p>
+  <p>Getting this wrong is silent. The design runs, <code>done</code> pulses, and plausible-looking
+  32-bit numbers appear in memory â€” computed against a vertically flipped weight matrix. There is no
+  error flag, no timeout, no <code>X</code> propagation. Only a golden-model comparison against a
+  <i>non-symmetric</i> weight matrix catches it, which is why every array-level testbench uses
+  <code>$urandom_range</code> rather than a convenient hand-written matrix.</p>
+</div>
+
+<h4>Valid gating is a bypass, not a stall</h4>
+<p>When <code>valid_in = 0</code> the PE registers <code>psum_in</code> unchanged instead of
+accumulating. Partial sums keep marching south at exactly one row per clock regardless of what
+<code>valid_in</code> is doing. A bubble in the activation stream therefore never <i>mixes</i> with
+real data â€” it produces a row of junk that flushes out on its own. There is no back-pressure
+anywhere in this design and no handshake to get wrong.</p>
+
+<p><i>Verified by</i> <code>tb_processing_element</code> â€” 1 566 checks, PASS. Directed vectors use
+hand-computed constants that owe nothing to the reference model: <code>100 + 3Ã—5 = 115</code>,
+<code>(âˆ’128)Ã—(âˆ’128) = +16384</code>, <code>50 + 127Ã—(âˆ’2) = âˆ’204</code>, and weight <code>âˆ’3</code>
+during <code>wload</code> must appear on <code>psum_out</code> as <code>0xFFFFFFFD</code>.</p>
+
+<!-- ============================================================ -->
+<h2 id="s6"><span class="num">6</span>delay_pipe â€” animated</h2>
+
+<p><code>delay_pipe</code> is 31 lines and is the most-instantiated module in the design: twelve
+copies. It is a shift register that is <code>WIDTH</code> bits wide and <code>DELAY</code> stages
+deep, and its entire job is to make a value arrive <code>DELAY</code> cycles later than it was
+presented.</p>
+
+<pre><code><span class="kw">generate</span>
+    <span class="kw">if</span> (DELAY == 0) <span class="kw">begin</span> : gen_no_delay
+        <span class="kw">assign</span> dout = din;                       <span class="cmt">// a plain wire â€” no register at all</span>
+    <span class="kw">end</span>
+    <span class="kw">else begin</span> : gen_with_delay
+        logic [WIDTH-1:0] pipe [0:DELAY-1];
+        <span class="kw">always_ff</span> @(<span class="kw">posedge</span> clk) <span class="kw">begin</span>
+            <span class="kw">if</span> (!rst_n) <span class="kw">for</span> (i = 0; i &lt; DELAY; i = i + 1) pipe[i] &lt;= '0;
+            <span class="kw">else begin</span>
+                pipe[0] &lt;= din;                       <span class="cmt">// newest value enters stage 0</span>
+                <span class="kw">for</span> (i = 1; i &lt; DELAY; i = i + 1)
+                    pipe[i] &lt;= pipe[i-1];             <span class="cmt">// everything else shifts along</span>
+            <span class="kw">end</span>
+        <span class="kw">end</span>
+        <span class="kw">assign</span> dout = pipe[DELAY-1];               <span class="cmt">// oldest value leaves</span>
+    <span class="kw">end</span>
+<span class="kw">endgenerate</span></code></pre>
+
+<div class="note">
+  <span class="lbl">DELAY = 0 is not a degenerate case to be tolerated</span>
+  <p>It is used <b>deliberately</b> â€” by row 0 of the input skew buffer and by column
+  <code>COLS-1</code> of the de-skew buffer. In those positions it must synthesise to a genuine wire
+  with no register and no reset behaviour, which is exactly what the <code>gen_no_delay</code> branch
+  produces. Writing this as <code>pipe[0:DELAY-1]</code> without the guard would declare a
+  zero-element array and fail to elaborate.</p>
+</div>
+
+<h3>The governing relation</h3>
+
+<p>Sampled just <i>before</i> the clock edge that will consume it, the pipe obeys one uniform
+relation for every depth including zero:</p>
+
+<pre><code>dout(cycle m) == din(cycle m âˆ’ DELAY)</code></pre>
+
+<p>Sampled <i>after</i> an edge instead, a combinational wire and a one-deep register are
+indistinguishable â€” both show the value that was driven before that edge. That is why
+<code>tb_delay_pipe</code> samples on the <b>negative</b> edge, and why every testbench in this
+repository states its sampling convention in its header comment. Two of the three defects ever found
+in this work were violations of exactly this rule.</p>
+
+<figure>
+<div class="stage" id="pipeStage">
+  <div class="stage-bar">
+    <span class="cyc">cycle <b id="pipeCyc">0</b></span>
+    <label class="hint">DELAY =
+      <select id="pipeDelay" class="btn" style="padding:4px 8px">
+        <option value="0">0</option><option value="1">1</option>
+        <option value="2">2</option><option value="3" selected>3</option>
+      </select>
+    </label>
+    <button class="btn primary" id="pipePlay">â–¶ Play</button>
+    <button class="btn" id="pipeStep">Step â–¸</button>
+    <button class="btn" id="pipeReset">â†º Reset</button>
+    <span class="spacer"></span>
+    <span class="hint" id="pipeRel">dout(m) = din(mâˆ’3)</span>
+  </div>
+  <div class="stage-body">
+    <div class="pipeline" id="pipeRow"></div>
+    <div class="legend">
+      <span><span class="sw" style="background:var(--abg);border:1px dashed var(--a)"></span> din â€” driven this cycle</span>
+      <span><span class="sw" style="background:var(--bg);border:1px solid var(--accent)"></span> pipe stage (a flip-flop)</span>
+      <span><span class="sw" style="background:var(--pbg);border:1px solid var(--p)"></span> dout â€” visible on the output now</span>
+    </div>
+  </div>
+</div>
+<figcaption><b>Figure 6.1 â€” a <code>delay_pipe</code> shifting.</b> Change <code>DELAY</code> to see
+the depth change. At <code>DELAY = 0</code> the input box and the output box always hold the same
+value, because there is no register between them.</figcaption>
+</figure>
+
+<p class="tcap">Complete trace â€” the value driven on <code>din</code> each cycle and what appears on
+<code>dout</code>, for all four depths:</p>
+<div class="trace" id="pipeTrace"></div>
+
+<!-- ============================================================ -->
+<h2 id="s7"><span class="num">7</span>The input skew buffer â€” animated</h2>
+
+<p>The array needs its activations to arrive as a <b>diagonal wavefront</b>, not as a dense column.
+<code>input_skew_buffer</code> is what converts one into the other: it is four pairs of
+<code>delay_pipe</code>, row <i>r</i> with <code>DELAY = r</code>.</p>
+
+<pre><code><span class="kw">for</span> (r = 0; r &lt; ROWS; r = r + 1) <span class="kw">begin</span> : gen_input_skew
+    delay_pipe #(.WIDTH(WIDTH), .DELAY(r)) u_a_delay ( ... dense_a_in[r]     -&gt; skew_a_out[r]     );
+    delay_pipe #(.WIDTH(1),     .DELAY(r)) u_v_delay ( ... dense_valid_in[r] -&gt; skew_valid_out[r] );
+<span class="kw">end</span></code></pre>
+
+<p>The valid bit gets its own pipe with the <i>same</i> delay, so data and valid can never separate.
+That matters because the PE takes its accumulate-or-bypass decision from <code>valid_in</code> in the
+same cycle it consumes <code>a_in</code>.</p>
+
+<h3>Why the delay has to be exactly <i>r</i></h3>
+
+<p>Activations travel east one column per cycle, so the activation arriving at PE[<i>r</i>][<i>c</i>]
+at cycle <i>t</i> is the one that entered row <i>r</i> at cycle <code>t âˆ’ c</code>. Unrolling the
+partial-sum recursion down a column gives</p>
+
+<pre><code>S_ROWS(tâ‚€ + ROWS) = Î£_r  w[r][c] Â· a_in_left[r](tâ‚€ + r âˆ’ c)</code></pre>
+
+<p>For that sum to be a dot product, every row must contribute an element of the <b>same</b>
+activation vector â€” so <code>a_in_left[r]</code> must be delayed by <i>r</i> relative to row 0.
+Substituting <code>a_in_left[r](t) = dense_a[r](t âˆ’ r)</code>:</p>
+
+<pre><code>a_in_left[r](tâ‚€ + r âˆ’ c) = dense_a[r](tâ‚€ âˆ’ c)</code></pre>
+
+<p>The <code>r</code> cancels. Every row now contributes the dense vector presented at cycle
+<code>tâ‚€ âˆ’ c</code>, and the sum is a genuine dot product. The skew delay does not <i>help</i> the
+array â€” it is what makes the array compute the right thing at all.</p>
+
+<figure>
+<div class="stage" id="skewStage">
+  <div class="stage-bar">
+    <span class="cyc">cycle <b id="skewCyc">0</b></span>
+    <button class="btn primary" id="skewPlay">â–¶ Play</button>
+    <button class="btn" id="skewStep">Step â–¸</button>
+    <button class="btn" id="skewReset">â†º Reset</button>
+    <span class="spacer"></span>
+    <span class="hint">three dense vectors on cycles 1, 2, 3</span>
+  </div>
+  <div class="stage-body">
+    <div id="skewBody"></div>
+    <div class="legend">
+      <span><span class="sw" style="background:var(--abg);border:1px solid var(--a)"></span> live activation</span>
+      <span><span class="sw" style="background:var(--bg);border:1px solid var(--line)"></span> idle (valid = 0)</span>
+      <span>vector <b>A0</b> = [1, 2, 3, 4] &nbsp; <b>A1</b> = [5, âˆ’1, 0, 2] &nbsp; <b>A2</b> = [âˆ’2, 3, 1, 1]</span>
+    </div>
+  </div>
+</div>
+<figcaption><b>Figure 7.1 â€” dense in, diagonal out.</b> On the left, three complete vectors are
+presented on three consecutive cycles. On the right, the array's west edge sees them staggered: row 0
+immediately, row 1 one cycle later, row 3 three cycles later. Watch the <code>A0</code> elements form
+a diagonal line down the right-hand column.</figcaption>
+</figure>
+
+<p class="tcap">Complete trace â€” what the array's west edge sees on every cycle
+(<code>â€”</code> means the valid bit is low):</p>
+<div class="trace" id="skewTrace"></div>
+
+<!-- ============================================================ -->
+<h2 id="s8"><span class="num">8</span>The systolic array</h2>
+
+<p><code>array.sv</code> contains no arithmetic whatsoever. It declares three interconnect meshes,
+instantiates 16 processing elements, and binds the boundaries. Every multiply and every add happens
+inside a PE.</p>
+
+<pre><code>logic signed [7:0]  a_net     [0:ROWS-1][0:COLS];    <span class="cmt">// horizontal, west â†’ east</span>
+logic               valid_net [0:ROWS-1][0:COLS];    <span class="cmt">// horizontal, alongside a_net</span>
+logic signed [31:0] psum_net  [0:ROWS]  [0:COLS-1];  <span class="cmt">// vertical, north â†’ south</span></code></pre>
+
+<p>Each mesh is sized <b>one larger than the grid</b> in its direction of travel. That is a small but
+important trick: it means the array boundaries are ordinary elements of the same array, so binding an
+input is a one-line <code>assign</code> rather than a special case.</p>
+
+<pre><code><span class="kw">for</span> (r = 0; r &lt; ROWS; r++) <span class="kw">begin</span> : left_bind
+    <span class="kw">assign</span> a_net[r][0]     = a_in_left[r];        <span class="cmt">// west boundary</span>
+    <span class="kw">assign</span> valid_net[r][0] = valid_in_left[r];
+<span class="kw">end</span>
+<span class="kw">for</span> (c = 0; c &lt; COLS; c++) <span class="kw">begin</span> : top_bind
+    <span class="kw">assign</span> psum_net[0][c]  = psum_in_top[c];      <span class="cmt">// north boundary</span>
+<span class="kw">end</span>
+<span class="kw">for</span> (r = 0; r &lt; ROWS; r++) <span class="kw">begin</span> : row_gen
+    <span class="kw">for</span> (c = 0; c &lt; COLS; c++) <span class="kw">begin</span> : col_gen
+        processing_element pe_inst (
+            .a_in (a_net[r][c]),   .a_out    (a_net[r][c+1]),      <span class="cmt">// horizontal link</span>
+            .psum_in(psum_net[r][c]), .psum_out(psum_net[r+1][c]), <span class="cmt">// vertical link</span>
+            ... );
+    <span class="kw">end</span>
+<span class="kw">end</span>
+<span class="kw">for</span> (c = 0; c &lt; COLS; c++) <span class="kw">begin</span> : bottom_bind
+    <span class="kw">assign</span> psum_out_bottom[c] = psum_net[ROWS][c];  <span class="cmt">// south boundary</span>
+<span class="kw">end</span></code></pre>
+
+<p>The instance name of PE row 2, column 3 in a waveform viewer is therefore
+<code>u_array.row_gen[2].col_gen[3].pe_inst</code>. Naming the generate blocks is not cosmetic â€” an
+unnamed generate block gets a tool-assigned name like <code>genblk1</code>, which makes hierarchical
+references fragile across tool versions.</p>
+
+<h3>Column latency</h3>
+
+<p>With activations skewed so that row <i>r</i> is delayed by <i>r</i>, a dense vector consumed at
+cycle <i>n</i> produces on column <i>c</i> a result observable immediately after cycle</p>
+
+<pre><code>n + (ROWSâˆ’1) + c</code></pre>
+
+<p><code>ROWSâˆ’1</code> is one register stage per PE row; the extra <code>+c</code> is the horizontal
+travel time of the activations. Sanity check for <code>c = 0</code>, <code>ROWS = 4</code>: four PEs,
+four register stages, first result visible after edge <code>n+3</code>. âœ“</p>
+
+<p>That <code>+c</code> is the staircase â€” column 0 finishes first, column 3 finishes three cycles
+later â€” and removing it is the de-skew buffer's only job.</p>
+
+<!-- ============================================================ -->
+<h2 id="s9"><span class="num">9</span>Matrix multiply, cycle by cycle â€” animated</h2>
+
+<p>This is the centrepiece figure. It runs a complete job on the level-1 fabric â€”
+<code>input_skew_buffer</code> â†’ <code>systolic_array</code> â†’ <code>output_deskew_buffer</code> â€”
+through all four phases, and it is driven by a <b>cycle-accurate JavaScript model of the RTL</b>: the
+same four registers per PE, the same combinational <code>psum_out = wload ? weight_q : psum_q</code>
+mux, the same non-blocking update semantics.</p>
+
+<h3>The problem being solved</h3>
+
+<div class="grid2">
+<div class="card">
+<h4>Weight matrix W (stationary)</h4>
+<pre style="margin:0"><code>       c0   c1   c2   c3
+ r0 [   2   -1    3    0 ]
+ r1 [   1    4   -2    5 ]
+ r2 [  -3    2    1    1 ]
+ r3 [   0    1    2   -4 ]</code></pre>
+</div>
+<div class="card">
+<h4>Activation vectors A (streamed)</h4>
+<pre style="margin:0"><code>       r0   r1   r2   r3
+ A0 [   1    2    3    4 ]
+ A1 [   5   -1    0    2 ]
+ A2 [  -2    3    1    1 ]</code></pre>
+</div>
+</div>
+
+<p>Expected result, computed independently as <code>C[i][c] = Î£<sub>r</sub> A[i][r] Â· W[r][c]</code>
+â€” this is exactly the golden model the testbenches use, and the animation checks itself against it:</p>
+
+<pre><code>C0 = [  -5   17   10   -3 ]
+C1 = [   9   -7   21  -13 ]
+C2 = [  -4   17   -9   12 ]</code></pre>
+
+<h3>The four phases</h3>
+
+<table>
+<thead><tr><th>Phase</th><th>Cycles</th><th>What is happening</th></tr></thead>
+<tbody>
+<tr><td><code>WLOAD</code></td><td>1â€“4</td><td><code>wload = 1</code>. Weight rows are driven onto the north edge <b>bottom-first</b>: W[3], W[2], W[1], W[0]. The vertical bus is a downward shift register, so the first row fed travels furthest.</td></tr>
+<tr><td><code>FLUSH</code></td><td>5â€“10</td><td><code>wload = 0</code>, zeros on the north edge, <code>valid = 0</code>. The <code>psum_q</code> registers latched weight values during WLOAD; this pushes that residue out of the bottom.</td></tr>
+<tr><td><code>COMPUTE</code></td><td>11â€“13</td><td>One dense activation vector per clock with <code>valid = 1</code>. A0 at cycle 11, A1 at 12, A2 at 13.</td></tr>
+<tr><td><code>DRAIN</code></td><td>14â€“21</td><td>The last vector is still travelling through the array, the de-skew buffer and the packing logic. C0 lands after cycle 17, C1 after 18, C2 after 19.</td></tr>
+</tbody>
+</table>
+
+<figure>
+<div class="stage" id="arrStage">
+  <div class="stage-bar">
+    <span class="phase" id="arrPhase" data-p="IDLE">IDLE</span>
+    <span class="cyc">cycle <b id="arrCyc">0</b></span>
+    <button class="btn primary" id="arrPlay">â–¶ Play</button>
+    <button class="btn" id="arrBack">â—‚ Back</button>
+    <button class="btn" id="arrStep">Step â–¸</button>
+    <button class="btn" id="arrReset">â†º Reset</button>
+    <label class="hint">speed <input type="range" id="arrSpeed" min="120" max="1400" value="620" step="20" style="width:90px;vertical-align:middle"></label>
+    <span class="spacer"></span>
+    <span class="pill" id="arrCheck">golden check: pending</span>
+  </div>
+  <div class="stage-body">
+    <div class="tl" id="arrTl" style="margin:0 0 16px"></div>
+    <div id="arrBody"></div>
+    <div class="legend">
+      <span><span class="sw" style="background:var(--wbg);border:1px solid var(--w)"></span> weight value / weight shifting</span>
+      <span><span class="sw" style="background:var(--abg);border:1px solid var(--a)"></span> live activation entering from the west</span>
+      <span><span class="sw" style="background:var(--pbg);border:1px solid var(--p)"></span> partial sum accumulating this edge</span>
+      <span class="hint">PE box: <span style="color:var(--w)">w</span> top-left Â· <span style="color:var(--a)">a_q</span> top-right Â· <span style="color:var(--p)">psum_q</span> centre</span>
+    </div>
+  </div>
+</div>
+<figcaption><b>Figure 9.1 â€” a complete 3-vector job.</b> Step through cycle by cycle. Watch four
+distinct things: (1) during WLOAD the weights march <i>down</i> the columns, so W[3] fed first ends
+up in the bottom row; (2) during COMPUTE the activations enter staggered from the west; (3) the
+partial sums accumulate downward, one row per cycle, each column finishing one cycle later than the
+one to its left; (4) the de-skew pipes remove that stagger so all four results of a vector appear on
+<code>result</code> on the same cycle.</figcaption>
+</figure>
+
+<p class="tcap">Complete cycle-by-cycle trace of the whole job. <code>W-row</code> is the weight row
+on the north edge, <code>west</code> is the array's west edge after skewing, <code>bottom</code> is
+<code>psum_out_bottom</code> before de-skew, <code>result</code> is the aligned output. Green rows
+carry a finished result vector.</p>
+<div class="trace" id="arrTrace"></div>
+
+<h3>Reading the trace</h3>
+
+<ul>
+<li><b>Cycles 1â€“4, the <code>W-row</code> column.</b> The order is 3, 2, 1, 0. After cycle 4 every
+PE holds its correct weight â€” check the weight values in the animation against the W matrix above.</li>
+<li><b>Cycles 1â€“4, the <code>bottom</code> column.</b> Weight values appear here. That is the
+residue the FLUSH phase exists to clear, and it is why the result bus must not be trusted until
+compute begins.</li>
+<li><b>Cycle 11.</b> A0 enters. Only <code>west[0]</code> is live â€” rows 1, 2 and 3 are still
+inside their skew pipes.</li>
+<li><b>Cycle 14.</b> <code>bottom[0]</code> becomes âˆ’5, which is <code>C0[0]</code>. That is
+<code>11 + (ROWSâˆ’1) + 0 = 14</code>. âœ“</li>
+<li><b>Cycles 15, 16, 17.</b> <code>bottom[1]</code>, <code>bottom[2]</code>,
+<code>bottom[3]</code> follow one cycle apart â€” the staircase.</li>
+<li><b>Cycle 17.</b> All four elements of C0 appear simultaneously on <code>result</code>. That is
+<code>11 + ROWS + COLS âˆ’ 2 = 17</code>. âœ“ The de-skew delay <code>COLSâˆ’1âˆ’c</code> exactly cancels
+the array's <code>+c</code>.</li>
+</ul>
+
+<div class="keybox">
+  <span class="lbl">Why FLUSH is belt-and-braces, and why it stays anyway</span>
+  <p>Strictly, FLUSH is <b>not required for correctness</b>. Partial sums march south at exactly one
+  row per cycle, so weight residue and a real accumulation always occupy different pipeline slots â€”
+  they can never mix. FLUSH exists so the result bus is <i>visibly</i> quiet before compute starts,
+  which is what makes the "quiet before compute" assertions and the waveforms meaningful.</p>
+  <p>This is recorded explicitly so that a future reader neither deletes it as pointless nor treats
+  it as untouchable.</p>
+</div>
+
+<h3>A full 4Ã—4 Ã— 4Ã—4 matrix multiply</h3>
+
+<p>The animation above streams three activation vectors. Nothing about the hardware changes if we
+stream <b>four</b> and read the activation stream itself as a 4Ã—4 matrix: the accelerator then
+computes an ordinary <b>4Ã—4 Ã— 4Ã—4 = 4Ã—4</b> matrix product, one result <i>row</i> per activation row.
+This is exactly the case the re-verification testbench <code>tb_accelerator_system_top</code> drives
+as a directed check (section <b>T5</b>), with hand-verifiable numbers:</p>
+
+<pre><code>     A (4Ã—4)              W (4Ã—4)                 C = A Ã— W (4Ã—4)
+  [ 1 0 0 0 ]        [  1  2  3  4 ]           [  1  2  3  4 ]   â† A row0 selects W row0
+  [ 0 1 0 0 ]   Ã—    [  5  6  7  8 ]     =     [  5  6  7  8 ]   â† A row1 selects W row1
+  [ 0 0 1 0 ]        [  9 10 11 12 ]           [  9 10 11 12 ]   â† A row2 selects W row2
+  [ 1 1 1 1 ]        [ 13 14 15 16 ]           [ 28 32 36 40 ]   â† A row3 = column sums</code></pre>
+
+<p>Each result row is one activation vector multiplied by the whole stationary weight matrix,
+<code>C[i][c] = Î£<sub>r</sub> A[i][r]Â·W[r][c]</code>. Because <b>W</b> is loaded once and reused for
+every activation row, a 4Ã—4 by 4Ã—4 multiply costs one weight-load followed by four back-to-back
+compute cycles â€” the same weight-stationary economics that let the design multiply a single weight
+matrix against a stream of up to 256 activation vectors (the depth of <code>a_mem</code>). The
+identity-style rows above make the answer checkable by eye: rows 0â€“2 of <b>C</b> reproduce weight
+rows 0â€“2, and the all-ones activation row 3 yields the four column sums <code>[28 32 36 40]</code>.</p>
+
+<h4>A second, fully general 4Ã—4 Ã— 4Ã—4 example</h4>
+
+<p>The identity-style case is easy to read but is a special one. Here is a completely general product
+of two arbitrary 4Ã—4 integer matrices â€” the same computation the accelerator performs, one activation
+row streamed per clock, verified against the golden model. Every entry is
+<code>C[i][c] = Î£<sub>r</sub> A[i][r]Â·W[r][c]</code>:</p>
+
+<pre><code>        A (4Ã—4)                    W (4Ã—4)                       C = A Ã— W (4Ã—4)
+  [  2  -1   3   0 ]        [  1   2  -1   3 ]              [  17    9    0   -4 ]
+  [  1   4  -2   5 ]   Ã—    [  0  -2   4   1 ]      =       [ -14    7   11   23 ]
+  [ -3   2   1   1 ]        [  5   1   2  -3 ]              [   1   -6   13   -8 ]
+  [  0   1   2  -4 ]        [ -1   3   0   2 ]              [  14  -12    8  -13 ]
+
+  worked entries
+    C[0][0] = 2Â·1 + (âˆ’1)Â·0 + 3Â·5 + 0Â·(âˆ’1)          = 17
+    C[1][2] = 1Â·(âˆ’1) + 4Â·4 + (âˆ’2)Â·2 + 5Â·0          = 11
+    C[3][3] = 0Â·3 + 1Â·1 + 2Â·(âˆ’3) + (âˆ’4)Â·2          = âˆ’13</code></pre>
+
+<p>To run this on the hardware the host writes the four <b>W</b> rows into <code>weight_mem</code>
+(addresses 0â€“3, one row per word), preloads the four <b>A</b> rows into <code>a_mem</code>, then
+pulses <code>start</code> with <code>num_vectors = 4</code>. Sixteen cycles after the last activation
+address the whole 4Ã—4 result matrix sits in <code>output_mem</code>, one 128-bit word per result row.
+Both this example and the identity one are checked as directed cases by the re-verification testbench
+<code>tb_accelerator_system_top</code> (sections&nbsp;T5 and&nbsp;T6) â€” see
+<code>verification_recheck/verification_recheck_report.md</code>.</p>
+
+<!-- ============================================================ -->
+<h2 id="s10"><span class="num">10</span>The output de-skew buffer</h2>
+
+<p>Twenty-four lines, and it does one thing: undo the <code>+c</code> staircase that section 8
+derived.</p>
+
+<pre><code><span class="kw">for</span> (c = 0; c &lt; COLS; c = c + 1) <span class="kw">begin</span> : gen_output_deskew
+    delay_pipe #(.WIDTH(WIDTH), .DELAY(COLS-1-c)) u_psum_delay (
+        .din (psum_in[c]), .dout (aligned_out[c]) );
+<span class="kw">end</span></code></pre>
+
+<p>Column 0 finishes first and is therefore delayed the most (<code>COLSâˆ’1 = 3</code>); column 3
+finishes last and passes through a plain wire (<code>DELAY = 0</code>). The two effects cancel
+exactly:</p>
+
+<pre><code>column c result appears at   n + (ROWSâˆ’1) + c
+de-skew delay                          + (COLSâˆ’1âˆ’c)
+                             â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+aligned at                   n + ROWS + COLS âˆ’ 2      â† independent of c</code></pre>
+
+<p>Because the result no longer depends on <i>c</i>, all four lanes emerge on the same cycle and the
+packing logic in <code>accelerator_top</code> can simply concatenate them into one 128-bit word. Any
+other de-skew depth would produce a word containing four results belonging to four <i>different</i>
+activation vectors â€” which, again, would be silent.</p>
+
+<p><i>Verified by</i> <code>tb_output_deskew_buffer</code> â€” 188 checks, including an explicit
+staircase-in / single-cycle-out alignment test and a negative check that the output is <b>empty on
+every cycle</b> until the last column has been fed.</p>
+
+<!-- ============================================================ -->
+<h2 id="s11"><span class="num">11</span>The memories</h2>
+
+<p><code>a_mem.sv</code>, <code>weight_mem.sv</code> and <code>outmem.sv</code> are the <b>same</b>
+primitive at three geometries. The entire body of each is four lines:</p>
+
+<pre><code><span class="kw">always_ff</span> @(<span class="kw">posedge</span> clk) <span class="kw">begin</span>
+    <span class="kw">if</span> (we) mem[addr] &lt;= wdata;
+    rdata &lt;= mem[addr];
+<span class="kw">end</span></code></pre>
+
+<table>
+<thead><tr><th>Module</th><th>File</th><th>Depth Ã— Width</th><th>Address width</th><th>Word contents</th></tr></thead>
+<tbody>
+<tr><td><code>a_mem</code></td><td><code>a_mem.sv</code></td><td>256 Ã— 32</td><td>8</td><td>4 Ã— int8, lane <i>r</i> = activation for array row <i>r</i></td></tr>
+<tr><td><code>weight_mem</code></td><td><code>weight_mem.sv</code></td><td>4 Ã— 32</td><td>2</td><td>4 Ã— int8, lane <i>c</i> = weight for array column <i>c</i></td></tr>
+<tr><td><code>output_mem</code></td><td><code>outmem.sv</code></td><td>256 Ã— 128</td><td>8</td><td>4 Ã— int32, lane <i>c</i> = result of array column <i>c</i></td></tr>
+</tbody>
+</table>
+
+<h3>Why weight_mem is 4 Ã— 32 while a_mem is 256 Ã— 32</h3>
+
+<p>The three memories share one primitive, but their <i>depths</i> differ by 64Ã—, and that asymmetry
+is a direct consequence of the <b>weight-stationary</b> dataflow â€” not an arbitrary choice.</p>
+
+<ul>
+<li><b>weight_mem holds one whole matrix, once.</b> The array has exactly <code>ROWS = 4</code> rows,
+and each 32-bit word packs the four int8 weights of one weight row (lane <i>c</i> = column <i>c</i>).
+Four rows â‡’ four words â‡’ <code>ADDR_W = 2</code>. The weights are loaded into the 16 PEs once at the
+start of a job and then <b>stay resident</b> â€” nothing in the array is ever re-fetched from
+weight_mem during compute. There is simply nothing more to store: a 4Ã—4 int8 matrix <i>is</i>
+4 Ã— 32 bits, so a deeper weight memory would be dead silicon.</li>
+<li><b>a_mem holds a whole stream of activation vectors.</b> Activations are the data that
+<i>moves</i>. One 32-bit a_mem word is one activation vector (lane <i>r</i> = row <i>r</i>), and a job
+streams <code>num_vectors</code> of them, one per clock. 256 words = up to 256 activation vectors
+multiplied against a <b>single</b> weight load, without reloading weights. That amortisation â€” pay the
+weight-load cost once, reuse it over as many activation rows as the activation memory can hold â€” is the
+entire economic point of a weight-stationary array.</li>
+</ul>
+
+<p>Put arithmetically: weight traffic is <code>ROWS Ã— COLS</code> bytes <b>per job</b>, while
+activation traffic is <code>ROWS</code> bytes <b>per vector</b>. Sizing the two memories to those
+rates keeps the expensive resource â€” memory bandwidth â€” busy on activations (re-read every cycle)
+rather than on weights (read once). <code>output_mem</code> mirrors <code>a_mem</code>'s depth
+(256 Ã— 128) because it holds one result vector per activation vector.</p>
+
+<h3>Why this exact coding style matters</h3>
+
+<p>This is the canonical inference template for a <b>single-port synchronous RAM with registered
+read data</b>. Every FPGA and ASIC synthesis tool recognises it and maps it onto a hard block â€”
+a Block RAM on FPGA, a compiled SRAM macro on ASIC â€” instead of building 8 192 flip-flops out of
+logic. Three details are load-bearing:</p>
+
+<ul>
+<li><b>The read is unconditional.</b> <code>rdata &lt;= mem[addr];</code> sits outside the
+<code>if (we)</code>. Guarding it would infer a read-enable that many memory macros do not have.</li>
+<li><b>There is no reset.</b> A reset on the data array would prevent hard-block inference entirely,
+because real SRAM macros cannot be cleared in one cycle. The cost is that reads of unwritten
+addresses return <code>X</code> in simulation â€” which is arguably a feature, since it makes reading
+uninitialised memory visible rather than silently returning zero.</li>
+<li><b>Both assignments are non-blocking.</b> That is what produces <b>read-before-write</b>
+behaviour: a read concurrent with a write to the same address returns the <i>old</i> contents.
+Swapping to blocking assignments would produce write-first behaviour and change the design's
+semantics.</li>
+</ul>
+
+<p><i>Verified by</i> <code>tb_a_mem</code> (538 checks), <code>tb_weight_mem</code> (125) and
+<code>tb_output_mem</code> (455) â€” all PASS. All three properties are checked explicitly, plus
+byte-lane integrity tests that match the packing conventions above. <code>tb_output_mem</code> is
+where defect #1 was found: <code>128'(-32'sd1)</code> sign-extends to 128 bits of ones, but the
+actual part-select <code>rd[32+:32]</code> is unsigned and zero-extends. The check was correct; the
+expected value was wrong.</p>
+
+<!-- ============================================================ -->
+<h2 id="s12"><span class="num">12</span>Control plane: FSM and AGU</h2>
+
+<p>The control plane is split along one clean line, taken directly from the architecture diagram:</p>
+
+<div class="grid2">
+<div class="card">
+<h4>controller.sv â€” durations only</h4>
+<p>Knows how long each phase lasts. Emits four phase enables and three status bits. Produces
+<b>no addresses at all</b>.</p>
+</div>
+<div class="card">
+<h4>agu.sv â€” addresses only</h4>
+<p>Knows what address belongs to each phase. Holds <b>no policy</b> â€” it never decides when a phase
+starts or ends, it just counts while enabled.</p>
+</div>
+</div>
+
+<p>Neither knows about SRAM read latency. That is <code>accelerator_top</code>'s job, and keeping it
+there is what lets both control modules be written and tested without reference to the memories.</p>
+
+<h3>12.1 The phase FSM</h3>
+
+<figure>
+<div class="diagram">
+<svg viewBox="0 0 880 190" role="img" aria-label="Controller state diagram">
+  <defs><style>
+    .st{fill:var(--panel2);stroke:var(--fg);stroke-width:1.5;rx:10}
+    .sn{font:700 13px var(--mono);fill:var(--fg)}
+    .sd{font:500 10.5px var(--mono);fill:var(--muted)}
+    .ar{stroke:var(--accent);stroke-width:2;fill:none;color:var(--accent)}
+  </style></defs>
+  <g>
+    <rect class="st" x="14" y="56" width="106" height="52"/>
+    <text class="sn" x="67" y="80" text-anchor="middle">IDLE</text>
+    <text class="sd" x="67" y="97" text-anchor="middle">wait start</text>
+
+    <rect class="st" x="156" y="56" width="106" height="52" style="fill:var(--wbg)"/>
+    <text class="sn" x="209" y="80" text-anchor="middle">WLOAD</text>
+    <text class="sd" x="209" y="97" text-anchor="middle">ROWS = 4</text>
+
+    <rect class="st" x="298" y="56" width="106" height="52"/>
+    <text class="sn" x="351" y="80" text-anchor="middle">FLUSH</text>
+    <text class="sd" x="351" y="97" text-anchor="middle">ROWS+2 = 6</text>
+
+    <rect class="st" x="440" y="56" width="118" height="52" style="fill:var(--pbg)"/>
+    <text class="sn" x="499" y="80" text-anchor="middle">COMPUTE</text>
+    <text class="sd" x="499" y="97" text-anchor="middle">num_vectors</text>
+
+    <rect class="st" x="594" y="56" width="106" height="52" style="fill:var(--abg)"/>
+    <text class="sn" x="647" y="80" text-anchor="middle">DRAIN</text>
+    <text class="sd" x="647" y="97" text-anchor="middle">STORE_LAT = 8</text>
+
+    <rect class="st" x="736" y="56" width="106" height="52" style="fill:var(--accent-w)"/>
+    <text class="sn" x="789" y="80" text-anchor="middle">DONE</text>
+    <text class="sd" x="789" y="97" text-anchor="middle">1 cycle</text>
+  </g>
+  <path class="ar" d="M120,82 H150" marker-end="url(#ah)"/>
+  <text class="sd" x="122" y="72" style="fill:var(--accent)">start</text>
+  <path class="ar" d="M262,82 H292" marker-end="url(#ah)"/>
+  <path class="ar" d="M404,82 H434" marker-end="url(#ah)"/>
+  <path class="ar" d="M558,82 H588" marker-end="url(#ah)"/>
+  <path class="ar" d="M700,82 H730" marker-end="url(#ah)"/>
+  <path class="ar" d="M789,56 V26 H67 V50" marker-end="url(#ah)"/>
+  <path class="ar" d="M351,108 V148 H647 V114" marker-end="url(#ah)" stroke-dasharray="5 4"/>
+  <text class="sd" x="440" y="164" style="fill:var(--accent)">num_vectors == 0 â€” skip COMPUTE entirely, so a bad command cannot hang the machine</text>
+</svg>
+</div>
+<figcaption><b>Figure 12.1 â€” the controller's six states.</b> <code>busy</code> covers
+WLOADâ€¦DRAIN. <code>done</code> is a single-cycle pulse fired in DONE, by which point
+<code>busy</code> is already low. <code>start</code> is sampled only in IDLE and is ignored while
+busy, so a stray pulse mid-job changes nothing.</figcaption>
+</figure>
+
+<p>The state register, counter and vector-count latch are the whole module:</p>
+
+<pre><code>PH_WLOAD:  <span class="kw">if</span> (cnt == VEC_CNT_W'(ROWS-1))          { cnt &lt;= 0; state &lt;= PH_FLUSH;   } <span class="kw">else</span> cnt++;
+PH_FLUSH:  <span class="kw">if</span> (cnt == VEC_CNT_W'(FLUSH_CYCLES-1))  { cnt &lt;= 0;
+               state &lt;= (vec_n == 0) ? PH_DRAIN : PH_COMPUTE;                     } <span class="kw">else</span> cnt++;
+PH_COMPUTE:<span class="kw">if</span> (cnt == (vec_n - 1'b1))              { cnt &lt;= 0; state &lt;= PH_DRAIN;   } <span class="kw">else</span> cnt++;
+PH_DRAIN:  <span class="kw">if</span> (cnt == VEC_CNT_W'(STORE_LATENCY-1)) { cnt &lt;= 0; state &lt;= PH_DONE;    } <span class="kw">else</span> cnt++;</code></pre>
+
+<div class="note">
+  <span class="lbl">Why num_vectors = 0 is handled explicitly</span>
+  <p><code>COMPUTE</code> exits on <code>cnt == vec_n - 1</code>. With <code>vec_n = 0</code> that
+  comparison is against <code>8'hFF</code>, so the FSM would sit in COMPUTE for 256 cycles issuing
+  garbage addresses and 256 write strobes â€” actively corrupting memory. The one-line guard in FLUSH
+  turns a malformed command from destructive into harmless. It costs one comparator.</p>
+</div>
+
+<p><i>Verified by</i> <code>tb_controller</code> â€” 85 checks. Every phase length is measured by
+counting clocks with that phase's enable high, for <code>num_vectors âˆˆ {0, 1, 3, 4, 6, 8, 16}</code>,
+plus the total job length measured independently. This testbench is where defect #3 was found: the
+testbench cleared its phase counters <i>after</i> the <code>start</code> pulse, discarding the first
+WLOAD cycle and measuring 3 instead of 4. The RTL was correct.</p>
+
+<h3>12.2 The address generator</h3>
+
+<h4>Weight address â€” counts down</h4>
+<pre><code><span class="kw">if</span> (!wload_phase) w_cnt &lt;= W_ADDR_W'(ROWS-1);   <span class="cmt">// re-armed whenever idle</span>
+<span class="kw">else</span>              w_cnt &lt;= w_cnt - 1'b1;         <span class="cmt">// 3, 2, 1, 0</span></code></pre>
+<p>Re-arming while idle means the very first WLOAD cycle already presents <code>ROWS-1</code>, and a
+second job starts from <code>ROWS-1</code> again rather than continuing from wherever the last job
+left off.</p>
+
+<h4>Activation address â€” counts up</h4>
+<pre><code><span class="kw">if</span> (!compute_phase) act_cnt &lt;= '0;
+<span class="kw">else</span>                act_cnt &lt;= act_cnt + 1'b1;
+<span class="kw">assign</span> act_addr = act_base + act_cnt;</code></pre>
+
+<h4>Output address and write strobe â€” a delay line, not a calculation</h4>
+
+<p>A result cannot be written when its activation address is issued; it is still travelling through
+the SRAM, the skew buffer, the PE column, the de-skew buffer and the packing logic. The obvious
+implementation is <i>"assert <code>o_we</code> when the counter reaches n + 8"</i>. This design does
+something else:</p>
+
+<pre><code>out_we_pipe[0]   &lt;= compute_phase;
+out_addr_pipe[0] &lt;= out_base + O_ADDR_W'(act_cnt);
+<span class="kw">for</span> (i = 1; i &lt; STORE_LATENCY; i++) <span class="kw">begin</span>
+    out_we_pipe[i]   &lt;= out_we_pipe[i-1];
+    out_addr_pipe[i] &lt;= out_addr_pipe[i-1];
+<span class="kw">end</span>
+<span class="kw">assign</span> out_we   = out_we_pipe[STORE_LATENCY-1];
+<span class="kw">assign</span> out_addr = out_addr_pipe[STORE_LATENCY-1];</code></pre>
+
+<div class="keybox">
+  <span class="lbl">Structural guarantees beat computed ones</span>
+  <p>Eight flip-flops buy something an equation cannot: the write strobe <b>structurally cannot</b>
+  drift away from the data it belongs to. Changing the datapath depth means changing one parameter
+  rather than re-deriving an equation and hoping every user of it was updated.</p>
+  <p>The testbench still checks it â€” but it is checking that a shift register was wired up, not that
+  an equation was got right, and those two things fail in very different ways.</p>
+</div>
+
+<p><i>Verified by</i> <code>tb_agu</code> â€” 62 checks, driven by <b>testbench-generated</b> phase
+enables rather than a real controller. That is deliberate: if the FSM held a phase one cycle too long
+<i>and</i> the AGU miscounted in the compensating direction, a combined test would pass. The
+write-strobe scoreboard schedules each expected <code>{strobe, address}</code> at a specific future
+cycle and counts <b>extra</b>, <b>missing</b> and <b>misaddressed</b> strobes separately â€” a naive
+"did we see 6 writes?" check would pass a pipeline that drops its last entry and emits a spurious one
+somewhere else.</p>
+
+<h3>12.3 Port arbitration at level 3</h3>
+
+<p>Every SRAM is single-port, so exactly one master may drive it:</p>
+
+<table>
+<thead><tr><th><code>busy</code></th><th>Owner</th><th>Behaviour</th></tr></thead>
+<tbody>
+<tr><td>0</td><td>Host</td><td>Preload activation vectors and weight rows; read results back. The host side of <code>output_mem</code> is read-only.</td></tr>
+<tr><td>1</td><td>AGU</td><td>Host write strobes are <b>forced to zero</b>, so a stray host access cannot corrupt a running job.</td></tr>
+</tbody>
+</table>
+
+<p>This is verified adversarially. <code>tb_accelerator_system_top</code> run 2 drives
+<code>0xDEADBEEF</code> into the weight memory write port and <code>0xBAADF00D</code> into the
+activation memory write port on <b>every cycle of a live job</b>, and requires the results to be
+bit-identical to the clean run. That is what proves the arbitration actually masks writes, rather
+than merely appearing to when nobody is pushing.</p>
+
+<!-- ============================================================ -->
+<h2 id="s13"><span class="num">13</span>Timing derivations</h2>
+
+<h3>Notation</h3>
+<ul>
+<li><b>Cycle <i>n</i></b> is the <i>n</i>-th positive clock edge.</li>
+<li>A signal <b>issued at cycle <i>n</i></b> is the value present just <i>before</i> edge <i>n</i> â€”
+the value that edge samples.</li>
+<li>A signal <b>observed at cycle <i>n</i></b> is the value present just <i>after</i> edge <i>n</i>.</li>
+</ul>
+<p>The distinction between <i>issued</i> and <i>observed</i> is the whole ballgame; conflating them
+produced two of the three defects found in this work.</p>
+
+<h3>The chain, one step at a time</h3>
+
+<table>
+<thead><tr><th>#</th><th>Step</th><th>Adds</th><th>Running total</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Down a PE column: one register stage per row</td><td><code>ROWSâˆ’1</code> = 3</td><td>3</td></tr>
+<tr><td>2</td><td>East to column <i>c</i>: horizontal travel</td><td><code>+c</code></td><td><code>3 + c</code></td></tr>
+<tr><td>3</td><td>De-skew pipe for column <i>c</i></td><td><code>COLSâˆ’1âˆ’c</code></td><td><b>6</b>, independent of <i>c</i></td></tr>
+<tr><td>4</td><td>SRAM read latency on <code>a_mem</code></td><td>+1</td><td><b>7</b> = <code>RESULT_LATENCY</code></td></tr>
+<tr><td>5</td><td>The write strobe must be high the cycle <i>after</i> the data is observable</td><td>+1</td><td><b>8</b> = <code>STORE_LATENCY</code></td></tr>
+</tbody>
+</table>
+
+<h3>Summary of every latency constant</h3>
+
+<table>
+<thead><tr><th>Constant</th><th>Value (4Ã—4)</th><th>Formula</th><th>Declared in</th></tr></thead>
+<tbody>
+<tr><td>Array column latency</td><td>3 + <i>c</i></td><td><code>(ROWS-1) + c</code></td><td><code>array.sv</code> (emergent)</td></tr>
+<tr><td>De-skew delay</td><td>3 âˆ’ <i>c</i></td><td><code>COLS-1-c</code></td><td><code>output_skewbuf.sv</code></td></tr>
+<tr><td>Level 1 result latency</td><td>6</td><td><code>ROWS + COLS - 2</code></td><td><code>wrapper_array_buf.sv</code></td></tr>
+<tr><td>Level 2 result latency</td><td>7</td><td><code>1 + ROWS + COLS - 2</code></td><td><code>wrapper_mem_arr_buf.sv</code></td></tr>
+<tr><td>Level 2 store latency</td><td>8</td><td><code>RESULT_LATENCY + 1</code></td><td><code>wrapper_mem_arr_buf.sv</code></td></tr>
+<tr><td>AGU write-pipe depth</td><td>8</td><td><code>STORE_LATENCY</code></td><td><code>agu.sv</code></td></tr>
+<tr><td>Controller <code>DRAIN</code></td><td>8</td><td><code>STORE_LATENCY</code></td><td><code>controller.sv</code></td></tr>
+<tr><td>Total job length</td><td><code>N + 19</code></td><td><code>ROWS + FLUSH_CYCLES + N + STORE_LATENCY + 1</code></td><td>emergent</td></tr>
+</tbody>
+</table>
+
+<p>The last three rows are the <i>same number</i>, and all three are derived from the single
+<code>STORE_LATENCY</code> parameter rather than written out three times. If the datapath depth ever
+changes, one parameter moves and the FSM, the AGU and the wrapper all follow.</p>
+
+<h3>Why control is re-timed inside the wrapper</h3>
+
+<p>Both <code>weight_mem</code> and <code>a_mem</code> have one clock of read latency, so the data
+belonging to an address issued at cycle <i>m</i> arrives at the array at cycle <i>m</i>+1.
+<code>wload</code> and <code>valid_in</code> must be high at <i>m</i>+1, not <i>m</i>. There were two
+ways to arrange that: make every caller pre-delay its control signals, or re-time inside the wrapper.
+<code>accelerator_top</code> re-times:</p>
+
+<pre><code>wload_q &lt;= wload;
+valid_q &lt;= valid_in;</code></pre>
+
+<div class="warnbox">
+  <span class="lbl">Rule 2 â€” control travels with its address</span>
+  <p>Issue <code>wload</code> and <code>valid_in</code> in the <b>same</b> cycle as the address they
+  belong to. Never pre-delay them at the caller. The AGU follows the same rule, which is why
+  <code>agu.sv</code> contains no knowledge of SRAM latency at all.</p>
+</div>
+
+<div class="warnbox">
+  <span class="lbl">Rule 3 â€” fixed latency, no back-pressure</span>
+  <p>There is no ready/valid handshake anywhere in this design. The host must respect the latency
+  numbers above; the design will not stall to wait for it and will not signal congestion.</p>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="s14"><span class="num">14</span>End-to-end data flow</h2>
+
+<p>Putting all three levels together, here is the complete path a single number takes.</p>
+
+<h3>A weight, from memory to its PE</h3>
+<ol>
+<li>Host writes <code>weight_mem[r]</code> while <code>!busy</code> â€” one 32-bit word holding the
+four int8 weights of weight row <i>r</i>, lane <i>c</i> for column <i>c</i>.</li>
+<li>FSM enters WLOAD. AGU drives <code>w_addr = 3</code> and <code>wload = 1</code> in the same
+cycle.</li>
+<li>One cycle later <code>w_rdata</code> returns weight row 3, and <code>wload_q</code> â€” the
+re-timed strobe â€” is high.</li>
+<li><code>drive_array_top</code> sign-extends each int8 lane to 32 bits and drives it onto the
+array's north edge: <code>psum_top[c] = PSUM_W'(signed'(w_rdata[c*8 +: 8]))</code>.</li>
+<li>The vertical bus shifts down. Over four cycles W[3] travels to row 3, W[2] to row 2, and so on.</li>
+</ol>
+
+<h3>An activation, from memory to a result in memory</h3>
+<ol>
+<li>Host writes <code>a_mem[act_base + i]</code> â€” one 32-bit word, lane <i>r</i> for array row
+<i>r</i>.</li>
+<li>Cycle <i>m</i>: AGU issues <code>act_addr</code> and <code>valid_in = 1</code> together, and
+pushes <code>{1, out_base+i}</code> into stage 0 of its 8-deep write pipe.</li>
+<li>Cycle <i>m</i>+1: <code>a_rdata</code> returns; <code>unpack_activations</code> splits it into
+four signed int8 values; <code>valid_q</code> is high. The vector is consumed by the array at this
+edge.</li>
+<li>Cycles <i>m</i>+1 â€¦ <i>m</i>+7: the skew buffer staggers the four elements; the array accumulates
+one row per cycle down each column; the de-skew buffer removes the column stagger.</li>
+<li>Just after cycle <i>m</i>+7: all four int32 results are on <code>result[0:3]</code>.
+<code>pack_output</code> concatenates them into one 128-bit <code>o_wdata</code>.</li>
+<li>Cycle <i>m</i>+8: <code>{1, out_base+i}</code> reaches the end of the AGU's write pipe.
+<code>o_we</code> is high, and <code>output_mem</code> samples <code>o_wdata</code> at that edge.</li>
+<li>After <code>done</code>: the host reads it back through <code>host_o_addr</code> /
+<code>o_rdata</code>, and gets one 128-bit word containing C[<i>i</i>][0..3].</li>
+</ol>
+
+<h3>Driving the design</h3>
+
+<pre><code>1.  hold rst_n low, then release
+2.  while (!busy)  write activation vectors and weight rows via the host_* ports
+3.  pulse start with num_vectors / act_base / out_base valid
+4.  wait for the done pulse            <span class="cmt">// single cycle; busy is already low</span>
+5.  while (!busy)  read results via host_o_addr / o_rdata</code></pre>
+
+<p>Job length is <code>num_vectors + 19</code> cycles. <code>start</code> is ignored while busy.
+<code>num_vectors = 0</code> is legal and does not hang.</p>
+
+<!-- ============================================================ -->
+<h2 id="s15"><span class="num">15</span>Verification summary</h2>
+
+<table>
+<thead><tr><th>Testbench</th><th>DUT</th><th>Checks</th><th>Result</th></tr></thead>
+<tbody>
+<tr><td><code>tb_delay_pipe</code></td><td><code>delay_pipe</code></td><td>127</td><td><span class="pill ok">PASS</span></td></tr>
+<tr><td><code>tb_processing_element</code></td><td><code>processing_element</code></td><td>1 566</td><td><span class="pill ok">PASS</span></td></tr>
+<tr><td><code>tb_a_mem</code></td><td><code>a_mem</code></td><td>538</td><td><span class="pill ok">PASS</span></td></tr>
+<tr><td><code>tb_weight_mem</code></td><td><code>weight_mem</code></td><td>125</td><td><span class="pill ok">PASS</span></td></tr>
+<tr><td><code>tb_output_mem</code></td><td><code>output_mem</code></td><td>455</td><td><span class="pill ok">PASS</span></td></tr>
+<tr><td><code>tb_input_skew_buffer</code></td><td><code>input_skew_buffer</code></td><td>366</td><td><span class="pill ok">PASS</span></td></tr>
+<tr><td><code>tb_output_deskew_buffer</code></td><td><code>output_deskew_buffer</code></td><td>188</td><td><span class="pill ok">PASS</span></td></tr>
+<tr><td><code>tb_systolic_array</code></td><td><code>systolic_array</code></td><td>37</td><td><span class="pill ok">PASS</span></td></tr>
+<tr><td><code>tb_array_buf_top</code></td><td><code>array_buf_top</code> (L1)</td><td>76</td><td><span class="pill ok">PASS</span></td></tr>
+<tr><td><code>tb_controller</code></td><td><code>controller</code></td><td>85</td><td><span class="pill ok">PASS</span></td></tr>
+<tr><td><code>tb_agu</code></td><td><code>agu</code></td><td>62</td><td><span class="pill ok">PASS</span></td></tr>
+<tr><td><code>tb_accelerator_top</code></td><td><code>accelerator_top</code> (L2)</td><td>76</td><td><span class="pill ok">PASS</span></td></tr>
+<tr><td><code>tb_accelerator_system_top</code></td><td><code>accelerator_system_top</code> (L3)</td><td>201</td><td><span class="pill ok">PASS</span></td></tr>
+<tr><th>Total</th><th>13 DUTs</th><th>3 902</th><th><span class="pill ok">13/13</span></th></tr>
+</tbody>
+</table>
+
+<h3>Method, in four points</h3>
+
+<ol>
+<li><b>Golden models are algorithmic, not RTL mirrors.</b> From <code>tb_systolic_array</code>
+upwards, expected values are <code>C = A Ã— W</code> computed by nested loops. Nothing about the
+expected <i>value</i> comes from the RTL â€” it is the specification written as arithmetic. Only the
+expected <i>cycle</i> is derived from pipeline structure, and that is a stated limitation.</li>
+<li><b>Every testbench declares its sampling convention in its header.</b> Convention A samples
+after the edge (registered outputs); Convention B samples on the negative edge, before the edge that
+consumes the value (delay lines and address buses). Mixing them is what caused two of the three
+defects.</li>
+<li><b>Negative checks are mandatory.</b> A passing test proves the design does something; a
+negative check proves the testbench would notice if it did not. Examples: the result must
+<b>not</b> be present one cycle early; the de-skew output must be <b>empty</b> until the last column
+is fed; a word past the end of a short run must be <b>untouched</b>; <code>start</code> during a job
+must change <b>nothing</b>.</li>
+<li><b>A passing test must still be readable.</b> The first version printed a banner and nothing
+else â€” <code>tb_processing_element</code> ran 1 566 checks and emitted three lines. All 13 now carry
+an identical reporting block and print decoded stimulus, a per-transaction trace with expected values
+alongside, and a per-section summary. The transcripts went from ~550 lines to ~2 900.</li>
+</ol>
+
+<h3>The three defects</h3>
+
+<table>
+<thead><tr><th>#</th><th>Where</th><th>Cause</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><code>tb_output_mem</code></td><td><code>128'(-32'sd1)</code> sign-extends; the actual part-select <code>rd[32+:32]</code> is unsigned and zero-extends</td></tr>
+<tr><td>2</td><td><code>tb_agu</code></td><td>Sampled the address bus <i>after</i> the edge that consumes it</td></tr>
+<tr><td>3</td><td><code>tb_controller</code></td><td>Cleared phase counters after the <code>start</code> pulse, discarding the first WLOAD cycle</td></tr>
+</tbody>
+</table>
+
+<p><b>All three were in testbench code. None was in the RTL.</b> That is a genuine result for a design
+of this size â€” but it is a statement about these tests, not a proof of correctness.</p>
+
+<!-- ============================================================ -->
+<h2 id="s16"><span class="num">16</span>Known limitations</h2>
+
+<p>Stated plainly, because a green regression that overstates its own scope is worse than a red one.</p>
+
+<ul>
+<li><b>Verified at <code>ROWS = COLS = 4</code> only.</b> <code>systolic_array</code>'s ports are
+hard-coded <code>[7:0]</code> / <code>[31:0]</code>, so the wrappers' <code>DATA_W</code> and
+<code>PSUM_W</code> parameters are effectively fixed at 8 and 32.</li>
+<li><b>No overflow protection on the 32-bit accumulator.</b> Unreachable at 4Ã—4 with int8 operands
+(worst case <code>4 Ã— 128 Ã— 128 = 65 536</code>), but nothing guards it if the array grows.</li>
+<li><b>Memories have no reset.</b> Reads of unwritten addresses return <code>X</code>.</li>
+<li><b><code>valid_in</code> is one bit broadcast to all rows.</b> Per-row valid is structurally
+supported by the PEs but is never driven that way.</li>
+<li><b>No <code>src_mem</code> â†’ <code>a_mem</code>/<code>weight_mem</code> load engine.</b> The host
+preloads the memories directly through the <code>host_*</code> ports. The original
+<code>index.md</code> anticipated this as <code>agu_load.sv</code>.</li>
+<li><b>No synthesis, timing closure, gate-level simulation, formal verification, or functional
+coverage.</b> "13/13 passing" is a pass rate, not a coverage number.</li>
+</ul>
+
+<div class="warnbox">
+  <span class="lbl">vlog passing is not evidence the design builds</span>
+  <p>Port-connection type checking happens at <b>elaboration</b> (<code>vopt</code> /
+  <code>vsim</code>), not compilation. A packed/unpacked port mismatch can pass <code>vlog</code>
+  cleanly and then produce a pile of <code>vsim</code> errors. The regression script elaborates every
+  top, which is what makes its green result meaningful.</p>
+</div>
+
+<h3>Sensible next steps, in order of value</h3>
+<ol>
+<li><b>Functional coverage.</b> Covergroups on phase transitions, <code>num_vectors</code> values,
+and back-to-back versus gapped streaming would turn a pass rate into a coverage number.</li>
+<li><b>Parameter sweep.</b> Parameterising <code>systolic_array</code>'s port widths would let the
+same testbenches run at 8Ã—8 and 2Ã—2.</li>
+<li><b>Elaboration gating in CI.</b> Mostly a matter of failing the build on <code>vopt</code>
+errors, which the regression script is already positioned to do.</li>
+<li><b>Overflow handling</b> on the accumulator, before the array grows.</li>
+<li><b>The load engine</b> (<code>agu_load.sv</code>) so the host is not responsible for preloading.</li>
+</ol>
+
+<div class="foot">
+  <p><b>Companion documents.</b>
+  <a href="beginners_guide.html">beginners_guide.html</a> â€” the same design explained from zero, with
+  line-by-line code walkthroughs. Â·
+  <a href="description_index.md">description_index.md</a> â€” master file index. Â·
+  <a href="design_files_description.md">design_files_description.md</a> â€” per-module reference. Â·
+  <a href="testbench_description.md">testbench_description.md</a> â€” per-testbench reference. Â·
+  <a href="../indi_ver_rep/verification_report.md">verification_report.md</a> â€” results and coverage
+  boundaries. Â·
+  <a href="../context_mkdwn/00-index.md">context_mkdwn/</a> â€” derivations and design decisions.</p>
+  <p>Regression baseline: 13/13 passing, 3 902 checks, 0 mismatches. QuestaSim 2021.1, run
+  2026-07-30.</p>
+</div>
+
+</div>
+
+<style>
+  .pe{height:66px}
+  .rowlab div,.wl .cellv{height:66px}
+  .arrwrap{margin-top:4px}
+  .skewpipe{display:flex;align-items:center;justify-content:center;gap:3px;height:66px;min-width:70px;
+            font:600 10px var(--mono);color:var(--muted)}
+  .skewpipe i{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;
+              border:1px solid var(--line2);border-radius:4px;font-style:normal;font-size:9.5px;background:var(--bg)}
+  .skewpipe i.f{border-color:var(--a);color:var(--a);background:var(--abg)}
+  .dsk{display:grid;grid-template-columns:repeat(4,minmax(84px,1fr));gap:6px}
+  .dsk .b{border:1px dashed var(--line2);border-radius:6px;padding:3px 2px;text-align:center;
+          font:600 10px var(--mono);color:var(--muted);background:var(--bg)}
+  .skewgrid{display:grid;grid-template-columns:auto auto auto auto;gap:6px 12px;align-items:center;
+            justify-content:center;font:600 13px var(--mono)}
+  .skewgrid .h{font:600 10.5px var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+  .skewgrid .v{border:1px solid var(--line);border-radius:6px;padding:5px 0;text-align:center;min-width:62px;background:var(--bg);color:var(--muted)}
+  .skewgrid .v.on{border-color:var(--a);background:var(--abg);color:var(--a)}
+  .skewgrid .p{font:500 10px var(--mono);color:var(--muted);text-align:center}
+  @media print{ .skewpipe i{border-color:#999} }
+</style>
+
+<script>
+(function(){
+'use strict';
+var $  = function(id){ return document.getElementById(id); };
+var s8 = function(v){ return ((v & 0xFF) << 24) >> 24; };
+var fmt= function(v){ return (v===null||v===undefined) ? 'â€”' : String(v); };
+
+/* ================================================================
+   1.  delay_pipe  --  faithful model of design_rtl/delay_pipe.sv
+   ================================================================
+   DELAY == 0  ->  dout = din                       (combinational wire)
+   DELAY  > 0  ->  pipe[0] <= din;  pipe[i] <= pipe[i-1];  dout = pipe[DELAY-1]
+
+   Frame k shows the situation DURING cycle k: din is the value driven
+   now, `st` is the register contents right now (before edge k), and
+   dout is what a downstream flop would capture at edge k.
+   Under that convention  dout(k) == din(k - DELAY)  holds for every
+   depth INCLUDING zero -- which is exactly why tb_delay_pipe samples on
+   the negative edge.                                                */
+
+var PIPE_DIN = [7, -3, 12, 0, 25, -8, 4, 19, -11, 6, 30, 2];
+
+function pipeFrames(delay){
+  var out = [], st = new Array(delay).fill(0), k, i, ns, din, dout;
+  for(k = 1; k <= PIPE_DIN.length; k++){
+    din  = PIPE_DIN[k-1];
+    dout = (delay === 0) ? din : st[delay-1];
+    out.push({ cyc:k, din:din, st:st.slice(), dout:dout });
+    if(delay > 0){ ns = st.slice(); for(i = delay-1; i >= 1; i--) ns[i] = st[i-1]; ns[0] = din; st = ns; }
+  }
+  return out;
+}
+
+(function initPipe(){
+  var row = $('pipeRow'), sel = $('pipeDelay'), cycEl = $('pipeCyc'), relEl = $('pipeRel');
+  if(!row) return;
+  var delay = 3, frames = pipeFrames(delay), idx = 0, timer = null;
+
+  function build(){
+    row.innerHTML = '';
+    function slot(cls, cap){
+      var d = document.createElement('div'); d.className = 'slot ' + cls;
+      var c = document.createElement('span'); c.className = 'cap'; c.textContent = cap;
+      d.appendChild(c);
+      var v = document.createElement('span'); v.className = 'val'; d.appendChild(v);
+      row.appendChild(d); return v;
+    }
+    var refs = { st:[] };
+    refs.din = slot('din', 'din');
+    for(var i = 0; i < delay; i++){
+      var a = document.createElement('span'); a.className = 'arrow'; a.textContent = 'â–¶'; row.appendChild(a);
+      refs.st.push(slot('stage', 'pipe[' + i + ']'));
+    }
+    var a2 = document.createElement('span'); a2.className = 'arrow'; a2.textContent = 'â–¶'; row.appendChild(a2);
+    refs.dout = slot('dout', 'dout');
+    return refs;
+  }
+  var refs = build();
+
+  function draw(){
+    var f = frames[idx];
+    cycEl.textContent = f.cyc;
+    refs.din.textContent = f.din;
+    for(var i = 0; i < delay; i++) refs.st[i].textContent = f.st[i];
+    refs.dout.textContent = f.dout;
+    relEl.textContent = delay === 0
+      ? 'dout(m) = din(m)   â€” a plain wire, no register'
+      : 'dout(m) = din(mâˆ’' + delay + ')';
+  }
+  function step(){ idx = (idx + 1) % frames.length; draw(); }
+  function stop(){ if(timer){ clearInterval(timer); timer = null; $('pipePlay').textContent = 'â–¶ Play'; } }
+
+  $('pipePlay').onclick  = function(){ if(timer) stop(); else { timer = setInterval(step, 700); this.textContent = 'âšâš Pause'; } };
+  $('pipeStep').onclick  = function(){ stop(); step(); };
+  $('pipeReset').onclick = function(){ stop(); idx = 0; draw(); };
+  sel.onchange = function(){ stop(); delay = parseInt(this.value,10); frames = pipeFrames(delay); refs = build(); idx = 0; draw(); };
+  draw();
+
+  /* ---- static trace: all four depths side by side ---- */
+  var all = [0,1,2,3].map(pipeFrames);
+  var h = '<table><thead><tr><th>cycle</th><th>din</th>' +
+          '<th>dout D=0</th><th>dout D=1</th><th>dout D=2</th><th>dout D=3</th><th>relation check</th></tr></thead><tbody>';
+  for(var k = 0; k < PIPE_DIN.length; k++){
+    var expect3 = (k-3 >= 0) ? PIPE_DIN[k-3] : 0;
+    h += '<tr><td class="mut">' + (k+1) + '</td><td>' + PIPE_DIN[k] + '</td>' +
+         '<td>' + all[0][k].dout + '</td><td>' + all[1][k].dout + '</td>' +
+         '<td>' + all[2][k].dout + '</td><td class="hi">' + all[3][k].dout + '</td>' +
+         '<td class="mut">dout(D=3) = din(' + (k+1-3) + ') = ' + expect3 +
+         (all[3][k].dout === expect3 ? ' âœ“' : ' âœ—') + '</td></tr>';
+  }
+  $('pipeTrace').innerHTML = h + '</tbody></table>';
+})();
+
+
+/* ================================================================
+   2.  input_skew_buffer  --  ROWS pairs of delay_pipe, DELAY = r
+   ================================================================ */
+
+var AVEC = [[1,2,3,4], [5,-1,0,2], [-2,3,1,1]];   /* lane r = array row r */
+var ROWS = 4, COLS = 4;
+
+/* dense vector presented on cycles 1, 2, 3; idle otherwise */
+function denseAt(k){
+  return (k >= 1 && k <= AVEC.length)
+    ? { a:AVEC[k-1], v:1, tag:'A' + (k-1) }
+    : { a:[0,0,0,0], v:0, tag:null };
+}
+
+function skewFrames(nCyc){
+  var out = [], st = [], k, r, i, dn, west, wtag, ns;
+  for(r = 0; r < ROWS; r++) st.push(new Array(r).fill(null));
+  for(k = 1; k <= nCyc; k++){
+    dn = denseAt(k); west = []; wtag = [];
+    for(r = 0; r < ROWS; r++){
+      if(r === 0){ west.push(dn.v ? dn.a[0] : null); wtag.push(dn.tag); }
+      else       { var c = st[r][r-1]; west.push(c ? c.val : null); wtag.push(c ? c.tag : null); }
+    }
+    out.push({ cyc:k, dense:dn, west:west, wtag:wtag, st:st.map(function(x){ return x.slice(); }) });
+    /* clock edge: shift every pipe */
+    ns = [];
+    for(r = 0; r < ROWS; r++){
+      var p = st[r].slice();
+      for(i = r-1; i >= 1; i--) p[i] = st[r][i-1];
+      if(r > 0) p[0] = dn.v ? { val:dn.a[r], tag:dn.tag } : null;
+      ns.push(p);
+    }
+    st = ns;
+  }
+  return out;
+}
+
+(function initSkew(){
+  var body = $('skewBody'); if(!body) return;
+  var frames = skewFrames(9), idx = 0, timer = null;
+
+  var html = '<div class="skewgrid">' +
+    '<div class="h">array row</div><div class="h">dense_a_in</div><div class="h">delay_pipe</div><div class="h">west edge</div>';
+  for(var r = 0; r < ROWS; r++){
+    html += '<div class="p">row ' + r + '</div>' +
+            '<div class="v" id="sd' + r + '">â€”</div>' +
+            '<div class="skewpipe" id="sp' + r + '"></div>' +
+            '<div class="v" id="sw' + r + '">â€”</div>';
+  }
+  body.innerHTML = html + '</div>';
+
+  function draw(){
+    var f = frames[idx];
+    $('skewCyc').textContent = f.cyc;
+    for(var r = 0; r < ROWS; r++){
+      var d = $('sd' + r), w = $('sw' + r), p = $('sp' + r);
+      d.textContent = f.dense.v ? f.dense.a[r] : 'â€”';
+      d.className   = 'v' + (f.dense.v ? ' on' : '');
+      w.textContent = f.west[r] === null ? 'â€”' : f.west[r];
+      w.className   = 'v' + (f.west[r] === null ? '' : ' on');
+      if(r === 0){ p.innerHTML = '<span>DELAY&nbsp;0 &mdash; wire</span>'; }
+      else{
+        var s = 'DELAY&nbsp;' + r + '&nbsp;';
+        for(var i = 0; i < r; i++){
+          var cell = f.st[r][i];
+          s += '<i class="' + (cell ? 'f' : '') + '">' + (cell ? cell.val : 'Â·') + '</i>';
+        }
+        p.innerHTML = s;
+      }
+    }
+  }
+  function step(){ idx = (idx + 1) % frames.length; draw(); }
+  function stop(){ if(timer){ clearInterval(timer); timer = null; $('skewPlay').textContent = 'â–¶ Play'; } }
+  $('skewPlay').onclick  = function(){ if(timer) stop(); else { timer = setInterval(step, 850); this.textContent = 'âšâš Pause'; } };
+  $('skewStep').onclick  = function(){ stop(); step(); };
+  $('skewReset').onclick = function(){ stop(); idx = 0; draw(); };
+  draw();
+
+  var t = '<table><thead><tr><th>cycle</th><th>dense_a_in (row 0..3)</th>' +
+          '<th>west edge row 0</th><th>row 1</th><th>row 2</th><th>row 3</th><th>vectors in flight</th></tr></thead><tbody>';
+  frames.forEach(function(f){
+    var live = f.wtag.filter(function(x){ return x; });
+    var uniq = live.filter(function(v,i){ return live.indexOf(v) === i; });
+    t += '<tr><td class="mut">' + f.cyc + '</td>' +
+         '<td>' + (f.dense.v ? f.dense.tag + ' = [' + f.dense.a.join(', ') + ']' : 'â€” (valid = 0)') + '</td>';
+    for(var r = 0; r < ROWS; r++){
+      t += '<td' + (f.west[r] === null ? ' class="mut"' : ' class="hi"') + '>' +
+           (f.west[r] === null ? 'â€”' : f.west[r] + ' Â·' + f.wtag[r]) + '</td>';
+    }
+    t += '<td class="mut">' + (uniq.length ? uniq.join(' + ') : 'â€”') + '</td></tr>';
+  });
+  $('skewTrace').innerHTML = t + '</tbody></table>';
+})();
+
+
+/* ================================================================
+   3.  The array  --  cycle-accurate model of array_buf_top
+   ================================================================
+   Per PE, exactly the four registers of MAC.sv:
+       weight_q, a_q, valid_q, psum_q
+   Combinational, exactly as in the RTL:
+       psum_out = wload ? 32'(weight_q) : psum_q     <-- the key line
+       a_out    = a_q
+       product  = weight_q * a_in ;  adder = psum_in + product
+   Update (non-blocking, so every read is of the PRE-edge value):
+       weight_q <= wload ? psum_in[7:0] : weight_q
+       psum_q   <= valid_in ? adder : psum_in                        */
+
+var WMAT = [[ 2,-1, 3, 0],
+            [ 1, 4,-2, 5],
+            [-3, 2, 1, 1],
+            [ 0, 1, 2,-4]];
+
+/* independent golden model -- exactly what the testbenches compute */
+var GOLD = AVEC.map(function(a){
+  var row = [], c, r, s;
+  for(c = 0; c < COLS; c++){ s = 0; for(r = 0; r < ROWS; r++) s += a[r] * WMAT[r][c]; row.push(s); }
+  return row;
+});
+
+var N_WLOAD = ROWS, N_FLUSH = ROWS + 2, N_COMP = AVEC.length, N_DRAIN = 8;
+var C_WLOAD = N_WLOAD, C_FLUSH = C_WLOAD + N_FLUSH, C_COMP = C_FLUSH + N_COMP,
+    C_DRAIN = C_COMP + N_DRAIN, C_TOTAL = C_DRAIN + 1;
+
+function schedule(k){
+  if(k >= 1 && k <= C_WLOAD){
+    var wr = ROWS - k;                       /* 3, 2, 1, 0  -- BOTTOM ROW FIRST */
+    return { ph:'WLOAD', wload:1, wrow:wr, pTop:WMAT[wr].slice(), a:[0,0,0,0], v:0, tag:null };
+  }
+  if(k <= C_FLUSH)  return { ph:'FLUSH',   wload:0, wrow:null, pTop:[0,0,0,0], a:[0,0,0,0], v:0, tag:null };
+  if(k <= C_COMP){
+    var i = k - C_FLUSH - 1;
+    return { ph:'COMPUTE', wload:0, wrow:null, pTop:[0,0,0,0], a:AVEC[i].slice(), v:1, tag:'A'+i };
+  }
+  if(k <= C_DRAIN)  return { ph:'DRAIN', wload:0, wrow:null, pTop:[0,0,0,0], a:[0,0,0,0], v:0, tag:null };
+  return { ph:'DONE', wload:0, wrow:null, pTop:[0,0,0,0], a:[0,0,0,0], v:0, tag:null };
+}
+
+function arrayFrames(){
+  var pe = [], ap = [], vp = [], op = [], r, c, i, k, frames = [];
+  for(r = 0; r < ROWS; r++){
+    pe.push([]); for(c = 0; c < COLS; c++) pe[r].push({ w:0, a:0, v:0, p:0 });
+    ap.push(new Array(r).fill(0)); vp.push(new Array(r).fill(0));
+  }
+  for(c = 0; c < COLS; c++) op.push(new Array(COLS-1-c).fill(0));
+
+  for(k = 1; k <= C_TOTAL; k++){
+    var inp = schedule(k);
+
+    /* ---- input skew buffer output = the array's west edge this cycle ---- */
+    var aW = [], vW = [];
+    for(r = 0; r < ROWS; r++){
+      aW.push(r === 0 ? inp.a[0] : ap[r][r-1]);
+      vW.push(r === 0 ? inp.v    : vp[r][r-1]);
+    }
+
+    /* ---- combinational nets, all from PRE-edge register values ---- */
+    var aNet = [], vNet = [], pNet = [];
+    for(r = 0; r <= ROWS; r++) pNet.push(new Array(COLS).fill(0));
+    for(c = 0; c < COLS; c++) pNet[0][c] = inp.pTop[c];
+    for(r = 0; r < ROWS; r++){
+      aNet.push(new Array(COLS+1).fill(0)); vNet.push(new Array(COLS+1).fill(0));
+      aNet[r][0] = aW[r]; vNet[r][0] = vW[r];
+      for(c = 0; c < COLS; c++){ aNet[r][c+1] = pe[r][c].a; vNet[r][c+1] = pe[r][c].v; }
+    }
+    for(c = 0; c < COLS; c++)
+      for(r = 0; r < ROWS; r++)
+        pNet[r+1][c] = inp.wload ? pe[r][c].w : pe[r][c].p;
+
+    var bottomPre = []; for(c = 0; c < COLS; c++) bottomPre.push(pNet[ROWS][c]);
+
+    /* ---- apply clock edge k ---- */
+    var nx = [], acc = [];
+    for(r = 0; r < ROWS; r++){
+      nx.push([]); acc.push([]);
+      for(c = 0; c < COLS; c++){
+        var o = pe[r][c], ain = aNet[r][c], vin = vNet[r][c], pin = pNet[r][c];
+        nx[r].push({
+          w: inp.wload ? s8(pin) : o.w,
+          a: ain,
+          v: vin,
+          p: vin ? (pin + o.w * ain) : pin
+        });
+        acc[r].push(!!vin);
+      }
+    }
+    for(r = ROWS-1; r >= 1; r--){
+      var na = ap[r].slice(), nv = vp[r].slice();
+      for(i = r-1; i >= 1; i--){ na[i] = ap[r][i-1]; nv[i] = vp[r][i-1]; }
+      na[0] = inp.a[r]; nv[0] = inp.v; ap[r] = na; vp[r] = nv;
+    }
+    for(c = 0; c < COLS; c++){
+      var d = COLS-1-c; if(d === 0) continue;
+      var no = op[c].slice();
+      for(i = d-1; i >= 1; i--) no[i] = op[c][i-1];
+      no[0] = bottomPre[c]; op[c] = no;
+    }
+    pe = nx;
+
+    /* ---- buses observable immediately AFTER edge k ---- */
+    var bottom = [], result = [];
+    for(c = 0; c < COLS; c++){
+      bottom.push(inp.wload ? pe[ROWS-1][c].w : pe[ROWS-1][c].p);
+      result.push((COLS-1-c) === 0 ? bottom[c] : op[c][COLS-2-c]);
+    }
+
+    frames.push({
+      cyc:k, ph:inp.ph, wrow:inp.wrow, wload:inp.wload, pTop:inp.pTop.slice(),
+      aW:aW, vW:vW, acc:acc, bottom:bottom, result:result,
+      pe: pe.map(function(row){ return row.map(function(x){ return { w:x.w, a:x.a, v:x.v, p:x.p }; }); }),
+      dsk: op.map(function(x){ return x.slice(); }),
+      tag: inp.tag
+    });
+  }
+  return frames;
+}
+
+(function initArray(){
+  var body = $('arrBody'); if(!body) return;
+  var F = arrayFrames(), idx = 0, timer = null;
+
+  /* result vector i lands just after cycle  C_FLUSH + 1 + i + 6 */
+  var landing = {};
+  for(var i = 0; i < AVEC.length; i++) landing[C_FLUSH + 1 + i + (ROWS + COLS - 2)] = i;
+
+  /* --- build the phase timeline --- */
+  var tl = $('arrTl');
+  tl.innerHTML =
+    '<div class="t-w" style="flex:' + N_WLOAD + '">WLOAD</div>' +
+    '<div class="t-f" style="flex:' + N_FLUSH + '">FLUSH</div>' +
+    '<div class="t-c" style="flex:' + N_COMP  + '">COMP</div>' +
+    '<div class="t-d" style="flex:' + N_DRAIN + '">DRAIN</div>' +
+    '<div class="t-o" style="flex:1">D</div>';
+
+  /* --- build the stage DOM once --- */
+  var h = '<div class="sect-lab">north edge â€” psum_in_top (weight row while wload = 1, zeros otherwise)</div>' +
+          '<div class="colhdr"><div>col 0</div><div>col 1</div><div>col 2</div><div>col 3</div></div>' +
+          '<div class="edge" id="aTop"></div>' +
+          '<div class="arrwrap"><div class="rowlab" id="aLab"></div><div class="wl" id="aWest"></div>' +
+          '<div class="cellgrid" id="aGrid"></div></div>' +
+          '<div class="sect-lab">south edge â€” psum_out_bottom, before de-skew (the staircase)</div>' +
+          '<div class="edge" id="aBot"></div>' +
+          '<div class="sect-lab">output_deskew_buffer â€” delay COLSâˆ’1âˆ’c</div>' +
+          '<div class="dsk" id="aDsk"></div>' +
+          '<div class="sect-lab">result â€” aligned, all four lanes on the same cycle</div>' +
+          '<div class="edge" id="aRes"></div>';
+  body.innerHTML = h;
+
+  var gTop = $('aTop'), gBot = $('aBot'), gRes = $('aRes'), gLab = $('aLab'),
+      gW = $('aWest'), gG = $('aGrid'), gD = $('aDsk');
+  var cTop = [], cBot = [], cRes = [], cW = [], cPE = [], cD = [];
+  var r, c, d;
+  for(c = 0; c < COLS; c++){
+    cTop.push(gTop.appendChild(document.createElement('div'))); cTop[c].className = 'eb';
+    cBot.push(gBot.appendChild(document.createElement('div'))); cBot[c].className = 'eb p';
+    cRes.push(gRes.appendChild(document.createElement('div'))); cRes[c].className = 'eb p';
+    cD.push(gD.appendChild(document.createElement('div')));     cD[c].className   = 'b';
+  }
+  for(r = 0; r < ROWS; r++){
+    var lb = document.createElement('div'); lb.textContent = 'row ' + r; gLab.appendChild(lb);
+    var wv = document.createElement('div'); wv.className = 'cellv'; gW.appendChild(wv); cW.push(wv);
+  }
+  for(r = 0; r < ROWS; r++){
+    cPE.push([]);
+    for(c = 0; c < COLS; c++){
+      var p = document.createElement('div'); p.className = 'pe';
+      p.innerHTML = '<span class="wq"></span><span class="aq"></span><span class="pq"></span>' +
+                    '<span class="tag">' + r + ',' + c + '</span>';
+      gG.appendChild(p);
+      cPE[r].push({ box:p, w:p.querySelector('.wq'), a:p.querySelector('.aq'), p:p.querySelector('.pq') });
+    }
+  }
+
+  function draw(){
+    var f = F[idx], r, c;
+    $('arrCyc').textContent = f.cyc;
+    var ph = $('arrPhase'); ph.textContent = f.ph; ph.setAttribute('data-p', f.ph);
+    var segs = tl.children, on = { WLOAD:0, FLUSH:1, COMPUTE:2, DRAIN:3, DONE:4 }[f.ph];
+    for(var s = 0; s < segs.length; s++) segs[s].className = segs[s].className.replace(' on','') + (s === on ? ' on' : '');
+
+    for(c = 0; c < COLS; c++){
+      cTop[c].textContent = f.wload ? f.pTop[c] : '0';
+      cTop[c].className   = 'eb' + (f.wload ? ' w' : ' dim');
+      cBot[c].textContent = f.bottom[c];
+      cBot[c].className   = 'eb p' + (f.bottom[c] !== 0 && f.ph !== 'WLOAD' ? ' hot' : (f.bottom[c] === 0 ? ' dim' : ' w'));
+      cRes[c].textContent = f.result[c];
+      cRes[c].className   = 'eb p' + (landing[f.cyc] !== undefined ? ' hot' : (f.result[c] === 0 ? ' dim' : ''));
+      var dep = COLS-1-c;
+      cD[c].innerHTML = dep === 0 ? 'DELAY 0 â€” wire'
+                                  : 'DELAY ' + dep + ' [' + f.dsk[c].join(', ') + ']';
+    }
+    for(r = 0; r < ROWS; r++){
+      cW[r].textContent = f.vW[r] ? f.aW[r] : 'â€”';
+      cW[r].className   = 'cellv' + (f.vW[r] ? ' live' : ' off');
+      for(c = 0; c < COLS; c++){
+        var q = cPE[r][c], st = f.pe[r][c];
+        q.w.textContent = 'w=' + st.w;
+        q.a.textContent = 'a=' + st.a;
+        q.p.textContent = st.p;
+        q.p.className   = 'pq' + (st.p === 0 ? ' zero' : '');
+        q.box.className = 'pe' + (f.wload ? ' shift' : (f.acc[r][c] ? ' acc' : ''));
+      }
+    }
+    if(landing[f.cyc] !== undefined){
+      var i = landing[f.cyc], ok = f.result.every(function(v, j){ return v === GOLD[i][j]; });
+      $('arrCheck').textContent = 'C' + i + ' = [' + f.result.join(', ') + ']  ' + (ok ? 'âœ“ matches golden' : 'âœ— MISMATCH');
+      $('arrCheck').className   = 'pill ' + (ok ? 'ok' : 'bad');
+    } else if(f.cyc === 1){
+      $('arrCheck').textContent = 'golden check: pending'; $('arrCheck').className = 'pill';
+    }
+  }
+  function step(){ idx = (idx + 1) % F.length; draw(); }
+  function stop(){ if(timer){ clearInterval(timer); timer = null; $('arrPlay').textContent = 'â–¶ Play'; } }
+  function play(){ stop(); timer = setInterval(step, parseInt($('arrSpeed').value,10)); $('arrPlay').textContent = 'âšâš Pause'; }
+
+  $('arrPlay').onclick  = function(){ if(timer) stop(); else play(); };
+  $('arrStep').onclick  = function(){ stop(); step(); };
+  $('arrBack').onclick  = function(){ stop(); idx = (idx - 1 + F.length) % F.length; draw(); };
+  $('arrReset').onclick = function(){ stop(); idx = 0; draw(); };
+  $('arrSpeed').oninput = function(){ if(timer) play(); };
+  draw();
+
+  /* ---- full static trace ---- */
+  var t = '<table><thead><tr><th>cycle</th><th>phase</th><th>north edge (psum_in_top)</th>' +
+          '<th>west edge (after skew)</th><th>bottom (psum_out_bottom)</th>' +
+          '<th>result (after de-skew)</th><th>note</th></tr></thead><tbody>';
+  F.forEach(function(f){
+    var land = landing[f.cyc], note = '', cls = '';
+    if(f.ph === 'WLOAD'){ note = 'weight row W[' + f.wrow + '] â†’ shifts down; lands in array row ' + f.wrow; cls = ' class="wl2"'; }
+    else if(f.ph === 'FLUSH')   note = 'zeros pushed through, valid = 0 â€” clearing weight residue';
+    else if(f.ph === 'COMPUTE') note = 'vector ' + f.tag + ' consumed at this edge';
+    else if(land !== undefined) note = 'C' + land + ' complete â€” golden [' + GOLD[land].join(', ') + ']';
+    else if(f.ph === 'DRAIN')   note = 'pipeline draining';
+    var westTxt = f.aW.map(function(v, r){ return f.vW[r] ? v : 'â€”'; }).join(', ');
+    t += '<tr' + cls + '><td class="mut">' + f.cyc + '</td><td>' + f.ph + '</td>' +
+         '<td>[' + (f.wload ? f.pTop.join(', ') : '0, 0, 0, 0') + ']</td>' +
+         '<td>[' + westTxt + ']</td>' +
+         '<td>[' + f.bottom.join(', ') + ']</td>' +
+         '<td' + (land !== undefined ? ' class="hi"' : '') + '>[' + f.result.join(', ') + ']</td>' +
+         '<td class="mut">' + note + '</td></tr>';
+  });
+  $('arrTrace').innerHTML = t + '</tbody></table>';
+})();
+})();
+</script>
+</body>
+</html>
+
+

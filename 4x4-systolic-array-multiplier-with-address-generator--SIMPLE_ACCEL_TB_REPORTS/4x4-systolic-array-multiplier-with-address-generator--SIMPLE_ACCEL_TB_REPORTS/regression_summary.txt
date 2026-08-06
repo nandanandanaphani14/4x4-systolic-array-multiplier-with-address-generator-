@@ -1,0 +1,19 @@
+﻿QuestaSim regression - 4x4 weight-stationary systolic accelerator
+Run: 2026-07-30 17:37:45
+Simulator: D:\SOFTWARES\QUESTASIM\win64\vsim.exe
+--------------------------------------------------------------------
+tb_delay_pipe                  PASS      127 checks     0 errors
+tb_processing_element          PASS     1566 checks     0 errors
+tb_a_mem                       PASS      538 checks     0 errors
+tb_weight_mem                  PASS      125 checks     0 errors
+tb_output_mem                  PASS      455 checks     0 errors
+tb_input_skew_buffer           PASS      366 checks     0 errors
+tb_output_deskew_buffer        PASS      188 checks     0 errors
+tb_systolic_array              PASS       37 checks     0 errors
+tb_array_buf_top               PASS       76 checks     0 errors
+tb_controller                  PASS       85 checks     0 errors
+tb_agu                         PASS       62 checks     0 errors
+tb_accelerator_top             PASS       76 checks     0 errors
+tb_accelerator_system_top      PASS      201 checks     0 errors
+--------------------------------------------------------------------
+13/13 testbenches passed

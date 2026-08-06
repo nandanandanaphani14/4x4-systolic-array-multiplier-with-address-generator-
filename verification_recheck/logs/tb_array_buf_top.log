@@ -1,0 +1,89 @@
+﻿Reading pref.tcl
+
+# 2021.1
+
+# vsim -c -do "run -all; quit -f" tb_array_buf_top 
+# Start time: 16:58:45 on Aug 06,2026
+# ** Note: (vsim-3812) Design is being optimized...
+# ** Warning: C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\input_buf.sv(7): (vopt-13314) Defaulting port 'dense_a_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\input_buf.sv(8): (vopt-13314) Defaulting port 'dense_valid_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\array.sv(14): (vopt-13314) Defaulting port 'a_in_left' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\array.sv(15): (vopt-13314) Defaulting port 'valid_in_left' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\array.sv(18): (vopt-13314) Defaulting port 'psum_in_top' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\output_skewbuf.sv(7): (vopt-13314) Defaulting port 'psum_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\wrapper_array_buf.sv(48): (vopt-13314) Defaulting port 'dense_a_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\wrapper_array_buf.sv(49): (vopt-13314) Defaulting port 'dense_valid_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\wrapper_array_buf.sv(52): (vopt-13314) Defaulting port 'psum_in_top' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Note: (vsim-12126) Error and warning message counts have been restored: Errors=0, Warnings=9.
+# //  Questa Sim-64
+# //  Version 2021.1 win64 Jan 19 2021
+# //
+# //  Copyright 1991-2021 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  QuestaSim and its associated documentation contain trade
+# //  secrets and commercial or financial information that are the property of
+# //  Mentor Graphics Corporation and are privileged, confidential,
+# //  and exempt from disclosure under the Freedom of Information Act,
+# //  5 U.S.C. Section 552. Furthermore, this information
+# //  is prohibited from disclosure under the Trade Secrets Act,
+# //  18 U.S.C. Section 1905.
+# //
+# Loading sv_std.std
+# Loading work.tb_array_buf_top(fast)
+# run -all
+# =====================================================================
+#  tb_array_buf_top  --  DUT: array_buf_top (LEVEL 1)   RESULT_LATENCY=6
+# =====================================================================
+#  Dense vectors in, aligned result out.  Golden C = A x W.
+# 
+#  TEST PLAN
+#    T1  full result vector aligned on ONE cycle at n+6
+#    T2  psum_raw still shows the per-column staircase (n+3+c)
+#    T3  negative: result bus quiet before the first result
+# =====================================================================
+# 
+#   -----------------------------------------------------------------
+#   T1 : aligned result vector, golden C = A x W
+#   -----------------------------------------------------------------
+#     cyc 18: result C[0] =   3785  -6912   1872   3875 (exp   3785  -6912   1872   3875)
+#     cyc 19: result C[1] =   4190  -5829   1546   5338 (exp   4190  -5829   1546   5338)
+#     cyc 20: result C[2] =  -2259   -149   6804   -245 (exp  -2259   -149   6804   -245)
+#     cyc 21: result C[3] =   1221  -2365  10574   4614 (exp   1221  -2365  10574   4614)
+#     cyc 22: result C[4] =  -2519  10788  -3740  14595 (exp  -2519  10788  -3740  14595)
+#     cyc 23: result C[5] =   2963  14417   5254  11019 (exp   2963  14417   5254  11019)
+#     aligned result vectors checked: 6 ; staircase lanes checked: 24
+#     T1 ends: 48 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T2 : de-skew alignment is real (raw staircase vs aligned)
+#   -----------------------------------------------------------------
+#     psum_raw presented column c at n+3+c (a staircase), yet result[]
+#     delivered all COLS columns on a single cycle -> de-skew did the work.
+#     T2 ends: 2 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T3 : negative: result quiet before first result
+#   -----------------------------------------------------------------
+#     result = 0 0 0 0 with no valid input (quiet)
+#     T3 ends: 4 checks, 0 errors  [PASS]
+# 
+#   =================================================================
+#    SECTION SUMMARY : tb_array_buf_top
+#   =================================================================
+#    SEC    DESCRIPTION                                     CHECKS  ERRORS  STATUS
+#    ------ ---------------------------------------------- ------- -------  ------
+#    T1     aligned result vector, golden C = A x W           48       0  PASS
+#    T2     de-skew alignment is real (raw staircase vs aligned)       2       0  PASS
+#    T3     negative: result quiet before first result         4       0  PASS
+#    ------ ---------------------------------------------- ------- -------
+#    TOTAL                                                      54       0
+#   =================================================================
+#    TOTALS: 54 checks, 0 errors
+#    simulated time : 406 ns
+#    RESULT: PASS - tb_array_buf_top
+#   =================================================================
+# ** Note: $finish    : C:/Users/VLSI/Desktop/systolic_array_multiplier/verification_recheck/testbenches/tb_array_buf_top.sv(119)
+#    Time: 406 ns  Iteration: 0  Instance: /tb_array_buf_top
+# End time: 16:58:58 on Aug 06,2026, Elapsed time: 0:00:13
+# Errors: 0, Warnings: 9

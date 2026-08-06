@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ZedBoard Implementation Guide — 4×4 Systolic Accelerator</title>
+<style>
+  :root{
+    --bg:#0c1018;--panel:#161d2c;--ink:#e7edf7;--dim:#9aa7bd;--line:#26304a;
+    --accent:#4da3ff;--accent2:#7ee0c0;--warn:#ffcf6b;--bad:#ff7a90;--pass:#54d183;
+    --sw:#4da3ff;--led:#ffcf6b;--shadow:0 10px 30px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box} html,body{margin:0;padding:0}
+  body{background:linear-gradient(180deg,#0a0e16,#0c1018 40%);color:var(--ink);
+    font:15px/1.62 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px 90px}
+  a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
+  code{font-family:Consolas,Menlo,monospace;background:#0e1420;border:1px solid var(--line);
+    border-radius:5px;padding:1px 5px;font-size:.86em}
+  pre{background:#080c14;border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto;
+    font-family:Consolas,Menlo,monospace;font-size:.82rem;line-height:1.5}
+  h1{font-size:2.1rem;margin:.2em 0 .1em;letter-spacing:-.5px}
+  h2{font-size:1.45rem;margin:1.7em 0 .5em} h3{font-size:1.1rem;margin:1.2em 0 .4em;color:var(--accent2)}
+  .num{display:inline-block;min-width:1.7em;color:var(--accent)}
+  header.hero{padding:50px 0 24px;border-bottom:1px solid var(--line)}
+  .sub{color:var(--dim);max-width:780px}
+  .pills{display:flex;gap:10px;flex-wrap:wrap;margin:20px 0 2px}
+  .pill{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:7px 15px;font-weight:600}
+  .pill b{color:var(--accent2)}
+  nav.toc{display:flex;gap:8px;flex-wrap:wrap;margin:22px 0 6px}
+  nav.toc a{background:#121826;border:1px solid var(--line);border-radius:8px;padding:6px 12px;color:var(--dim);font-size:.85rem}
+  nav.toc a:hover{color:var(--ink);border-color:var(--accent);text-decoration:none}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin:16px 0;box-shadow:var(--shadow)}
+  table{border-collapse:collapse;width:100%;margin:12px 0;font-size:.9rem}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:#0f1626;color:var(--dim)} td.n{text-align:right;font-variant-numeric:tabular-nums}
+  .rec{color:var(--pass);font-weight:700} .no{color:var(--bad)} .warn{color:var(--warn)}
+  .callout{border-left:3px solid var(--warn);background:#181a12;border-radius:0 10px 10px 0;padding:12px 16px;margin:14px 0}
+  .callout.tip{border-color:var(--accent2);background:#0f1a18}
+  .callout .lbl{font-weight:700;color:var(--warn);display:block;margin-bottom:3px}
+  .callout.tip .lbl{color:var(--accent2)}
+  button.btn{background:#1b2338;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:7px 14px;font-weight:600;cursor:pointer;font-size:.9rem}
+  button.btn:hover{border-color:var(--accent)} button.btn.primary{background:var(--accent);color:#04122b;border-color:var(--accent)}
+  .ctrl{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+  .cyc{color:var(--dim);font-variant-numeric:tabular-nums}
+  /* board widget */
+  .board{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-end;justify-content:center;padding:8px 0}
+  .bank{text-align:center} .bank .cap{color:var(--dim);font-size:.78rem;margin-bottom:8px}
+  .row{display:flex;gap:8px}
+  .sw{width:34px;height:52px;border-radius:6px;border:1px solid var(--line);background:#0f1728;position:relative;cursor:pointer;transition:.15s}
+  .sw .k{position:absolute;left:4px;right:4px;height:20px;border-radius:4px;background:#33405e;top:26px;transition:.18s}
+  .sw.on{border-color:var(--sw);box-shadow:0 0 12px rgba(77,163,255,.35)} .sw.on .k{top:4px;background:var(--sw)}
+  .sw .lab{position:absolute;bottom:-18px;left:0;right:0;font-size:.68rem;color:var(--dim)}
+  .led{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:#241f0e;transition:.12s}
+  .led.on{background:var(--led);box-shadow:0 0 14px var(--led),0 0 4px var(--led)}
+  .led .lab{}
+  .readout{margin-top:26px;text-align:center;color:var(--dim);font-size:.9rem}
+  .readout b{color:var(--ink);font-variant-numeric:tabular-nums}
+  /* flow */
+  .flow{display:flex;gap:8px;flex-wrap:wrap;align-items:stretch}
+  .stg{flex:1;min-width:120px;background:#111828;border:1px solid var(--line);border-radius:10px;padding:12px;transition:.3s;opacity:.5}
+  .stg.on{opacity:1;border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),0 0 20px rgba(77,163,255,.22)}
+  .stg .t{font-weight:700} .stg .d{color:var(--dim);font-size:.8rem}
+  .arrow{align-self:center;color:var(--line);font-size:1.3rem}
+  /* fsm */
+  .fsm{display:flex;gap:8px;flex-wrap:wrap}
+  .state{background:#111828;border:1px solid var(--line);border-radius:9px;padding:8px 12px;font-weight:600;font-size:.85rem;transition:.3s;opacity:.55}
+  .state.on{opacity:1;border-color:var(--accent2);color:var(--accent2);box-shadow:0 0 16px rgba(126,224,192,.25)}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;color:var(--dim);font-size:.82rem;margin-top:10px}
+  .mono{font-family:Consolas,Menlo,monospace}
+  h4{margin:1.1em 0 .4em;font-size:1rem;color:var(--ink)}
+  pre code .k{color:var(--accent2);font-weight:700;background:#12271f;border-radius:3px;padding:0 4px}
+  footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--line);color:var(--dim);font-size:.86rem}
+  ol li,ul li{margin:4px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <div class="mono" style="color:var(--dim);letter-spacing:2px;font-size:.8rem">FPGA IMPLEMENTATION · DIGILENT ZEDBOARD</div>
+  <h1>Running the 4×4 Systolic Accelerator on a ZedBoard</h1>
+  <p class="sub">A peripheral-free plan: enter matrices on the <b>8 slide switches</b>, run the
+  accelerator in the PL fabric, and read the result on the <b>8 LEDs</b> — plus richer alternatives
+  (Vivado VIO/ILA over JTAG, and the on-board USB-UART) that also need no external connectors.</p>
+  <div class="pills">
+    <div class="pill">Board: <b>ZedBoard</b> (Zynq-7000)</div>
+    <div class="pill">Part: <b>xc7z020clg484-1</b></div>
+    <div class="pill">Logic: <b>PL-only</b> (no PS needed)</div>
+    <div class="pill">Clock: <b>100 MHz</b> on-board</div>
+  </div>
+  <nav class="toc">
+    <a href="#why">1 · Two challenges</a>
+    <a href="#opts">2 · Interface options</a>
+    <a href="#harness">3 · Console harness</a>
+    <a href="#proto">4 · Switch/LED protocol</a>
+    <a href="#clock">5 · Clocking</a>
+    <a href="#util">6 · Resources</a>
+    <a href="#flow">7 · Vivado flow</a>
+    <a href="#bringup">8 · Bring-up test</a>
+    <a href="#alt">9 · All options — steps</a>
+    <a href="#trouble">10 · Troubleshooting</a>
+  </nav>
+</header>
+
+<!-- 1 -->
+<h2 id="why"><span class="num">1</span>Two challenges to solve first</h2>
+<p class="sub">The design already works in simulation (re-verified at 11/11, 3 680 checks). Putting it on
+hardware with only switches and LEDs raises two problems that shape the whole plan:</p>
+<div class="panel">
+  <h3>Challenge A — it finishes far too fast to watch</h3>
+  <p>A job is <code>num_vectors + 13</code> cycles — and only <code>num_vectors + 9</code> when the
+  weight matrix has not changed since the last run, because the controller then <b>skips the WLOAD
+  phase entirely</b>. At 100 MHz a 4-vector job completes in <b>≈ 170 ns</b>, or <b>≈ 130 ns</b>
+  reusing weights. You cannot see either on an LED. <b>Solution:</b> let the accelerator run at full
+  speed, but <b>latch the result</b> into registers the operator reads back at leisure.</p>
+  <p class="small">The FSM is 5 states — <code>IDLE(0) → WLOAD(1) → COMPUTE(2) → DRAIN(3) →
+  DONE(4)</code>. There is no FLUSH phase; COMPUTE follows WLOAD directly. If you display
+  <code>phase</code> on the LEDs (state <code>S_CAPTURE</code> in <code>fpga_top.sv</code> does),
+  use that encoding.</p>
+  <h3>Challenge B — 8 switches / 8 LEDs are too narrow for a 4×4 matrix</h3>
+  <p>A 4×4 int8 weight matrix is 16 bytes; a 4×4 activation matrix is another 16; each result is an
+  int32. Eight bits in, eight bits out. <b>Solution:</b> a small on-chip <b>console FSM</b> — enter
+  one byte per switch setting, commit with a button, auto-advance a pointer; read the result one byte
+  at a time selected by the switches.</p>
+</div>
+<div class="callout tip"><span class="lbl">Key idea</span>The existing RTL is <b>not modified</b>. All
+of this lives in a new wrapper, <code>fpga_top.sv</code>, that instantiates
+<code>accelerator_system_top</code> and drives its host ports — exactly what the testbench did in
+simulation, now done in hardware by switches and buttons.</div>
+
+<!-- 2 -->
+<h2 id="opts"><span class="num">2</span>Four peripheral-free interface options</h2>
+<p class="sub">All four avoid external connectors. Pick by how much you want to type vs. how much you
+want to see. This guide builds option&nbsp;1 in full and shows how to reach the others.</p>
+<div class="panel">
+<table>
+<thead><tr><th>Option</th><th>How you interact</th><th>Effort</th><th>Best for</th></tr></thead>
+<tbody>
+<tr><td><b>1 · Switches + LEDs</b><br><span class="rec">built here</span></td>
+  <td>Enter bytes on SW, commit with buttons, read result bytes on LEDs</td><td>Medium HW, zero PC tools</td>
+  <td>The literal ask — a self-contained board demo with nothing attached</td></tr>
+<tr><td><b>2 · Vivado VIO + ILA</b><br><span class="rec">recommended</span></td>
+  <td>Drive inputs / read outputs from the Vivado dashboard over the <b>same JTAG-USB cable</b> used to program</td>
+  <td>Low HW, uses Vivado Hardware Manager</td>
+  <td>Fastest bring-up and the only way to <i>watch the pipeline</i> cycle-by-cycle. No physical I/O at all.</td></tr>
+<tr><td><b>3 · USB-UART text console</b></td>
+  <td>Type matrices / see results as <b>text</b> in a serial terminal (PuTTY/Tera Term) over the on-board USB-UART. On the ZedBoard that bridge is on the <b>PS</b> (UART1, MIO48/49), so this uses a <i>minimal</i> PS + an AXI-Lite wrapper + a tiny bare-metal monitor.</td>
+  <td>Medium (block design + <code>accel_axi</code> + C monitor), zero external parts</td>
+  <td>Comfortable matrix entry; the USB cable is already connected</td></tr>
+<tr><td><b>4 · Full PS / AXI integration</b></td>
+  <td>The same PS+AXI base scaled up — AXI-DMA streaming of many vectors, a done-interrupt, or a Linux/UIO driver</td>
+  <td>High</td>
+  <td>The most product-like path; real workloads beyond a hand-typed 4×4</td></tr>
+</tbody>
+</table>
+<p class="cyc">Options 2–4 are detailed in §9. Everything from §3–§8 builds option 1.</p>
+</div>
+
+<!-- 3 -->
+<h2 id="harness"><span class="num">3</span>The console harness — <code>fpga_top.sv</code></h2>
+<p class="sub">One wrapper adds four things around the untouched accelerator: button debouncers, a
+loader FSM, a start/done handshake, and a result reader + LED mux. Press <b>Play</b> to walk the
+load → run → read flow.</p>
+<div class="panel">
+  <div class="ctrl">
+    <button class="btn primary" id="flowPlay">▶ Play flow</button>
+    <button class="btn" id="flowStep">Step ▸</button>
+    <button class="btn" id="flowReset">↺ Reset</button>
+    <span class="cyc" id="flowLbl">idle</span>
+  </div>
+  <div class="flow" id="flow">
+    <div class="stg" data-s="0"><div class="t">SW + buttons</div><div class="d">operator enters bytes, presses COMMIT</div></div>
+    <div class="arrow">→</div>
+    <div class="stg" data-s="1"><div class="t">Loader FSM</div><div class="d">fills wbuf[16] &amp; abuf[16]</div></div>
+    <div class="arrow">→</div>
+    <div class="stg" data-s="2"><div class="t">host_* writes</div><div class="d">stream into a_mem / weight_mem while !busy</div></div>
+    <div class="arrow">→</div>
+    <div class="stg" data-s="3"><div class="t">start ▸ accelerator</div><div class="d">FSM+AGU run the job (~170 ns)</div></div>
+    <div class="arrow">→</div>
+    <div class="stg" data-s="4"><div class="t">capture on done</div><div class="d">read output_mem → obuf[4]</div></div>
+    <div class="arrow">→</div>
+    <div class="stg" data-s="5"><div class="t">LED read-out</div><div class="d">SW selects a result byte → LEDs</div></div>
+  </div>
+</div>
+
+<h3>The console FSM</h3>
+<p class="sub">Seven states. It never drives a memory port while the accelerator is <code>busy</code> —
+the design's own arbitration would mask it anyway, but the FSM respects it by construction.</p>
+<div class="panel">
+  <div class="ctrl"><button class="btn primary" id="fsmPlay">▶ Step through states</button><span class="cyc" id="fsmLbl">S_ENTER_W</span></div>
+  <div class="fsm" id="fsm">
+    <div class="state" data-i="0">S_ENTER_W<br><span class="cyc">16 weight bytes</span></div>
+    <div class="state" data-i="1">S_ENTER_A<br><span class="cyc">16 activation bytes</span></div>
+    <div class="state" data-i="2">S_READY<br><span class="cyc">wait START</span></div>
+    <div class="state" data-i="3">S_WRITE<br><span class="cyc">8 SRAM writes</span></div>
+    <div class="state" data-i="4">S_RUN<br><span class="cyc">wait done</span></div>
+    <div class="state" data-i="5">S_CAPTURE<br><span class="cyc">read 4 words</span></div>
+    <div class="state" data-i="6">S_READ<br><span class="cyc">display</span></div>
+  </div>
+  <p class="cyc" style="margin-top:10px">BTND (RESET) returns to S_ENTER_W from any state. Full source:
+  <code>FPGA_IMPL/rtl/fpga_top.sv</code> (elaborates clean against the RTL).</p>
+</div>
+
+<!-- 4 -->
+<h2 id="proto"><span class="num">4</span>The switch / LED byte protocol</h2>
+<p class="sub">Toggle the switches below to form a signed byte; the LEDs echo it (as they do on the board
+while loading). This is exactly one entered value.</p>
+<div class="panel">
+  <div class="board">
+    <div class="bank">
+      <div class="cap">SW7 … SW0 &nbsp;(one signed int8)</div>
+      <div class="row" id="swRow"></div>
+    </div>
+    <div class="bank">
+      <div class="cap">LD7 … LD0 &nbsp;(echo)</div>
+      <div class="row" id="ledRow"></div>
+    </div>
+  </div>
+  <div class="readout">byte = <b id="roBin">00000000</b> &nbsp;·&nbsp; unsigned <b id="roU">0</b>
+    &nbsp;·&nbsp; signed <b id="roS">0</b> &nbsp;·&nbsp; hex <b id="roH">0x00</b></div>
+</div>
+
+<h3>Entry sequence (fixed 4×4 × 4×4 demo)</h3>
+<ol>
+  <li><b>Weights</b> — 16 bytes, row-major <code>W[0][0..3], W[1][0..3], …</code>. Set SW, press
+  <b>BTNC</b> (COMMIT); the pointer auto-advances. After 16 commits the FSM moves to activations.</li>
+  <li><b>Activations</b> — 16 bytes, row-major <code>A[0][0..3], …, A[3][0..3]</code> (each activation
+  row becomes one streamed vector). After 16 commits the FSM parks in <b>S_READY</b>.</li>
+  <li><b>Run</b> — press <b>BTNU</b> (START). The harness writes the four weight words and four
+  activation words into the SRAMs, pulses <code>start</code>, and waits for <code>done</code>.</li>
+  <li><b>Read</b> — the 4×4 result is 4 words × 16 bytes. Set <code>SW[5:4]</code> = result row (0–3)
+  and <code>SW[3:0]</code> = byte within that row's 128-bit word; the LEDs show that byte. Little-endian:
+  byte 0 is the low byte of column 0's int32.</li>
+  <li><b>BTND</b> (RESET) at any time restarts the entry sequence.</li>
+</ol>
+<div class="callout"><span class="lbl">Signed bytes</span>Enter negative weights/activations as two's
+complement: −1 = <code>11111111</code> (0xFF), −128 = <code>10000000</code> (0x80). The readout above
+shows the signed value so you can dial it in.</div>
+
+<!-- 5 -->
+<h2 id="clock"><span class="num">5</span>Clocking &amp; why the result is latched</h2>
+<p class="sub">The 100 MHz on-board oscillator (pin&nbsp;Y9) drives everything directly. There is
+<b>no need to slow the clock</b>: the job runs full-speed and the harness captures the result into
+<code>obuf</code>, which the operator then reads at human pace via the switches.</p>
+<ul>
+  <li><b>Do not gate the clock to "single-step".</b> The pipeline has SRAMs with a synchronous read;
+  freezing the clock mid-job is fragile and would require touching the verified RTL. If you want to
+  watch it evolve cycle-by-cycle, use <b>option 2 (ILA)</b> instead — it samples the real clock.</li>
+  <li><b>Buttons are debounced</b> (~2.6 ms window) and turned into single-cycle pulses, so one press
+  commits exactly one byte.</li>
+  <li><b>Power-on reset</b> is a saturating counter (<code>rst_n</code> low for 64 k cycles after
+  configuration), so the accelerator starts from a clean state with no reset button required.</li>
+</ul>
+
+<!-- 6 -->
+<h2 id="util"><span class="num">6</span>Resource use &amp; timing (it is tiny)</h2>
+<p class="sub">The XC7Z020 has 53 200 LUTs, 106 400 FFs, 220 DSP48s and 140 block RAMs. This design
+barely dents it — the interesting numbers are the DSPs and BRAMs.</p>
+<div class="panel">
+<table>
+<thead><tr><th>Resource</th><th>Used by the design</th><th>XC7Z020</th><th>≈ %</th></tr></thead>
+<tbody>
+<tr><td>DSP48 (8×8 multiply)</td><td>16 (one per PE) — synthesis may pack the small add into the same slice</td><td>220</td><td class="n">~7%</td></tr>
+<tr><td>Block RAM</td><td><code>output_mem</code> 256×128 (~1–2 BRAM); <code>a_mem</code> 256×32 (~1 BRAM); <code>weight_mem</code> 4×32 → LUTRAM</td><td>140</td><td class="n">&lt;5%</td></tr>
+<tr><td>LUT / FF</td><td>16 PEs + skew/de-skew + FSM/AGU + harness — a few thousand each</td><td>53 200 / 106 400</td><td class="n">&lt;10%</td></tr>
+</tbody>
+</table>
+<p><b>Timing:</b> the critical path is one 8×8 multiply feeding a 32-bit add inside a PE. 100 MHz
+(10 ns) is comfortable for this on the −1 speed grade; expect positive slack. If you ever fail timing
+after edits, add an MMCM to run the fabric at 50 MHz — the interface does not care about throughput.</p>
+</div>
+
+<!-- 7 -->
+<h2 id="flow"><span class="num">7</span>Vivado build flow (step by step)</h2>
+<div class="panel">
+<ol>
+  <li><b>New project</b> → RTL project, do not specify sources yet → part <code>xc7z020clg484-1</code>
+  (or pick the ZedBoard from the boards list if you have the board files).</li>
+  <li><b>Add design sources</b>: all 13 files from <code>…SIMPLE_ACCEL_RTL/</code> plus
+  <code>FPGA_IMPL/rtl/fpga_top.sv</code>. Set <b><code>fpga_top</code> as top</b>.</li>
+  <li><b>Add constraints</b>: <code>FPGA_IMPL/zedboard_accelerator.xdc</code>.
+  <span class="warn">Verify the pins/IOSTANDARDs against the official Digilent master XDC for your
+  board revision (see the callout below).</span></li>
+  <li><b>Run Synthesis</b>, then <b>Run Implementation</b>, then <b>Generate Bitstream</b>. A PL-only
+  Zynq design builds fine; the XDC allows the unconstrained-pin DRC so it completes.</li>
+  <li><b>Open Hardware Manager</b> → connect the ZedBoard over USB (JP2 in JTAG mode; power on) →
+  <b>Program Device</b> with the generated <code>.bit</code>.</li>
+  <li><b>Interact</b>: follow the entry sequence in §4. That's it — nothing else is attached.</li>
+</ol>
+</div>
+<div class="callout"><span class="lbl">Pin constraints — verify before building</span>Board revisions move
+pins. Download the Digilent <code>zedboard_master.xdc</code>, uncomment the clock / SW / LD / BTN lines,
+and rename the ports to <code>clk, sw[*], btnc/u/d/l/r, led[*]</code>. The provided XDC matches the
+common rev C/D mapping but is a starting template, not a guarantee for your board.</div>
+
+<!-- 8 -->
+<h2 id="bringup"><span class="num">8</span>Bring-up test — a known-answer 4×4 × 4×4</h2>
+<p class="sub">Use the same directed case the re-verification testbench checks (section T5), so you know
+the expected answer before you touch the board.</p>
+<div class="panel">
+<pre><code>Enter WEIGHTS (16 commits, row-major W[r][c]):
+   1  2  3  4   5  6  7  8   9 10 11 12  13 14 15 16
+
+Enter ACTIVATIONS (16 commits, row-major A[i][r]):
+   1  0  0  0   0  1  0  0   0  0  1  0   1  1  1  1
+
+Press START.  Expected result C = A x W:
+   row 0 :  1   2   3   4          (= W row 0)
+   row 1 :  5   6   7   8          (= W row 1)
+   row 2 :  9  10  11  12          (= W row 2)
+   row 3 : 28  32  36  40          (= column sums)
+
+Read row 3, column 0 (= 28 = 0x1C):
+   SW[5:4] = 11  (result row 3)
+   SW[3:0] = 0000 (byte 0 = low byte of column 0)
+   LEDs -> 0001 1100  = 28   ✓
+Column 1 of row 3 (= 32): SW[3:0] = 0100 (byte 4) -> 0010 0000 = 32 ✓</code></pre>
+<p>Because every result here fits in one byte and is non-negative, only the low byte of each column's
+int32 is non-zero — a convenient first test. For the general signed example (T6) the upper bytes carry
+sign extension (e.g. −13 = 0xFFFFFFF3), which is where reading all four bytes of a word matters.</p>
+</div>
+
+<!-- 9 -->
+<h2 id="alt"><span class="num">9</span>Step-by-step walkthrough for every option</h2>
+<p class="sub">Each option is a complete procedure below. They are ordered by hardware effort; all four
+need <b>no external connectors</b> — only the USB cable that already programs the board.</p>
+
+<!-- ===== OPTION 1 ===== -->
+<h3 id="opt1">Option 1 — Switches + LEDs &nbsp;<span class="rec">built in this guide</span></h3>
+<div class="panel">
+<ol>
+  <li><b>Project</b> — Vivado → <i>Create Project</i> → RTL project → part <code>xc7z020clg484-1</code>.</li>
+  <li><b>Sources</b> — <i>Add Sources → Add or create design sources</i>: all 13 files from
+  <code>…SIMPLE_ACCEL_RTL/</code> + <code>FPGA_IMPL/rtl/fpga_top.sv</code>. Right-click
+  <code>fpga_top</code> → <i>Set as Top</i>.</li>
+  <li><b>Constraints</b> — add <code>FPGA_IMPL/zedboard_accelerator.xdc</code> (verify pins per §7 callout).</li>
+  <li><b>Build</b> — <i>Run Synthesis → Run Implementation → Generate Bitstream</i>.</li>
+  <li><b>Program</b> — <i>Open Hardware Manager → Open Target → Auto Connect → Program Device</i>
+  with the <code>.bit</code>.</li>
+  <li><b>Operate</b> — follow §4/§8: enter 16 weight bytes then 16 activation bytes on the switches
+  (BTNC after each), press BTNU to run, then select result bytes with the switches and read the LEDs.</li>
+</ol>
+<p class="cyc">This is the whole flow already covered in §7–§8; the steps are repeated here for completeness.</p>
+</div>
+
+<!-- ===== OPTION 2 ===== -->
+<h3 id="opt2">Option 2 — Vivado VIO + ILA over JTAG &nbsp;<span class="rec">recommended for debug</span></h3>
+<p class="sub">Two on-chip debug cores turn the programming cable into a data path. Use an <b>ILA</b> to
+<i>watch</i> the pipeline and/or a <b>VIO</b> to <i>drive</i> inputs from the PC — no switches, no LEDs.</p>
+<div class="panel">
+<h4>2a · ILA — capture the ~170 ns run as a waveform</h4>
+<ol>
+  <li>Build the Option-1 design (the ILA rides on top of <code>fpga_top</code> so you still load via switches, or on top of the Option-3 design so you load via UART).</li>
+  <li>In the elaborated or synthesized design, right-click the nets you want to see —
+  <code>u_acc/…/psum_out_bottom</code>, <code>result</code>, <code>phase</code>, <code>busy</code>,
+  <code>start</code> — and choose <i>Mark Debug</i>. Alternatively add an <b>ILA</b> IP from the IP catalog.</li>
+  <li>Run the <i>Set Up Debug</i> wizard: assign the debug clock to <code>clk</code>, set a sample
+  depth of e.g. 1024, finish. Re-run synthesis/implementation/bitstream.</li>
+  <li>Program the device. In Hardware Manager an <b>hw_ila</b> appears. Set the trigger to
+  <code>start == 1</code>, arm it, then cause a run (press BTNU, or use the UART/VIO). The wizard
+  captures the whole job — you can watch the weight load, the diagonal wavefront and each column's
+  result appear at <code>n+3+c</code>.</li>
+</ol>
+<h4>2b · VIO — drive inputs and read outputs from the dashboard</h4>
+<ol>
+  <li>Instantiate a <b>VIO</b> IP alongside <code>accelerator_system_top</code> in a thin top
+  (skip <code>fpga_top</code>). Map VIO <i>probe_out</i> ports to
+  <code>start, num_vectors[8], act_base[8], out_base[8], host_w_wdata[32], host_w_addr[2],
+  host_w_we, host_a_wdata[32], host_a_addr[8], host_a_we, host_o_addr[8]</code> and VIO
+  <i>probe_in</i> ports to <code>busy, done, phase[3], o_rdata[128]</code>.</li>
+  <li>Only <code>clk</code> needs a pin (Y9). No switch/LED constraints are required. Build and program.</li>
+  <li>Open the <b>hw_vio</b> dashboard, add all probes. To load a weight word: set
+  <code>host_w_wdata</code> and <code>host_w_addr</code>, then toggle <code>host_w_we</code> 1→0.
+  Repeat for the four weight and four activation words, then pulse <code>start</code>.</li>
+  <li>Set <code>host_o_addr</code> to 0…3 and read <code>o_rdata</code> (128-bit) directly on the
+  dashboard — the four int32 columns of each result row.</li>
+</ol>
+<div class="callout tip"><span class="lbl">Best of both</span>Keep <code>fpga_top</code> for loading (switches
+are quick for a few bytes) and add an <b>ILA</b> purely to observe. VIO shines when you want to script
+inputs from a Tcl console (<code>set_property OUTPUT_VALUE …</code> on the probes).</div>
+</div>
+
+<!-- ===== OPTION 3 ===== -->
+<h3 id="opt3">Option 3 — USB-UART text console (minimal PS + AXI-Lite)</h3>
+<div class="callout"><span class="lbl">ZedBoard reality — read this first</span>The on-board USB-UART
+(Cypress bridge) is wired to the <b>Processing System</b> — <b>PS UART1 on MIO48/49</b>, not to the PL.
+A pure-PL UART cannot reach it without an external adapter (a peripheral you don't have). So the
+peripheral-free text console goes through a <i>minimal</i> PS: the ARM core owns the UART, and a
+bare-metal "monitor" drives the accelerator over an AXI-Lite bus. The accelerator RTL stays unchanged;
+the bridge to it is <code>FPGA_IMPL/rtl/accel_axi.sv</code> (a small AXI4-Lite slave, elaborated clean).</div>
+
+<div class="panel">
+<h4>Data path</h4>
+<pre><code>  You (terminal)  ──USB──►  PS UART1  ──►  ARM Cortex-A9  ──AXI-Lite──►  accel_axi  ──►  accelerator_system_top
+   PuTTY/Tera Term          (MIO48/49)     accel_monitor.c   (M_AXI_GP0)   (this wrapper)   (unmodified design, PL)</code></pre>
+
+<h4>accel_axi register map (byte address = index × 4)</h4>
+<table>
+<thead><tr><th>idx</th><th>offset</th><th>name</th><th>acc</th><th>meaning</th></tr></thead>
+<tbody>
+<tr><td class="n">0</td><td>0x00</td><td>NUMVEC</td><td>W</td><td><code>num_vectors[7:0]</code></td></tr>
+<tr><td class="n">1</td><td>0x04</td><td>ACT_BASE</td><td>W</td><td><code>act_base[7:0]</code></td></tr>
+<tr><td class="n">2</td><td>0x08</td><td>OUT_BASE</td><td>W</td><td><code>out_base[7:0]</code></td></tr>
+<tr><td class="n">3</td><td>0x0C</td><td>W_WDATA</td><td>W</td><td>32-bit weight word (4×int8, lane c)</td></tr>
+<tr><td class="n">4</td><td>0x10</td><td>W_COMMIT</td><td>W</td><td>write <code>w_addr</code> → pulses <code>host_w_we</code></td></tr>
+<tr><td class="n">5</td><td>0x14</td><td>A_WDATA</td><td>W</td><td>32-bit activation word (4×int8, lane r)</td></tr>
+<tr><td class="n">6</td><td>0x18</td><td>A_COMMIT</td><td>W</td><td>write <code>a_addr</code> → pulses <code>host_a_we</code></td></tr>
+<tr><td class="n">7</td><td>0x1C</td><td>START</td><td>W</td><td>write anything → pulses <code>start</code> (clears sticky done)</td></tr>
+<tr><td class="n">8</td><td>0x20</td><td>O_ADDR</td><td>W</td><td><code>output_mem</code> read address</td></tr>
+<tr><td class="n">9</td><td>0x24</td><td>STATUS</td><td>R</td><td>bit0 busy · bit1 done(sticky) · bits[4:2] phase</td></tr>
+<tr><td class="n">10–13</td><td>0x28–0x34</td><td>ORD0–3</td><td>R</td><td><code>o_rdata</code> 32-bit slices = result columns 0–3</td></tr>
+</tbody>
+</table>
+
+<h4>Procedure</h4>
+<ol>
+  <li><b>Block design</b> — <i>Create Block Design</i>. Add <b>ZYNQ7 Processing System</b>; click
+  <i>Run Block Automation</i> and apply the <b>ZedBoard preset</b> (this enables UART1 on MIO48/49 and
+  <code>FCLK_CLK0</code>). Confirm UART1 is checked under <i>MIO Configuration → I/O Peripherals</i>.</li>
+  <li><b>Add the accelerator</b> — add <code>accel_axi.sv</code> (and the 13 RTL files) to the project,
+  then in the BD right-click → <i>Add Module</i> → <code>accel_axi</code>. (Or <i>Tools → Create and
+  Package New IP</i> to package it first.)</li>
+  <li><b>Connect AXI</b> — run <i>Connection Automation</i>: it inserts an <b>AXI Interconnect</b> and a
+  <b>Processor System Reset</b>, wires <code>M_AXI_GP0 → accel_axi S_AXI</code>, and ties
+  <code>FCLK_CLK0</code> to <code>S_AXI_ACLK</code> and the clocks. Check <code>S_AXI_ARESETN</code> is
+  the interconnect's peripheral reset.</li>
+  <li><b>Address</b> — in the <i>Address Editor</i>, assign <code>accel_axi</code> a base (default
+  ~<code>0x43C0_0000</code>). Note it — it becomes <code>XPAR_ACCEL_AXI_0_S_AXI_BASEADDR</code>.</li>
+  <li><b>Wrapper + build</b> — <i>Validate Design</i> → right-click the BD → <i>Create HDL Wrapper</i>
+  (let Vivado manage) → set as top → <i>Generate Bitstream</i>. No PL pin XDC is needed; the PS supplies
+  the clock and owns the UART pins.</li>
+  <li><b>Export</b> — <i>File → Export → Export Hardware</i> → <b>Include bitstream</b> → produces an
+  <code>.xsa</code>.</li>
+  <li><b>Vitis app</b> — open Vitis → <i>Create Platform Project</i> from the <code>.xsa</code> →
+  <i>Create Application Project</i> (Empty Application, standalone/bare-metal). Add
+  <code>FPGA_IMPL/sw/accel_monitor.c</code> to <code>src/</code>. In the BSP settings set
+  <b>stdin/stdout = ps7_uart_1</b>.</li>
+  <li><b>Terminal</b> — plug in USB. In Windows <i>Device Manager</i> note the <b>USB Serial Port</b>
+  (COMx). Open PuTTY/Tera Term on that port at <b>115200-8-N-1</b>, no flow control.</li>
+  <li><b>Run</b> — in Vitis: <i>Program FPGA</i> (loads the bitstream), then <i>Run</i> the app. The
+  monitor menu appears in the terminal.</li>
+</ol>
+
+<h4>Worked terminal session</h4>
+<pre><code> 4x4 systolic accelerator monitor
+   d  load built-in demo matrices
+   w  enter weight matrix W[r][c]
+   a  enter activation matrix A[i][r]
+   r  run the job
+   p  print the result matrix
+   ?  this help
+
+accel> <span class="k">d</span>
+  demo matrices loaded (expect result row 3 = 28 32 36 40).
+accel> <span class="k">r</span>
+  running...
+  done.
+accel> <span class="k">p</span>
+  C = A x W :
+    [      1      2      3      4 ]
+    [      5      6      7      8 ]
+    [      9     10     11     12 ]
+    [     28     32     36     40 ]
+accel></code></pre>
+<p>To run your own matrices, press <b>w</b> and type 16 signed integers (row-major
+<code>W[r][c]</code>), then <b>a</b> and 16 more (<code>A[i][r]</code>), then <b>r</b> and <b>p</b>.
+Source of the monitor: <code>FPGA_IMPL/sw/accel_monitor.c</code>.</p>
+</div>
+
+<!-- ===== OPTION 4 ===== -->
+<h3 id="opt4">Option 4 — Full PS / AXI integration (scaling beyond a typed 4×4)</h3>
+<p class="sub">Option 3 already stands up the PS+AXI base. Option 4 is what you add once you want real
+workloads rather than hand-typed matrices — still no external peripherals.</p>
+<div class="panel">
+<ol>
+  <li><b>Stream many vectors with AXI-DMA</b> — widen <code>accel_axi</code> (or add a second AXI-Stream
+  slave) so the PS DMAs a block of activation vectors into <code>a_mem</code> and reads the result
+  block back, instead of one word per register write. <code>num_vectors</code> then drives a long job.</li>
+  <li><b>Interrupt on done</b> — route the accelerator's <code>done</code> to a PL-to-PS interrupt
+  (<code>IRQ_F2P</code>) instead of polling the sticky bit; the monitor becomes event-driven.</li>
+  <li><b>Run under Linux</b> — with PetaLinux, expose <code>accel_axi</code> as a <b>UIO</b> device and
+  <code>mmap</code> the register block from a user-space C/Python program, printing over the same
+  USB-UART console (now the Linux <code>ttyPS0</code>).</li>
+  <li><b>Benchmark</b> — feed larger activation matrices (up to the 256-vector depth of
+  <code>a_mem</code>) and time the job; each vector is one clock once the pipe is full.</li>
+</ol>
+<p class="cyc">All of this reuses the unmodified accelerator and the same USB cable — the difference is how
+much data moves and who drives it.</p>
+</div>
+
+<!-- 10 -->
+<h2 id="trouble"><span class="num">10</span>Troubleshooting</h2>
+<div class="panel">
+<table>
+<thead><tr><th>Symptom</th><th>Likely cause / fix</th></tr></thead>
+<tbody>
+<tr><td>Bitstream generation stops on unconstrained pins</td><td>Keep the
+  <code>BITSTREAM.GENERAL.UNCONSTRAINEDPINS {Allow}</code> line, and make sure every top port is in the XDC.</td></tr>
+<tr><td>Every commit advances by two bytes</td><td>Debounce window too short / button bounce — increase
+  <code>DB_BITS</code> in the <code>debounce</code> module.</td></tr>
+<tr><td>LEDs show garbage / X after program</td><td>Give power-on reset time; the counter holds
+  <code>rst_n</code> low for 64 k cycles — don't press START within the first ~1 ms.</td></tr>
+<tr><td>Result is a vertically-flipped product</td><td>Weight rows entered in the wrong order. Enter
+  <b>row-major</b> W[0] first; the AGU handles the bottom-first array loading internally.</td></tr>
+<tr><td>Timing failure after edits</td><td>Add an MMCM and clock the fabric at 50 MHz; the console does
+  not depend on throughput.</td></tr>
+<tr><td>Wrong pins / no response</td><td>Re-check the XDC against the Digilent master for your board rev.</td></tr>
+</tbody>
+</table>
+</div>
+
+<footer>
+  <b>Files in <code>FPGA_IMPL/</code>:</b>
+  <code>rtl/fpga_top.sv</code> (console harness, elaborates against the design),
+  <code>zedboard_accelerator.xdc</code> (pin template),
+  this guide, and <code>README.md</code>.<br><br>
+  The accelerator RTL itself is unchanged — see <code>…SIMPLE_ACCEL_RTL/</code> and the design
+  reference in <code>context_mkdwn/</code>. Functional baseline: 11/11 testbenches, 3 680 checks,
+  0 mismatches (<code>verification_recheck/</code>).
+</footer>
+
+</div>
+<script>
+/* flow */
+(function(){
+  const stg=[...document.querySelectorAll('#flow .stg')], lbl=document.getElementById('flowLbl');
+  const names=['operator enters bytes','loader fills buffers','writing SRAMs','job running (~170 ns)','capturing result','reading out on LEDs'];
+  let i=-1,t=null;
+  function show(){ stg.forEach((s,k)=>s.classList.toggle('on',k===i)); lbl.textContent=i<0?'idle':names[i]; }
+  function step(){ i=(i+1)%stg.length; show(); }
+  document.getElementById('flowStep').onclick=()=>{if(t){clearInterval(t);t=null;}step();};
+  document.getElementById('flowPlay').onclick=()=>{ if(t){clearInterval(t);t=null;return;} t=setInterval(step,760); };
+  document.getElementById('flowReset').onclick=()=>{if(t){clearInterval(t);t=null;}i=-1;show();};
+  show();
+})();
+/* fsm */
+(function(){
+  const st=[...document.querySelectorAll('#fsm .state')], lbl=document.getElementById('fsmLbl');
+  const nm=['S_ENTER_W','S_ENTER_A','S_READY','S_WRITE','S_RUN','S_CAPTURE','S_READ']; let i=0,t=null;
+  function show(){ st.forEach((s,k)=>s.classList.toggle('on',k===i)); lbl.textContent=nm[i]; }
+  document.getElementById('fsmPlay').onclick=()=>{ if(t){clearInterval(t);t=null;return;} t=setInterval(()=>{i=(i+1)%st.length;show();},700); };
+  show();
+})();
+/* board widget */
+(function(){
+  const swRow=document.getElementById('swRow'), ledRow=document.getElementById('ledRow');
+  const sws=[],leds=[]; let val=0;
+  for(let b=7;b>=0;b--){ const s=document.createElement('div'); s.className='sw'; s.innerHTML='<div class="k"></div><div class="lab">SW'+b+'</div>';
+    s.onclick=()=>{ val^= (1<<b); render(); }; swRow.appendChild(s); sws[b]=s; }
+  for(let b=7;b>=0;b--){ const l=document.createElement('div'); l.className='led'; ledRow.appendChild(l); leds[b]=l; }
+  function render(){
+    for(let b=0;b<8;b++){ const on=(val>>b)&1; sws[b].classList.toggle('on',on); leds[b].classList.toggle('on',on); }
+    const bin=val.toString(2).padStart(8,'0');
+    document.getElementById('roBin').textContent=bin;
+    document.getElementById('roU').textContent=val;
+    document.getElementById('roS').textContent=(val>127?val-256:val);
+    document.getElementById('roH').textContent='0x'+val.toString(16).toUpperCase().padStart(2,'0');
+  }
+  render();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,911 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>USB-UART Console Implementation Guide — 4×4 Systolic Array Accelerator on ZedBoard</title>
+<style>
+@page { size: A4; margin: 16mm 15mm 16mm 15mm; }
+* { box-sizing: border-box; }
+body {
+  font-family: "Segoe UI", "Calibri", "Helvetica Neue", Arial, sans-serif;
+  font-size: 10pt; line-height: 1.45; color: #16181d; margin: 0;
+}
+h1 { font-size: 21pt; line-height: 1.15; margin: 0 0 6px 0; color: #1d4d2b; letter-spacing: -0.3px; }
+h2 {
+  font-size: 14pt; margin: 22px 0 8px 0; color: #1d4d2b;
+  border-bottom: 2px solid #1d4d2b; padding-bottom: 3px;
+  page-break-after: avoid; break-after: avoid;
+}
+h3 { font-size: 11.5pt; margin: 15px 0 5px 0; color: #2a6b3c; page-break-after: avoid; break-after: avoid; }
+h4 { font-size: 10pt; margin: 12px 0 4px 0; color: #2c3540; page-break-after: avoid; break-after: avoid; }
+p { margin: 6px 0; }
+ul, ol { margin: 6px 0; padding-left: 22px; }
+li { margin: 3px 0; }
+code {
+  font-family: "Consolas", "DejaVu Sans Mono", monospace; font-size: 8.8pt;
+  background: #eef4ef; padding: 0.5px 3px; border-radius: 2px; color: #123;
+}
+pre {
+  font-family: "Consolas", "DejaVu Sans Mono", monospace; font-size: 7.9pt;
+  line-height: 1.35; background: #f6f9f7; border: 1px solid #d4e0d7;
+  border-left: 3px solid #1d4d2b; border-radius: 3px;
+  padding: 7px 9px; margin: 8px 0; white-space: pre-wrap; overflow-wrap: anywhere;
+  page-break-inside: avoid; break-inside: avoid;
+}
+pre code { background: none; padding: 0; font-size: inherit; }
+pre.term { background: #1d2721; color: #d8e6dc; border-color: #16201a; border-left-color: #4f9a63; }
+pre.term code { color: inherit; }
+table {
+  width: 100%; border-collapse: collapse; margin: 9px 0; font-size: 8.6pt;
+  page-break-inside: avoid; break-inside: avoid;
+}
+th {
+  background: #1d4d2b; color: #fff; text-align: left; padding: 4px 6px;
+  font-weight: 600; border: 1px solid #1d4d2b; vertical-align: top;
+}
+td { border: 1px solid #c8d6cd; padding: 3.5px 6px; vertical-align: top; }
+tbody tr:nth-child(even) { background: #f4f8f5; }
+.mono td:first-child, .mono th:first-child { font-family: "Consolas", monospace; }
+.title-block { border-bottom: 3px solid #1d4d2b; padding-bottom: 12px; margin-bottom: 16px; }
+.subtitle { font-size: 12pt; color: #4a5764; margin: 2px 0 8px 0; }
+.meta { font-size: 8.5pt; color: #6b7885; }
+.note, .warn, .tip {
+  padding: 7px 10px; margin: 9px 0; border-radius: 3px; font-size: 9.2pt;
+  page-break-inside: avoid; break-inside: avoid;
+}
+.note { background: #eaf3fa; border-left: 4px solid #2b7cb8; }
+.warn { background: #fdf1e8; border-left: 4px solid #d2691e; }
+.tip  { background: #edf7ee; border-left: 4px solid #3d8b45; }
+.note b, .warn b, .tip b { display: block; margin-bottom: 2px; font-size: 8.8pt;
+  text-transform: uppercase; letter-spacing: 0.5px; }
+.note b { color: #1c5c8c; } .warn b { color: #a2500f; } .tip b { color: #2c6b33; }
+.toc { background: #f6f9f7; border: 1px solid #d4e0d7; border-radius: 4px; padding: 10px 14px; margin: 14px 0; }
+.toc ol { margin: 0; padding-left: 20px; column-count: 2; column-gap: 26px; font-size: 9.2pt; }
+.toc li { margin: 2px 0; break-inside: avoid; }
+.pb { page-break-before: always; break-before: page; }
+.ascii {
+  font-family: "Consolas", "DejaVu Sans Mono", monospace; font-size: 7.4pt; line-height: 1.25;
+  background: #fbfdfb; border: 1px solid #d4e0d7; border-radius: 3px;
+  padding: 8px 10px; margin: 9px 0; white-space: pre; overflow-x: auto;
+  page-break-inside: avoid; break-inside: avoid;
+}
+.tag { display: inline-block; background: #1d4d2b; color: #fff; font-size: 7.5pt;
+  padding: 1px 6px; border-radius: 8px; letter-spacing: 0.4px; vertical-align: 1px; }
+.small { font-size: 8.5pt; color: #55606c; }
+hr { border: none; border-top: 1px solid #d4e0d7; margin: 16px 0; }
+.stepnum { display:inline-block; background:#1d4d2b; color:#fff; width:22px; height:22px;
+  border-radius:11px; text-align:center; line-height:22px; font-size:9pt; font-weight:700;
+  margin-right:6px; vertical-align:2px; }
+h3.step { border-top: 1px solid #d4e0d7; padding-top: 10px; margin-top: 18px; }
+</style>
+</head>
+<body>
+
+<div class="title-block">
+  <div class="tag">METHOD 3 &nbsp;·&nbsp; PERIPHERAL-FREE</div>
+  <h1>USB-UART Text Console</h1>
+  <div class="subtitle">Step-by-step Vivado + Vitis flow to type matrices into the 4×4
+  weight-stationary systolic-array multiplier and read results back in a serial terminal</div>
+  <div class="meta">
+    Target part <code>xc7z020clg484-1</code> &nbsp;·&nbsp; Vivado + Vitis 2019.1 or later &nbsp;·&nbsp;
+    Design under test <code>accelerator_system_top</code> (unmodified) &nbsp;·&nbsp;
+    Companion document: <code>VIO_ILA.pdf</code>
+  </div>
+</div>
+
+<div class="toc">
+<b style="font-size:9.5pt;color:#1d4d2b;">Contents</b>
+<ol>
+  <li>What this method gives you</li>
+  <li>The data path, and why the PS is involved</li>
+  <li>Prerequisites, board setup, cable drivers</li>
+  <li>The design under test — protocol and data layout</li>
+  <li>The AXI4-Lite wrapper <code>accel_axi.sv</code></li>
+  <li>Step 1 — create the Vivado project</li>
+  <li>Step 2 — add the sources</li>
+  <li>Step 3 — create the block design</li>
+  <li>Step 4 — add and configure the Zynq PS</li>
+  <li>Step 5 — add <code>accel_axi</code> to the block design</li>
+  <li>Step 6 — connection automation</li>
+  <li>Step 7 — assign the address</li>
+  <li>Step 8 — validate, wrap, set top</li>
+  <li>Step 9 — generate the bitstream</li>
+  <li>Step 10 — export hardware (<code>.xsa</code>)</li>
+  <li>Step 11 — the Vitis platform project</li>
+  <li>Step 12 — the Vitis application project</li>
+  <li>Step 13 — BSP settings: route stdio to UART1</li>
+  <li>Step 14 — open the serial terminal</li>
+  <li>Step 15 — program the FPGA and run</li>
+  <li>Step 16 — use the console</li>
+  <li>Register map reference</li>
+  <li>How the software talks to the hardware</li>
+  <li>Troubleshooting</li>
+  <li>Extending to Method 4</li>
+  <li>Appendix A — data packing reference</li>
+  <li>Appendix B — build checklist</li>
+</ol>
+</div>
+
+<h2>1. What this method gives you</h2>
+
+<p>Method 1 makes you enter thirty-two int8 bytes on eight slide switches, one button press at a time.
+Method 2 makes you type hex words into a Vivado dashboard. <b>Method 3 gives you a text console:</b> open
+a serial terminal, press <code>d</code> for the demo or <code>w</code> to type your own matrix, press
+<code>r</code> to run, press <code>p</code> to print. Still no external peripherals — the ZedBoard's
+USB-UART bridge is on the board itself.</p>
+
+<pre class="term"><code>accel&gt; d
+  demo matrices loaded (expect result row 3 = 28 32 36 40).
+
+accel&gt; r
+  running...
+  done.
+
+accel&gt; p
+  C = A x W :
+    [      1      2      3      4 ]
+    [      5      6      7      8 ]
+    [      9     10     11     12 ]
+    [     28     32     36     40 ]
+
+accel&gt; </code></pre>
+
+<h2>2. The data path, and why the PS is involved</h2>
+
+<div class="warn"><b>The ZedBoard USB-UART is a PS resource, not a PL resource</b>
+On the ZedBoard the USB-to-serial bridge is hard-wired to the Zynq <b>Processing System</b> — UART1 on
+MIO48/49. Those pins are not routable from the PL fabric. So a "no external peripherals" text console
+cannot be a pure-PL design: it needs a minimal PS that owns the UART, with an AXI4-Lite bridge carrying
+commands from the ARM core into the accelerator. That bridge is <code>accel_axi.sv</code>.</div>
+
+<div class="ascii">
+   PC                              ZedBoard
+   ┌─────────────┐                 ┌──────────────────────────────────────────────────────┐
+   │ PuTTY /     │   USB           │  PS (Zynq-7000)                │  PL (fabric)        │
+   │ Tera Term / │◄═══════════════►│  ┌──────────┐   ┌───────────┐  │  ┌───────────────┐  │
+   │ Vitis       │  J14 micro-B    │  │ UART1    │   │ Cortex-A9 │  │  │ accel_axi     │  │
+   │ terminal    │  115200-8-N-1   │  │ MIO48/49 │◄─►│ accel_    │  │  │ ┌───────────┐ │  │
+   └─────────────┘                 │  └──────────┘   │ monitor.c │  │  │ │accelerator│ │  │
+                                   │                 └─────┬─────┘  │  │ │_system_top│ │  │
+   ┌─────────────┐                 │                 ┌─────▼─────┐  │  │ │(UNMODIFIED)│ │  │
+   │ Vivado HW   │   USB           │                 │ M_AXI_GP0 │══╪═►│ └───────────┘ │  │
+   │ Manager     │◄═══════════════►│  JTAG           └───────────┘  │  └───────────────┘  │
+   │ (.bit load) │  J17 micro-B    │                 FCLK_CLK0 100 MHz ─────────┘         │
+   └─────────────┘                 └──────────────────────────────────────────────────────┘
+
+   terminal → USB → PS UART1 → ARM (accel_monitor.c) → AXI-Lite → accel_axi → accelerator (PL)
+</div>
+
+<div class="note"><b>Two USB cables, two different jobs</b>
+<b>J17 (PROG)</b> carries JTAG — Vivado uses it to load the bitstream and Vitis uses it to download and
+debug the ARM application. <b>J14 (UART)</b> carries the serial console. You want <b>both</b> plugged in
+for this method. Method 2 (VIO+ILA) uses only J17.</div>
+
+<h2>3. Prerequisites, board setup, cable drivers</h2>
+
+<h3>3.1 Tools</h3>
+<ul>
+<li><b>Vivado</b> and <b>Vitis</b>, <b>the same version</b>, 2019.1 or later. A mismatched pair is a
+    common source of "cannot open the <code>.xsa</code>" errors. <span class="small">In 2019.1 and later
+    the tool is called Vitis; in 2018.3 and earlier it was SDK — the flow is equivalent.</span></li>
+<li><b>Cable drivers</b> — accept Vivado's "Install Cable Drivers" prompt, or run the installer from
+    <code>&lt;Xilinx&gt;/Vivado/&lt;ver&gt;/data/xicom/cable_drivers/</code>.</li>
+<li><b>USB-UART bridge driver</b> — see 3.3.</li>
+<li>Optionally the <b>Digilent board files</b> for the ZedBoard. These are <i>strongly recommended</i> for
+    this method, because the board preset configures the PS DDR, clocks and MIO peripherals correctly in
+    one click. Without them you must configure the PS by hand.</li>
+</ul>
+
+<h3>3.2 Board setup</h3>
+<table>
+<thead><tr><th style="width:22%">Item</th><th style="width:24%">Setting</th><th>Why</th></tr></thead>
+<tbody>
+<tr><td>Power <code>JP3</code> / <code>SW8</code></td><td>USB or wall adapter; power ON</td><td><code>PGOOD</code> (LD13) must be lit.</td></tr>
+<tr><td>Boot mode <code>JP7–JP11</code></td><td>All five to <b>GND</b> = JTAG</td><td>Vitis downloads the ELF over JTAG rather than the PS booting from QSPI/SD. <span class="small">Confirm against the ZedBoard Hardware User Guide for your board revision.</span></td></tr>
+<tr><td>JTAG cable</td><td>Micro-USB into <b>J17</b></td><td>Bitstream download + ARM debug.</td></tr>
+<tr><td>UART cable</td><td>Micro-USB into <b>J14</b></td><td>The serial console.</td></tr>
+</tbody>
+</table>
+
+<h3>3.3 The USB-UART driver and COM port</h3>
+<p>Which bridge chip the board carries depends on its revision:</p>
+<table>
+<thead><tr><th style="width:24%">Board revision</th><th style="width:26%">Bridge chip</th><th>Driver</th></tr></thead>
+<tbody>
+<tr><td>ZedBoard rev C and earlier</td><td>Cypress CY7C64225</td><td>Cypress USB-to-UART driver (bundled by Digilent)</td></tr>
+<tr><td>ZedBoard rev D</td><td>Silicon Labs CP2104</td><td>Silicon Labs CP210x VCP driver</td></tr>
+</tbody>
+</table>
+<p>Both enumerate as a standard <b>USB Serial Port (COMx)</b>. After plugging J14 in and powering the
+board, open <b>Device Manager → Ports (COM &amp; LPT)</b> and note the COM number. If it appears with a
+warning triangle, install the matching driver above.</p>
+
+<div class="tip"><b>Note the COM number now</b>
+You need it in step 14. If several COM ports are present, unplug J14, refresh Device Manager, plug it
+back in, and see which one appears.</div>
+
+<h2>4. The design under test — protocol and data layout</h2>
+
+<p>The accelerator is used exactly as the simulation testbench used it. Nothing about the RTL changes.</p>
+
+<h3>4.1 Host protocol</h3>
+<pre><code>1.  hold rst_n low, then release
+2.  while (!busy):  write weight rows   via host_w_*   (4 words)
+                    write activations   via host_a_*   (num_vectors words)
+3.  pulse start, with num_vectors / act_base / out_base valid
+4.  wait for the done pulse             (job length = num_vectors + 13 clocks)
+5.  while (!busy):  read results        via host_o_addr -> o_rdata</code></pre>
+
+<h3>4.2 The four facts the software must respect</h3>
+<table>
+<thead><tr><th style="width:4%">#</th><th style="width:28%">Fact</th><th>Software consequence</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><b>Job length = <code>num_vectors</code> + 13 clocks.</b> Four vectors = 17 clocks = <b>170 ns</b>. If the weight matrix has not changed since the last job the FSM <b>skips WLOAD</b> and it is <code>num_vectors</code> + 9 = 13 clocks = <b>130 ns</b>.</td><td>Faster than a single AXI register write from the ARM. By the time the CPU's next instruction executes, the job is long finished. The polling loop in <code>run_job()</code> almost always exits on its first read. Software needs no change to get the reuse speed-up — just do not rewrite the weight registers between jobs.</td></tr>
+<tr><td>1b</td><td><b>The FSM has 5 states, not 6.</b> Encoding: <b>0 IDLE, 1 WLOAD, 2 COMPUTE, 3 DRAIN, 4 DONE</b>. The old FLUSH phase (<code>ROWS+2</code> = 6 clocks between WLOAD and COMPUTE) has been removed.</td><td>Any software that decodes <code>STATUS[4:2]</code> to name the phase must use the new table. Nothing else changes: the driver only ever waits on sticky-done.</td></tr>
+<tr><td>2</td><td><b><code>done</code> is a one-cycle pulse (10 ns).</b></td><td>Software polling cannot possibly catch it. <code>accel_axi</code> latches it into a <b>sticky-done</b> bit, cleared automatically when a new <code>start</code> is written. Software polls <code>STATUS.bit1</code>.</td></tr>
+<tr><td>3</td><td><b>Host writes are masked while <code>busy==1</code>.</b></td><td>Load everything <i>before</i> writing START. The monitor's <code>run_job()</code> does exactly this.</td></tr>
+<tr><td>4</td><td><b><code>output_mem</code> has one clock of read latency</b> after <code>host_o_addr</code> changes.</td><td>10 ns versus an AXI read of tens of nanoseconds — comfortable, but <code>print_result()</code> inserts two dummy STATUS reads anyway as belt-and-braces.</td></tr>
+</tbody>
+</table>
+
+<h3>4.3 Data layout — get a lane wrong and the matrix silently transposes</h3>
+<pre><code>weight_mem[r]   [31:24][23:16][15:8][7:0]   =  W[r][3] W[r][2] W[r][1] W[r][0]   (lane c = column c)
+a_mem[i]        [31:24][23:16][15:8][7:0]   =  A[i][3] A[i][2] A[i][1] A[i][0]   (lane r = row r)
+output_mem[i]   [127:96][95:64][63:32][31:0] = C[i][3] C[i][2] C[i][1] C[i][0]   (lane c, int32)</code></pre>
+<p>This is what <code>pack()</code> in <code>accel_monitor.c</code> implements:</p>
+<pre><code>static u32 pack(signed char l0, signed char l1, signed char l2, signed char l3){
+    return ((u32)(u8)l0)        | (((u32)(u8)l1) &lt;&lt; 8)
+         | (((u32)(u8)l2) &lt;&lt; 16) | (((u32)(u8)l3) &lt;&lt; 24);
+}</code></pre>
+
+<div class="tip"><b>Write weight rows in natural order 0, 1, 2, 3</b>
+The design's "weight rows load bottom-first" rule is the <b>AGU's</b> job — it counts <code>w_addr</code>
+down 3, 2, 1, 0 during WLOAD. The software writes <code>weight_mem[r] = W</code> row <i>r</i> in natural
+order, which is what <code>load_weights()</code> does. Pre-reversing produces a wrong result that still
+looks plausible.</div>
+
+<h2 class="pb">5. The AXI4-Lite wrapper <code>accel_axi.sv</code></h2>
+
+<p><code>accel_axi</code> is a minimal AXI4-Lite slave that exposes the accelerator's host ports as
+memory-mapped registers. It instantiates <code>accelerator_system_top</code> unmodified and adds three
+things:</p>
+
+<ol>
+<li><b>A standard AXI4-Lite register file.</b> Nine write registers, five read registers.</li>
+<li><b>One-cycle command pulses.</b> Writes to <code>W_COMMIT</code>, <code>A_COMMIT</code> and
+    <code>START</code> produce single-clock strobes, because the accelerator's control inputs are pulses,
+    not levels:
+<pre style="margin:5px 0"><code>start_p &lt;= 0; w_commit_p &lt;= 0; a_commit_p &lt;= 0;   // default low every cycle
+if (slv_wr) case (widx)
+    6'd4: begin w_addr_p &lt;= S_AXI_WDATA[1:0]; w_commit_p &lt;= 1'b1; end
+    6'd6: begin a_addr_p &lt;= S_AXI_WDATA[7:0]; a_commit_p &lt;= 1'b1; end
+    6'd7: start_p &lt;= 1'b1;
+endcase</code></pre></li>
+<li><b>Sticky done.</b> Fact 2 above:
+<pre style="margin:5px 0"><code>if      (!S_AXI_ARESETN) done_sticky &lt;= 1'b0;
+else if (start_p)        done_sticky &lt;= 1'b0;   // arm for the new job
+else if (done)           done_sticky &lt;= 1'b1;   // latch the 10 ns pulse</code></pre></li>
+</ol>
+
+<p>Note that <code>rst_n</code> is tied to <code>S_AXI_ARESETN</code>, so the accelerator is reset by the
+AXI peripheral reset — no separate reset logic is needed.</p>
+
+<h2>6. <span class="stepnum">1</span>Create the Vivado project</h2>
+<ol>
+<li>Launch Vivado → <b>Create Project</b> → <i>Next</i>.</li>
+<li>Project name e.g. <code>accel_uart</code>. Choose a path with <b>no spaces</b> and keep it short —
+    Vitis workspaces inherit long paths and Windows path-length limits bite. <i>Next</i>.</li>
+<li><b>RTL Project</b>, tick <i>Do not specify sources at this time</i>. <i>Next</i>.</li>
+<li>Select the target:
+    <ul>
+    <li><b>Boards</b> tab → <b>ZedBoard Zynq Evaluation and Development Kit</b> — preferred, because it
+        unlocks the one-click PS preset in step 4.</li>
+    <li>Or <b>Parts</b> tab → <code>xc7z020clg484-1</code> if you do not have the board files.</li>
+    </ul>
+    <i>Next</i> → <b>Finish</b>.</li>
+</ol>
+
+<h2>7. <span class="stepnum">2</span>Add the sources</h2>
+<ol>
+<li><i>Flow Navigator → Add Sources → Add or create design sources → Add Files</i>.</li>
+<li>Select all <b>13</b> <code>.sv</code> files in <code>…SIMPLE_ACCEL_RTL/</code>:
+<pre><code>MAC.sv                  array.sv                delay_pipe.sv
+input_buf.sv            output_skewbuf.sv       a_mem.sv
+weight_mem.sv           outmem.sv               controller.sv
+agu.sv                  wrapper_array_buf.sv    wrapper_mem_arr_buf.sv
+wrapper_full_system.sv</code></pre></li>
+<li>Also add <code>FPGA_IMPL/rtl/accel_axi.sv</code>.</li>
+<li>Tick <b>Copy sources into project</b> if you want a self-contained project. <b>Finish</b>.</li>
+</ol>
+
+<div class="warn"><b>Set the file type to SystemVerilog</b>
+In the <i>Sources</i> pane, verify every file shows as <b>SystemVerilog</b>. If any shows as Verilog,
+right-click → <i>Set File Type → SystemVerilog</i>. Symptom of getting this wrong: hundreds of syntax
+errors on <code>logic</code>, <code>always_ff</code>, <code>always_comb</code>, or on the unpacked-array
+port <code>result [0:3]</code>.</div>
+
+<p>The hierarchy should now show <code>accel_axi</code> at the top with
+<code>accelerator_system_top</code> beneath it, resolving cleanly down to the PEs. If any module shows as
+missing, a file was not added.</p>
+
+<h2>8. <span class="stepnum">3</span>Create the block design</h2>
+<ol>
+<li><i>Flow Navigator → IP INTEGRATOR → Create Block Design</i>.</li>
+<li>Design name: <code>system</code>. Directory: <i>&lt;Local to Project&gt;</i>. <b>OK</b>.</li>
+<li>An empty BD canvas opens.</li>
+</ol>
+
+<h2>9. <span class="stepnum">4</span>Add and configure the Zynq PS</h2>
+
+<ol>
+<li>Click <b>+</b> (Add IP) on the canvas, type <code>zynq</code>, double-click
+    <b>ZYNQ7 Processing System</b>.</li>
+<li>A green banner appears: <b>Run Block Automation</b>. Click it.</li>
+<li>In the dialog tick <b>Apply Board Preset</b> and leave <i>Cross Trigger In/Out</i> disabled. <b>OK</b>.
+    <span class="small">The preset configures DDR3, the MIO peripheral assignment and the clock tree for
+    the ZedBoard. If you selected the raw part instead of the board, this checkbox is absent — see the
+    note below.</span></li>
+</ol>
+
+<div class="note"><b>No board files? Configure the PS manually</b>
+Double-click the PS block and set, at minimum: <i>DDR Configuration</i> → memory part
+<code>MT41K128M16 JT-125</code> (ZedBoard's DDR3); <i>MIO Configuration → I/O Peripherals</i> → enable
+<b>UART 1</b> on <b>MIO 48..49</b>; <i>Clock Configuration</i> → <b>FCLK_CLK0 = 100 MHz</b>;
+<i>PS-PL Configuration</i> → enable <b>M_AXI_GP0</b>. This is why the board files are worth installing.</div>
+
+<h3>9.1 Verify three things in Re-customize IP</h3>
+<p>Double-click the ZYNQ7 block and check each of these — <b>all three are required</b>:</p>
+<table>
+<thead><tr><th style="width:30%">Page</th><th style="width:26%">Setting</th><th>Why</th></tr></thead>
+<tbody>
+<tr><td>MIO Configuration → I/O Peripherals</td><td><b>UART 1</b> enabled, <b>MIO 48..49</b></td><td>This is the on-board USB-UART. UART <b>0</b> is <i>not</i> wired to J14 — enabling the wrong one gives you a working build and a silent terminal.</td></tr>
+<tr><td>Clock Configuration → PL Fabric Clocks</td><td><b>FCLK_CLK0 = 100 MHz</b>, enabled</td><td>Clocks the whole PL side: the AXI interconnect, <code>accel_axi</code>, and the accelerator itself.</td></tr>
+<tr><td>PS-PL Configuration → AXI Non Secure Enablement → GP Master AXI Interface</td><td><b>M AXI GP0 interface</b> ticked</td><td>The port the ARM uses to reach <code>accel_axi</code>. Without it, Connection Automation has nothing to connect and the address editor stays empty.</td></tr>
+</tbody>
+</table>
+<p>Click <b>OK</b>.</p>
+
+<h2>10. <span class="stepnum">5</span>Add <code>accel_axi</code> to the block design</h2>
+
+<p>There are two routes. Try route A first; fall back to route B if Vivado does not recognise the AXI
+interface.</p>
+
+<h3>10.1 Route A — Add Module <span class="tag">QUICK</span></h3>
+<ol>
+<li>Right-click empty canvas → <b>Add Module…</b></li>
+<li>Select <b><code>accel_axi</code></b> → <b>OK</b>.</li>
+<li><b>Verify the interface was inferred.</b> The block should show a single grouped pin labelled
+    <b><code>S_AXI</code></b> with a <b>+</b> expander, plus separate <code>S_AXI_ACLK</code> and
+    <code>S_AXI_ARESETN</code> pins. Vivado infers this from the standard
+    <code>S_AXI_AWADDR</code>/<code>S_AXI_WVALID</code>/… port naming.</li>
+</ol>
+<p>If instead you see thirty-odd individual scalar pins, the inference failed — use route B.</p>
+
+<h3>10.2 Route B — package it as a custom IP <span class="tag">ROBUST</span></h3>
+<ol>
+<li><i>Tools → Create and Package New IP…</i> → <i>Next</i>.</li>
+<li>Choose <b>Package your current project</b> → <i>Next</i>.</li>
+<li>Pick an IP location outside the project (e.g. <code>…/ip_repo/accel_axi_1.0</code>) → <i>Next</i> →
+    <b>Finish</b>. A packaging project opens.</li>
+<li>On the <b>Ports and Interfaces</b> page, confirm <code>S_AXI</code> is recognised as an
+    <code>aximm</code> interface with <code>S_AXI_ACLK</code> as its associated clock and
+    <code>S_AXI_ARESETN</code> as its associated reset. If not, right-click → <i>Auto Infer
+    Interface → AXI4-Lite Slave</i>, then set the clock/reset association.</li>
+<li>On <b>Review and Package</b>, click <b>Package IP</b>.</li>
+<li>Back in the main project: <i>Settings → IP → Repository</i> → <b>+</b> → add your
+    <code>ip_repo</code> path → <b>OK</b>.</li>
+<li>On the BD canvas, <b>+</b> (Add IP) → search <code>accel_axi</code> → double-click.</li>
+</ol>
+
+<div class="tip"><b>Why route B is more reliable</b>
+Packaging makes the AXI interface, its clock/reset association, and the address-space declaration
+<i>explicit metadata</i> rather than something inferred from port names at BD-assembly time. It also
+gives you a reusable IP you can drop into other block designs. Route A is faster when it works.</div>
+
+<h2 class="pb">11. <span class="stepnum">6</span>Connection automation</h2>
+
+<ol>
+<li>A green banner appears: <b>Run Connection Automation</b>. Click it.</li>
+<li>In the dialog tick <b>All Automation</b> (the checkbox at the top of the tree) → <b>OK</b>.</li>
+</ol>
+
+<p>Vivado now does all of the following automatically:</p>
+<table>
+<thead><tr><th style="width:34%">What it inserts / connects</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td><b>AXI Interconnect</b> (or SmartConnect)</td><td>Bridges <code>M_AXI_GP0</code> to the <code>accel_axi/S_AXI</code> slave port.</td></tr>
+<tr><td><b>Processor System Reset</b></td><td>Generates a synchronised, correctly sequenced <code>peripheral_aresetn</code> from <code>FCLK_RESET0_N</code>.</td></tr>
+<tr><td><code>FCLK_CLK0</code> → <code>S_AXI_ACLK</code>, interconnect clocks, <code>M_AXI_GP0_ACLK</code></td><td>Everything on the PL side runs on one 100 MHz clock — no CDC anywhere in this design.</td></tr>
+<tr><td><code>peripheral_aresetn</code> → <code>S_AXI_ARESETN</code></td><td>Which, inside <code>accel_axi</code>, is also the accelerator's <code>rst_n</code>.</td></tr>
+</tbody>
+</table>
+
+<p>Click the <b>Regenerate Layout</b> icon to tidy the canvas. You should see four blocks:
+ZYNQ7 PS → AXI Interconnect → <code>accel_axi</code>, with a Processor System Reset off to one side.</p>
+
+<div class="note"><b>Everything is synchronous to FCLK_CLK0</b>
+The PS AXI master, the interconnect, <code>accel_axi</code>, and the accelerator all run on the same
+100 MHz clock. There is no clock-domain crossing to reason about, which is one reason this design is a
+comfortable first PS/PL integration.</div>
+
+<h2>12. <span class="stepnum">7</span>Assign the address</h2>
+
+<ol>
+<li><i>Window → Address Editor</i>.</li>
+<li>Expand <code>processing_system7_0 → Data</code>. You should see <code>accel_axi_0/S_AXI</code>
+    with an <b>Offset Address</b> and a <b>Range</b>.</li>
+<li>If it is unmapped, right-click → <b>Assign Address</b> (or click <i>Auto Assign Address</i>).</li>
+<li>The usual result is <b><code>0x43C0_0000</code></b>, range <b>64K</b> (Vivado's minimum allocation is
+    4K; <code>accel_axi</code> only decodes 256 bytes of it, which is harmless).</li>
+<li><b>Write this address down.</b> It becomes <code>XPAR_ACCEL_AXI_0_S_AXI_BASEADDR</code> in
+    <code>xparameters.h</code>, and <code>accel_monitor.c</code> uses it.</li>
+</ol>
+
+<div class="warn"><b>If the Address Editor is empty</b>
+Either <code>M_AXI_GP0</code> is not enabled in the PS (step 4, section 9.1), or the AXI interface on
+<code>accel_axi</code> was never inferred (step 5). Fix that before continuing — a build with an
+unmapped slave compiles fine and then hangs the ARM with a data-abort on the first register write.</div>
+
+<h2>13. <span class="stepnum">8</span>Validate, wrap, set top</h2>
+
+<ol>
+<li>Press <b>F6</b> (or <i>Validate Design</i>). Expect <i>"Validation successful"</i>. Resolve any
+    critical warnings before continuing — unconnected clock or reset pins are the usual culprits.</li>
+<li><i>Ctrl+S</i> to save the block design.</li>
+<li>In the <b>Sources</b> pane, right-click <code>system.bd</code> → <b>Create HDL Wrapper</b> →
+    choose <b>Let Vivado manage wrapper and auto-update</b> → <b>OK</b>.</li>
+<li>Right-click the generated <code>system_wrapper</code> → <b>Set as Top</b> (it turns bold).</li>
+</ol>
+
+<h2>14. <span class="stepnum">9</span>Generate the bitstream</h2>
+
+<ol>
+<li><i>Flow Navigator → Generate Bitstream</i>. Accept the prompt to run synthesis and implementation
+    first. <b>OK</b>.</li>
+<li>Wait. On a typical machine this takes 5–15 minutes.</li>
+<li>When it completes, check <i>Reports → Timing → Report Timing Summary</i>: <b>WNS must be positive</b>.
+    This design has ample margin at 100 MHz.</li>
+</ol>
+
+<div class="tip"><b>No PL pin constraints are needed</b>
+Unlike Method 1 and Method 2, this design has <b>zero</b> PL-level top ports. The clock comes from the PS
+(<code>FCLK_CLK0</code>), and the UART pins are PS MIO, which the PS7 block configures directly. There is
+no XDC to write, and consequently no risk of a wrong <code>PACKAGE_PIN</code>.</div>
+
+<h2>15. <span class="stepnum">10</span>Export hardware (<code>.xsa</code>)</h2>
+
+<ol>
+<li><i>File → Export → Export Hardware…</i></li>
+<li>Select <b>Include bitstream</b>. <span class="small">This is essential — without it, Vitis has no
+    bitstream to program and the PL stays empty.</span></li>
+<li>Choose an export path (default is the project directory) → <b>OK</b>. You now have
+    <code>system_wrapper.xsa</code>.</li>
+</ol>
+
+<h2>16. <span class="stepnum">11</span>The Vitis platform project</h2>
+
+<ol>
+<li>Launch <b>Vitis</b> (<i>Tools → Launch Vitis IDE</i> from Vivado, or from the Start menu).</li>
+<li>Choose a <b>workspace</b> directory — again, short path, no spaces.</li>
+<li><i>File → New → Platform Project…</i></li>
+<li>Name it e.g. <code>accel_platform</code> → <i>Next</i>.</li>
+<li>On <i>Hardware Specification</i>, browse to the <code>system_wrapper.xsa</code> you just exported.</li>
+<li>Set <b>Operating system = <code>standalone</code></b>, <b>Processor = <code>ps7_cortexa9_0</code></b>.
+    Tick <b>Generate boot components</b> if offered. <b>Finish</b>.</li>
+<li>Right-click the platform in the Explorer → <b>Build Project</b>. Wait for the BSP to compile.</li>
+</ol>
+
+<h2>17. <span class="stepnum">12</span>The Vitis application project</h2>
+
+<ol>
+<li><i>File → New → Application Project…</i> → <i>Next</i>.</li>
+<li>On <i>Platform</i>, select the <code>accel_platform</code> you just built → <i>Next</i>.</li>
+<li>Application project name: <code>accel_monitor</code>. System project name defaults from it.
+    <i>Next</i>.</li>
+<li>Domain: <code>standalone_ps7_cortexa9_0</code> → <i>Next</i>.</li>
+<li>Template: <b>Empty Application (C)</b> → <b>Finish</b>.</li>
+<li>Copy <code>FPGA_IMPL/sw/accel_monitor.c</code> into the application's <code>src/</code> folder.
+    <span class="small">Drag-and-drop into the Vitis Explorer works; choose <i>Copy files</i>.</span></li>
+</ol>
+
+<div class="note"><b>Confirm the base address</b>
+Open <code>&lt;platform&gt;/export/…/include/xparameters.h</code> and search for
+<code>ACCEL_AXI</code>. You should find <code>XPAR_ACCEL_AXI_0_S_AXI_BASEADDR 0x43C00000</code>.
+<code>accel_monitor.c</code> picks this up automatically:
+<pre style="margin-top:5px;margin-bottom:0"><code>#ifdef XPAR_ACCEL_AXI_0_S_AXI_BASEADDR
+  #define ACCEL_BASE  XPAR_ACCEL_AXI_0_S_AXI_BASEADDR
+#else
+  #define ACCEL_BASE  0x43C00000u   /* typical default; confirm in xparameters.h */
+#endif</code></pre>
+If the macro is named differently (Vivado derives it from the BD instance name), either rename your BD
+instance to <code>accel_axi_0</code> or edit the <code>#define</code>.</div>
+
+<h2 class="pb">18. <span class="stepnum">13</span>BSP settings: route stdio to UART1</h2>
+
+<div class="warn"><b>This is the step most often skipped, and it is the one that produces a silent terminal</b>
+By default the standalone BSP may route <code>stdin</code>/<code>stdout</code> to <code>ps7_uart_0</code>.
+On the ZedBoard the USB bridge is on <b>UART1</b>. Get this wrong and everything builds, the application
+runs, and nothing ever appears in your terminal.</div>
+
+<ol>
+<li>In the Explorer, open the <b>platform</b> project → double-click <code>platform.spr</code>.</li>
+<li>Navigate to <code>standalone on ps7_cortexa9_0</code> → <b>Board Support Package</b> →
+    <b>Modify BSP Settings…</b></li>
+<li>Select <b><code>standalone</code></b> in the left tree.</li>
+<li>Set <b><code>stdin</code></b> = <code>ps7_uart_1</code> and
+    <b><code>stdout</code></b> = <code>ps7_uart_1</code>.</li>
+<li><b>OK</b>, then <b>rebuild the platform</b>, then rebuild the application.</li>
+</ol>
+
+<p>Then build the application: right-click <code>accel_monitor</code> → <b>Build Project</b>. Expect zero
+errors.</p>
+
+<h2>19. <span class="stepnum">14</span>Open the serial terminal</h2>
+
+<p>Any of these work. Open it <b>before</b> you run the application so you do not miss the banner.</p>
+
+<table>
+<thead><tr><th style="width:22%">Terminal</th><th>How</th></tr></thead>
+<tbody>
+<tr><td><b>Vitis built-in</b></td><td><i>Window → Show View → Vitis Serial Terminal</i> → click <b>+</b> → select the COM port → set the settings below → <b>OK</b>. Most convenient, since it lives in the same window as the Run button.</td></tr>
+<tr><td><b>PuTTY</b></td><td>Connection type <b>Serial</b>, Serial line <code>COMx</code>, Speed <code>115200</code>. Under <i>Connection → Serial</i>, set Flow control to <b>None</b>. Open.</td></tr>
+<tr><td><b>Tera Term</b></td><td><i>File → New connection → Serial</i> → pick COMx. Then <i>Setup → Serial port</i> → 115200, 8 bit, none, 1 stop, none.</td></tr>
+</tbody>
+</table>
+
+<table>
+<thead><tr><th style="width:30%">Setting</th><th style="width:20%">Value</th><th>Note</th></tr></thead>
+<tbody>
+<tr><td>Baud rate</td><td><b>115200</b></td><td>The BSP default for the ZedBoard preset. Wrong baud = garbage characters.</td></tr>
+<tr><td>Data bits</td><td>8</td><td rowspan="3">Collectively "8-N-1".</td></tr>
+<tr><td>Parity</td><td>None</td></tr>
+<tr><td>Stop bits</td><td>1</td></tr>
+<tr><td>Flow control</td><td><b>None</b></td><td>The board has no RTS/CTS wiring. Leaving this on hardware flow control makes the terminal appear dead.</td></tr>
+</tbody>
+</table>
+
+<h2>20. <span class="stepnum">15</span>Program the FPGA and run</h2>
+
+<ol>
+<li>Board powered, <b>both</b> USB cables connected (J17 and J14), terminal open.</li>
+<li>In Vitis: <i>Xilinx → Program Device</i> (or right-click the system project → <i>Program FPGA</i>).
+    Confirm the bitstream path is the one from your <code>.xsa</code>. Click <b>Program</b>.
+    <span class="small">The blue DONE LED (LD12) lights when the PL is configured.</span></li>
+<li>Right-click the <code>accel_monitor</code> application → <b>Run As → Launch Hardware (Single
+    Application Debug)</b>. <span class="small">Vitis resets the PS, downloads the ELF over JTAG and
+    starts it.</span></li>
+<li>The help banner appears in the terminal:</li>
+</ol>
+
+<pre class="term"><code> 4x4 systolic accelerator monitor
+   d  load built-in demo matrices
+   w  enter weight matrix W[r][c]
+   a  enter activation matrix A[i][r]
+   r  run the job
+   p  print the result matrix
+   ?  this help
+
+accel&gt; </code></pre>
+
+<h2>21. <span class="stepnum">16</span>Use the console</h2>
+
+<h3>21.1 The built-in demo</h3>
+<p>Press <code>d</code>, then <code>r</code>, then <code>p</code>. This is the T5 golden case — the same
+vectors the simulation regression checks, so a mismatch here is unambiguously a hardware or setup
+problem.</p>
+
+<pre><code>     A (4x4)              W (4x4)                 C = A x W (4x4)
+  [ 1 0 0 0 ]        [  1  2  3  4 ]           [  1  2  3  4 ]
+  [ 0 1 0 0 ]   x    [  5  6  7  8 ]     =     [  5  6  7  8 ]
+  [ 0 0 1 0 ]        [  9 10 11 12 ]           [  9 10 11 12 ]
+  [ 1 1 1 1 ]        [ 13 14 15 16 ]           [ 28 32 36 40 ]</code></pre>
+
+<pre class="term"><code>accel&gt; d
+  demo matrices loaded (expect result row 3 = 28 32 36 40).
+
+accel&gt; r
+  running...
+  done.
+
+accel&gt; p
+  C = A x W :
+    [      1      2      3      4 ]
+    [      5      6      7      8 ]
+    [      9     10     11     12 ]
+    [     28     32     36     40 ]</code></pre>
+
+<p>Rows 0–2 reproduce the weight rows (activation rows 0–2 are one-hot selectors); the all-ones
+activation row 3 yields the column sums. One weight load, four back-to-back compute cycles — the
+weight-stationary economics of the design, visible in a terminal.</p>
+
+<h3>21.2 Your own matrices</h3>
+<pre class="term"><code>accel&gt; w
+  enter 16 values for weights, row-major W[r][c] (signed -128..127):
+2 -1 3 0 1 4 -2 5 -3 2 1 1 0 1 2 -4
+  captured.
+
+accel&gt; a
+  enter 16 values for activations, row-major A[i][r] (signed -128..127):
+1 2 3 4 5 -1 0 2 -2 3 1 1 0 0 0 0
+  captured.
+
+accel&gt; r
+  running...
+  done.
+
+accel&gt; p
+  C = A x W :
+    [     -5     17     10     -3 ]
+    [      9     -7     21    -13 ]
+    [     -4     17     -9     12 ]
+    [      0      0      0      0 ]</code></pre>
+
+<p class="small">These are the architecture document's reference matrices. Values may be separated by
+spaces or newlines; <code>read_int()</code> skips whitespace and accepts a leading minus sign. Enter all
+16 for each matrix — the parser does not prompt per element.</p>
+
+<h3>21.3 The command set</h3>
+<table class="mono">
+<thead><tr><th style="width:8%">Key</th><th style="width:26%">Action</th><th>Detail</th></tr></thead>
+<tbody>
+<tr><td>d</td><td>Load the built-in demo</td><td>Fills <code>W</code> and <code>A</code> in software only — nothing is sent to hardware until <code>r</code>.</td></tr>
+<tr><td>w</td><td>Enter the weight matrix</td><td>16 signed values, row-major <code>W[r][c]</code>.</td></tr>
+<tr><td>a</td><td>Enter the activation matrix</td><td>16 signed values, row-major <code>A[i][r]</code>.</td></tr>
+<tr><td>r</td><td>Run the job</td><td>Writes weights, then activations, then <code>num_vectors=4</code>, <code>act_base=0</code>, <code>out_base=0</code>, then <code>START</code>; polls sticky-done.</td></tr>
+<tr><td>p</td><td>Print the result</td><td>Reads <code>output_mem[0..3]</code> and prints four signed int32 lanes per row.</td></tr>
+<tr><td>?</td><td>Help</td><td>Reprints the banner.</td></tr>
+</tbody>
+</table>
+
+<h2 class="pb">22. Register map reference</h2>
+
+<p>All registers are 32 bits; the byte address is <code>index × 4</code> from
+<code>ACCEL_BASE</code> (typically <code>0x43C0_0000</code>).</p>
+
+<table class="mono">
+<thead><tr><th style="width:7%">Idx</th><th style="width:9%">Offset</th><th style="width:15%">Name</th><th style="width:8%">Access</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td>0</td><td>0x00</td><td>NUMVEC</td><td>W</td><td><code>num_vectors[7:0]</code> — how many activation vectors this job streams</td></tr>
+<tr><td>1</td><td>0x04</td><td>ACT_BASE</td><td>W</td><td><code>act_base[7:0]</code> — first <code>a_mem</code> address of the job</td></tr>
+<tr><td>2</td><td>0x08</td><td>OUT_BASE</td><td>W</td><td><code>out_base[7:0]</code> — first <code>output_mem</code> address</td></tr>
+<tr><td>3</td><td>0x0C</td><td>W_WDATA</td><td>W</td><td>32-bit weight word — four int8 lanes, lane <i>c</i> = column <i>c</i></td></tr>
+<tr><td>4</td><td>0x10</td><td>W_COMMIT</td><td>W</td><td>Write <code>w_addr[1:0]</code> → pulses <code>host_w_we</code> for one clock</td></tr>
+<tr><td>5</td><td>0x14</td><td>A_WDATA</td><td>W</td><td>32-bit activation word — four int8 lanes, lane <i>r</i> = row <i>r</i></td></tr>
+<tr><td>6</td><td>0x18</td><td>A_COMMIT</td><td>W</td><td>Write <code>a_addr[7:0]</code> → pulses <code>host_a_we</code> for one clock</td></tr>
+<tr><td>7</td><td>0x1C</td><td>START</td><td>W</td><td>Write anything → pulses <code>start</code>, <b>and clears sticky-done</b></td></tr>
+<tr><td>8</td><td>0x20</td><td>O_ADDR</td><td>W</td><td><code>output_mem</code> read address for the read-back path</td></tr>
+<tr><td>9</td><td>0x24</td><td>STATUS</td><td>R</td><td>bit0 = <code>busy</code>, bit1 = <b>sticky</b> <code>done</code>, bits[4:2] = <code>phase</code></td></tr>
+<tr><td>10</td><td>0x28</td><td>ORD0</td><td>R</td><td><code>o_rdata[31:0]</code> — column 0 result (int32)</td></tr>
+<tr><td>11</td><td>0x2C</td><td>ORD1</td><td>R</td><td><code>o_rdata[63:32]</code> — column 1</td></tr>
+<tr><td>12</td><td>0x30</td><td>ORD2</td><td>R</td><td><code>o_rdata[95:64]</code> — column 2</td></tr>
+<tr><td>13</td><td>0x34</td><td>ORD3</td><td>R</td><td><code>o_rdata[127:96]</code> — column 3</td></tr>
+</tbody>
+</table>
+
+<h3>22.1 STATUS bit layout</h3>
+<pre><code>bit   31 ................ 5 |  4  3  2 |   1    |  0
+              reserved (0)  |  phase   | done_  | busy
+                            |  [2:0]   | sticky |
+
+phase encoding:  0 IDLE   1 WLOAD   2 COMPUTE   3 DRAIN   4 DONE</code></pre>
+
+<div class="note"><b>Why <code>done</code> is sticky and <code>busy</code> is not</b>
+<code>busy</code> is a level that lasts <code>num_vectors</code>+18 clocks — still only 220 ns, so software
+essentially never observes it as 1. <code>done</code> is a <i>one-clock pulse</i>, which polling could
+never catch even in principle. Latching it in hardware is the only workable answer, and clearing it on
+the next <code>START</code> write means software never has to clear it explicitly.</div>
+
+<h2>23. How the software talks to the hardware</h2>
+
+<h3>23.1 The register accessors</h3>
+<pre><code>#define WR(idx,val)  Xil_Out32(ACCEL_BASE + ((idx)*4), (u32)(val))
+#define RD(idx)      Xil_In32 (ACCEL_BASE + ((idx)*4))</code></pre>
+
+<h3>23.2 Loading a matrix</h3>
+<p>Every write is a two-step: stage the data word, then commit it to an address. The commit write is
+what generates the one-clock <code>host_*_we</code> strobe.</p>
+<pre><code>static void load_weights(void){
+    for (int r = 0; r &lt; 4; r++){
+        WR(R_WDATA,  pack(W[r][0], W[r][1], W[r][2], W[r][3]));
+        WR(R_WCOMMIT, r);                 /* commits weight_mem[r] */
+    }
+}</code></pre>
+<p>Note the <b>natural</b> row order <code>0,1,2,3</code> — see the box in section 4.3.</p>
+
+<h3>23.3 Running and waiting</h3>
+<pre><code>static void run_job(void){
+    load_weights();
+    load_activations();
+    WR(R_NUMVEC,  4);
+    WR(R_ACTBASE, 0);
+    WR(R_OUTBASE, 0);
+    WR(R_START,   1);                     /* pulse start (clears sticky done) */
+    u32 guard = 0;
+    while (!(RD(R_STATUS) &amp; STATUS_DONE)) {
+        if (++guard &gt; 1000000u) { printf("  [timeout waiting for done]\r\n"); return; }
+    }
+}</code></pre>
+<p>The order matters: everything is loaded <i>before</i> <code>START</code>, because port arbitration
+masks host writes while <code>busy==1</code>. The job then takes 17 clocks (170 ns) — shorter than a
+single AXI read — so the polling loop virtually always exits on its first iteration. The guard counter
+turns a hardware hang into a printed message instead of a frozen console.</p>
+
+<h3>23.4 Reading results</h3>
+<pre><code>static void print_result(void){
+    printf("  C = A x W :\r\n");
+    for (int row = 0; row &lt; 4; row++){
+        WR(R_OADDR, row);                 /* select output_mem[row] */
+        (void)RD(R_STATUS);               /* small delay: let read latency settle */
+        (void)RD(R_STATUS);
+        int c0 = (int)RD(R_ORD0 + 0);
+        ...
+    }
+}</code></pre>
+<p>The two dummy STATUS reads cover <code>output_mem</code>'s one clock of read latency. An AXI read
+already takes far longer than 10 ns, so they are belt-and-braces rather than strictly necessary — but
+they cost nothing and remove a whole class of subtle failure.</p>
+
+<h2 class="pb">24. Troubleshooting</h2>
+
+<h3>24.1 Nothing appears in the terminal</h3>
+<table>
+<thead><tr><th style="width:34%">Check</th><th>Fix</th></tr></thead>
+<tbody>
+<tr><td><code>stdin</code>/<code>stdout</code> not set to <code>ps7_uart_1</code></td><td><b>The most common cause.</b> Section 18. Rebuild the platform <i>and</i> the application afterwards.</td></tr>
+<tr><td>UART1 not enabled in the PS</td><td>Re-customize ZYNQ7 → MIO Configuration → I/O Peripherals → tick <b>UART 1</b>, MIO 48..49. Regenerate the bitstream.</td></tr>
+<tr><td>Terminal on the wrong COM port</td><td>Device Manager → Ports. Unplug/replug J14 to identify it.</td></tr>
+<tr><td>J14 not connected</td><td>J17 is JTAG; J14 is the UART. You need both.</td></tr>
+<tr><td>Flow control set to hardware</td><td>Set it to <b>None</b>. The board has no RTS/CTS wiring.</td></tr>
+<tr><td>Application never launched</td><td><i>Run As → Launch Hardware</i>. Programming the FPGA alone does not start the ARM.</td></tr>
+</tbody>
+</table>
+
+<h3>24.2 Garbage characters</h3>
+<table>
+<thead><tr><th style="width:34%">Check</th><th>Fix</th></tr></thead>
+<tbody>
+<tr><td>Baud rate mismatch</td><td>Set the terminal to <b>115200</b>. Confirm the BSP's UART baud rate matches.</td></tr>
+<tr><td>Wrong data format</td><td>8 data bits, no parity, 1 stop bit.</td></tr>
+<tr><td>Two terminals on the same port</td><td>Close one. A COM port can have a single owner.</td></tr>
+</tbody>
+</table>
+
+<h3>24.3 Console works but results are wrong or zero</h3>
+<table>
+<thead><tr><th style="width:34%">Symptom</th><th>Cause and fix</th></tr></thead>
+<tbody>
+<tr><td>All results read <b>0</b></td><td>The bitstream was never loaded (only the ELF was), so the PL is empty and reads return 0. Run <i>Program FPGA</i> first. Also confirm you exported the <code>.xsa</code> with <b>Include bitstream</b> ticked.</td></tr>
+<tr><td>Result matrix is <b>transposed</b> or scrambled</td><td>Lane order in the packed word. Lane 0 is the <b>low</b> byte. <code>weight_mem[r]</code> lane <i>c</i> = W[r][c]; <code>a_mem[i]</code> lane <i>r</i> = A[i][r]. See Appendix A.</td></tr>
+<tr><td>Row 3 is right (<code>28 32 36 40</code>) but rows 0–2 are wrong</td><td>Weight rows written in reverse. Write <code>weight_mem[0..3]</code> in natural order — bottom-first is the AGU's job. This failure hides in row 3 because the all-ones activation row is a column sum and is insensitive to row permutation.</td></tr>
+<tr><td>Results are stale — the previous run's values</td><td>Confirm <code>START</code> is actually written (register index 7) and that sticky-done goes to 1. If <code>run_job()</code> printed a timeout, the job never completed.</td></tr>
+<tr><td><code>[timeout waiting for done]</code></td><td>Either the PL is unprogrammed (reads return 0, so bit1 never sets), or the address decode is wrong so writes go nowhere, or <code>num_vectors</code> was left at 0 in a modified version. Check <code>ACCEL_BASE</code> against <code>xparameters.h</code>.</td></tr>
+</tbody>
+</table>
+
+<h3>24.4 Build and integration problems</h3>
+<table>
+<thead><tr><th style="width:34%">Symptom</th><th>Cause and fix</th></tr></thead>
+<tbody>
+<tr><td>Address Editor is empty</td><td><code>M_AXI_GP0</code> not enabled in the PS, or the AXI interface was never inferred on <code>accel_axi</code>. Sections 9.1 and 10.</td></tr>
+<tr><td><code>accel_axi</code> shows 30 loose pins instead of a grouped <code>S_AXI</code></td><td>Interface inference failed. Use route B (package as IP) in section 10.2.</td></tr>
+<tr><td>Hundreds of syntax errors on <code>logic</code> / <code>always_ff</code></td><td>Files added as Verilog. Right-click each → <i>Set File Type → SystemVerilog</i>.</td></tr>
+<tr><td>Vitis cannot open the <code>.xsa</code></td><td>Vivado and Vitis versions differ. Use a matched pair.</td></tr>
+<tr><td><code>XPAR_ACCEL_AXI_0_S_AXI_BASEADDR</code> undefined</td><td>Vivado derives the macro from the BD instance name. Search <code>xparameters.h</code> for the actual name, or rename the BD instance to <code>accel_axi_0</code> and rebuild.</td></tr>
+<tr><td>Data abort / prefetch abort on the first register write</td><td>The slave is unmapped or <code>ACCEL_BASE</code> is wrong. Verify both the Address Editor entry and <code>xparameters.h</code>.</td></tr>
+<tr><td>Validate Design reports unconnected clock or reset</td><td>Re-run <i>Connection Automation</i> with <b>All Automation</b> ticked; check the Processor System Reset block was inserted.</td></tr>
+<tr><td>Device not found under Program FPGA</td><td>Cable drivers, or J17 not connected, or boot-mode jumpers not in JTAG. Section 3.2.</td></tr>
+</tbody>
+</table>
+
+<div class="tip"><b>When the console is healthy but you cannot tell why the numbers are wrong</b>
+Add an ILA to this same block design and watch the run cycle-by-cycle — the companion
+<code>VIO_ILA.pdf</code> covers the setup, the expected phase-length map (4 / N / 8 / 1) and the
+result checkpoints. The two methods compose: keep the UART for comfortable data entry and use the ILA
+for visibility.</div>
+
+<h2>25. Extending to Method 4</h2>
+
+<p>Method 3 stands up the PS + AXI base. Method 4 is what you add for real workloads — still with no
+external peripherals.</p>
+
+<table>
+<thead><tr><th style="width:26%">Extension</th><th>How</th></tr></thead>
+<tbody>
+<tr><td><b>Longer jobs from the console</b></td><td>The cheapest win: <code>a_mem</code> holds <b>256</b> activation vectors against a single weight load. Extend <code>load_activations()</code> to loop over more rows and write <code>NUMVEC</code> accordingly. Once the pipe is full it is one vector per clock — that amortisation is the entire economic point of a weight-stationary array.</td></tr>
+<tr><td><b>Stream with AXI-DMA</b></td><td>Add an AXI-DMA (or an AXI-Stream port on <code>accel_axi</code>) so the PS DMAs a block of activation vectors into <code>a_mem</code> and reads the result block back, instead of one register write per word.</td></tr>
+<tr><td><b>Interrupt on done</b></td><td>Route the accelerator's <code>done</code> to a PL→PS interrupt (<code>IRQ_F2P</code>) and enable it in the PS7 GIC. The monitor becomes event-driven instead of polling the sticky-done bit. <span class="small">Keep the sticky bit anyway — it is still the only way to read completion status after the fact.</span></td></tr>
+<tr><td><b>Run under Linux</b></td><td>With PetaLinux, expose <code>accel_axi</code> as a <b>UIO</b> device, <code>mmap</code> the register block from a user-space C or Python program, and print over the same console — now <code>ttyPS0</code>.</td></tr>
+<tr><td><b>Benchmark</b></td><td>Feed up to 256 vectors and time the job with the PS global timer. Expected: <code>num_vectors + 13</code> clocks, i.e. 2.75 µs for a full 256-vector job at 100 MHz.</td></tr>
+<tr><td><b>Bare-metal boot from SD</b></td><td>Package the bitstream + FSBL + ELF into a <code>BOOT.BIN</code> so the board runs the console standalone at power-up, with no PC attached at all.</td></tr>
+</tbody>
+</table>
+
+<h2 class="pb">Appendix A — data packing reference</h2>
+
+<h3>A.1 The three word formats</h3>
+<pre><code>weight_mem[r]  bits  [31:24] [23:16] [15:8] [7:0]
+                     W[r][3] W[r][2] W[r][1] W[r][0]        int8, lane c = COLUMN c
+
+a_mem[i]       bits  [31:24] [23:16] [15:8] [7:0]
+                     A[i][3] A[i][2] A[i][1] A[i][0]        int8, lane r = ROW r
+
+output_mem[i]  bits  [127:96] [95:64] [63:32] [31:0]
+                     C[i][3]  C[i][2] C[i][1] C[i][0]       int32, lane c = COLUMN c</code></pre>
+
+<h3>A.2 The demo matrices as raw register writes</h3>
+<p>If you ever bypass the menu and poke registers directly (from XSDB, or from your own application),
+this is the exact sequence for the T5 golden case:</p>
+<pre><code>WR(3, 0x04030201); WR(4, 0);      /* weight_mem[0] = W row0 = 1 2 3 4     */
+WR(3, 0x08070605); WR(4, 1);      /* weight_mem[1] = W row1 = 5 6 7 8     */
+WR(3, 0x0C0B0A09); WR(4, 2);      /* weight_mem[2] = W row2 = 9 10 11 12  */
+WR(3, 0x100F0E0D); WR(4, 3);      /* weight_mem[3] = W row3 = 13 14 15 16 */
+
+WR(5, 0x00000001); WR(6, 0);      /* a_mem[0] = A row0 = 1 0 0 0          */
+WR(5, 0x00000100); WR(6, 1);      /* a_mem[1] = A row1 = 0 1 0 0          */
+WR(5, 0x00010000); WR(6, 2);      /* a_mem[2] = A row2 = 0 0 1 0          */
+WR(5, 0x01010101); WR(6, 3);      /* a_mem[3] = A row3 = 1 1 1 1          */
+
+WR(0, 4); WR(1, 0); WR(2, 0);     /* num_vectors=4, act_base=0, out_base=0 */
+WR(7, 1);                         /* START -- 17 clocks = 170 ns          */
+while (!(RD(9) & 0x2)) ;          /* poll sticky done                     */
+
+WR(8, 3); RD(9); RD(9);           /* select output_mem[3], settle          */
+RD(10); RD(11); RD(12); RD(13);   /* -> 28, 32, 36, 40                     */</code></pre>
+
+<h3>A.3 Packing an arbitrary matrix by hand</h3>
+<p>For a signed byte <i>v</i>, the hex byte is <i>v</i> for 0…127 and <i>v</i>+256 for −128…−1.</p>
+<pre><code>word = (byte3 &lt;&lt; 24) | (byte2 &lt;&lt; 16) | (byte1 &lt;&lt; 8) | byte0
+
+                            lane order in the word:  [b3][b2][b1][b0]
+W = [  2  -1   3   0 ]      row 0 -> 00 03 FF 02  ->  weight_mem[0] = 0x0003FF02
+    [  1   4  -2   5 ]      row 1 -> 05 FE 04 01  ->  weight_mem[1] = 0x05FE0401
+    [ -3   2   1   1 ]      row 2 -> 01 01 02 FD  ->  weight_mem[2] = 0x010102FD
+    [  0   1   2  -4 ]      row 3 -> FC 02 01 00  ->  weight_mem[3] = 0xFC020100
+
+A = [  1   2   3   4 ]      A0    -> 04 03 02 01  ->  a_mem[0]      = 0x04030201
+    [  5  -1   0   2 ]      A1    -> 02 00 FF 05  ->  a_mem[1]      = 0x0200FF05
+    [ -2   3   1   1 ]      A2    -> 01 01 03 FE  ->  a_mem[2]      = 0x010103FE
+
+expected C = [ -5  17  10  -3 ]   ORD3..ORD0 = FFFFFFFD 0000000A 00000011 FFFFFFFB
+             [  9  -7  21 -13 ]   ORD3..ORD0 = FFFFFFF3 00000015 FFFFFFF9 00000009
+             [ -4  17  -9  12 ]   ORD3..ORD0 = 0000000C FFFFFFF7 00000011 FFFFFFFC</code></pre>
+<p class="small">Negative int32 results appear as <code>FFFF_FFxx</code>. <code>print_result()</code>
+casts to <code>int</code>, so the console shows them correctly signed.</p>
+
+<h2>Appendix B — build checklist</h2>
+
+<table>
+<thead><tr><th style="width:6%">✓</th><th style="width:28%">Step</th><th>Verification that it worked</th></tr></thead>
+<tbody>
+<tr><td>☐</td><td>1 · Project created</td><td>Part reads <code>xc7z020clg484-1</code> in the project summary</td></tr>
+<tr><td>☐</td><td>2 · 13 RTL + <code>accel_axi.sv</code> added</td><td>Hierarchy resolves with no missing modules; all files typed SystemVerilog</td></tr>
+<tr><td>☐</td><td>3 · Block design created</td><td><code>system.bd</code> in Sources</td></tr>
+<tr><td>☐</td><td>4 · ZYNQ7 PS + board preset</td><td>UART1 on MIO48/49 · FCLK_CLK0 = 100 MHz · M_AXI_GP0 enabled</td></tr>
+<tr><td>☐</td><td>5 · <code>accel_axi</code> added</td><td>Block shows a grouped <code>S_AXI</code> pin, not 30 loose ones</td></tr>
+<tr><td>☐</td><td>6 · Connection Automation</td><td>AXI Interconnect + Processor System Reset present; no unconnected pins</td></tr>
+<tr><td>☐</td><td>7 · Address assigned</td><td>Address Editor shows <code>accel_axi_0/S_AXI</code> at <code>0x43C0_0000</code></td></tr>
+<tr><td>☐</td><td>8 · Validate + wrapper + top</td><td>"Validation successful"; <code>system_wrapper</code> is bold in Sources</td></tr>
+<tr><td>☐</td><td>9 · Bitstream generated</td><td>Positive WNS in the timing summary</td></tr>
+<tr><td>☐</td><td>10 · Hardware exported</td><td><code>.xsa</code> exists and <b>Include bitstream</b> was ticked</td></tr>
+<tr><td>☐</td><td>11 · Vitis platform built</td><td>BSP compiles with no errors</td></tr>
+<tr><td>☐</td><td>12 · Application created</td><td><code>accel_monitor.c</code> is in <code>src/</code></td></tr>
+<tr><td>☐</td><td>13 · BSP stdio → <code>ps7_uart_1</code></td><td>Platform <b>and</b> application rebuilt afterwards</td></tr>
+<tr><td>☐</td><td>14 · Terminal open</td><td>COMx at 115200-8-N-1, flow control None</td></tr>
+<tr><td>☐</td><td>15 · Program FPGA + Run</td><td>DONE LED (LD12) lit; help banner in the terminal</td></tr>
+<tr><td>☐</td><td>16 · <code>d</code> · <code>r</code> · <code>p</code></td><td>Result row 3 = <code>28 32 36 40</code></td></tr>
+</tbody>
+</table>
+
+<hr>
+<p class="small">
+<b>Design reference:</b> <code>context_mkdwn/</code> — chunk 06 (memory word and lane layout), chunk 07
+(controller FSM and phase durations), chunk 11 (L3 wrapper, port arbitration, host protocol), chunk 12
+(dataflow and timing derivations), chunk 13 (worked example / T5 golden case).<br>
+<b>Sources used:</b> <code>FPGA_IMPL/rtl/accel_axi.sv</code>, <code>FPGA_IMPL/sw/accel_monitor.c</code>,
+the 13 unmodified files in <code>…SIMPLE_ACCEL_RTL/</code>.<br>
+<b>Functional baseline:</b> 11/11 testbenches, 3 680 checks, 0 mismatches (<code>verification_recheck/</code>).<br>
+<b>Companion document:</b> <code>VIO_ILA.pdf</code> — Method 2, driving and observing the accelerator over JTAG.
+</p>
+
+</body>
+</html>

@@ -1,0 +1,72 @@
+﻿Reading pref.tcl
+
+# 2021.1
+
+# vsim -c -do "run -all; quit -f" tb_input_skew_buffer 
+# Start time: 16:57:09 on Aug 06,2026
+# ** Note: (vsim-3812) Design is being optimized...
+# ** Warning: C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\input_buf.sv(7): (vopt-13314) Defaulting port 'dense_a_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\input_buf.sv(8): (vopt-13314) Defaulting port 'dense_valid_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Note: (vsim-12126) Error and warning message counts have been restored: Errors=0, Warnings=2.
+# //  Questa Sim-64
+# //  Version 2021.1 win64 Jan 19 2021
+# //
+# //  Copyright 1991-2021 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  QuestaSim and its associated documentation contain trade
+# //  secrets and commercial or financial information that are the property of
+# //  Mentor Graphics Corporation and are privileged, confidential,
+# //  and exempt from disclosure under the Freedom of Information Act,
+# //  5 U.S.C. Section 552. Furthermore, this information
+# //  is prohibited from disclosure under the Trade Secrets Act,
+# //  18 U.S.C. Section 1905.
+# //
+# Loading sv_std.std
+# Loading work.tb_input_skew_buffer(fast)
+# run -all
+# =====================================================================
+#  tb_input_skew_buffer  --  DUT: input_skew_buffer (input_buf.sv)
+# =====================================================================
+#  ROWS=4 WIDTH=8  Convention B (drive after posedge, sample negedge)
+# 
+#  TEST PLAN
+#    T1  random stream: row r delayed by r; valid travels with data
+#    T2  one dense vector emerges as a diagonal wavefront
+# =====================================================================
+# 
+#   -----------------------------------------------------------------
+#   T1 : random stream, per-row delay = r
+#   -----------------------------------------------------------------
+#     120 cycles: skew_a[r]/skew_v[r] each equal their dense input delayed by r
+#     T1 ends: 948 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T2 : single dense vector -> diagonal wavefront
+#   -----------------------------------------------------------------
+#     present [11,22,33,44] valid=1 on one cycle:
+#     off0: skew_a=11 0 0 0  skew_v=1 0 0 0
+#     off1: skew_a=0 22 0 0  skew_v=0 1 0 0
+#     off2: skew_a[2]=33
+#     off3: skew_a[3]=44 skew_v[3]=1
+#     the vector formed a clean diagonal: row r appeared at offset r.
+#     T2 ends: 9 checks, 0 errors  [PASS]
+# 
+#   =================================================================
+#    SECTION SUMMARY : tb_input_skew_buffer
+#   =================================================================
+#    SEC    DESCRIPTION                                     CHECKS  ERRORS  STATUS
+#    ------ ---------------------------------------------- ------- -------  ------
+#    T1     random stream, per-row delay = r                 948       0  PASS
+#    T2     single dense vector -> diagonal wavefront          9       0  PASS
+#    ------ ---------------------------------------------- ------- -------
+#    TOTAL                                                     957       0
+#   =================================================================
+#    TOTALS: 957 checks, 0 errors
+#    simulated time : 1281 ns
+#    RESULT: PASS - tb_input_skew_buffer
+#   =================================================================
+# ** Note: $finish    : C:/Users/VLSI/Desktop/systolic_array_multiplier/verification_recheck/testbenches/tb_input_skew_buffer.sv(86)
+#    Time: 1281 ns  Iteration: 0  Instance: /tb_input_skew_buffer
+# End time: 16:57:21 on Aug 06,2026, Elapsed time: 0:00:12
+# Errors: 0, Warnings: 2

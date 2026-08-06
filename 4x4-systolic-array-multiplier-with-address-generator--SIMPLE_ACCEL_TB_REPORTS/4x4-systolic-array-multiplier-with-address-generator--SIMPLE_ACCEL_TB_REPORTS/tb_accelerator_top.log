@@ -1,0 +1,287 @@
+﻿Reading pref.tcl
+
+# 2021.1
+
+# vsim -c tb_accelerator_top -do "run -all; quit -f" 
+# Start time: 17:37:23 on Jul 30,2026
+# ** Note: (vsim-3812) Design is being optimized...
+# ** Warning: C:\Users\nanda\Desktop\verification_individual\design_rtl\input_buf.sv(7): (vopt-13314) Defaulting port 'dense_a_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\nanda\Desktop\verification_individual\design_rtl\input_buf.sv(8): (vopt-13314) Defaulting port 'dense_valid_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\nanda\Desktop\verification_individual\design_rtl\array.sv(14): (vopt-13314) Defaulting port 'a_in_left' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\nanda\Desktop\verification_individual\design_rtl\array.sv(15): (vopt-13314) Defaulting port 'valid_in_left' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\nanda\Desktop\verification_individual\design_rtl\array.sv(18): (vopt-13314) Defaulting port 'psum_in_top' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\nanda\Desktop\verification_individual\design_rtl\output_skewbuf.sv(7): (vopt-13314) Defaulting port 'psum_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\nanda\Desktop\verification_individual\design_rtl\wrapper_array_buf.sv(48): (vopt-13314) Defaulting port 'dense_a_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\nanda\Desktop\verification_individual\design_rtl\wrapper_array_buf.sv(49): (vopt-13314) Defaulting port 'dense_valid_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\nanda\Desktop\verification_individual\design_rtl\wrapper_array_buf.sv(52): (vopt-13314) Defaulting port 'psum_in_top' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Note: (vsim-12126) Error and warning message counts have been restored: Errors=0, Warnings=9.
+# //  Questa Sim-64
+# //  Version 2021.1 win64 Jan 19 2021
+# //
+# //  Copyright 1991-2021 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  QuestaSim and its associated documentation contain trade
+# //  secrets and commercial or financial information that are the property of
+# //  Mentor Graphics Corporation and are privileged, confidential,
+# //  and exempt from disclosure under the Freedom of Information Act,
+# //  5 U.S.C. Section 552. Furthermore, this information
+# //  is prohibited from disclosure under the Trade Secrets Act,
+# //  18 U.S.C. Section 1905.
+# //
+# Loading sv_std.std
+# Loading work.tb_accelerator_top(fast)
+# run -all
+# =====================================================================
+#  tb_accelerator_top  --  LEVEL 2 wrapper (memories + fabric)
+# =====================================================================
+#  DUT           : accelerator_top  (wrapper_mem_arr_buf.sv)
+#  Contains      : a_mem, weight_mem, output_mem + array_buf_top
+#  Sequenced by  : this testbench, acting as the host
+# 
+#  WORD FORMATS
+#    a_mem      32 bits = 4 x int8, lane r = activation for ROW r
+#    weight_mem 32 bits = 4 x int8, lane c = weight for COLUMN c;
+#               address r holds weight row r
+#    output_mem 128 bits = 4 x int32, lane c = result of COLUMN c
+# 
+#  LATENCY UNDER TEST
+#    a_addr issued at cycle n -> result valid just after n+7
+#    -> capture it by asserting o_we at cycle n+8
+#    The extra +1 over level 1 is the SRAM read latency.
+# 
+#  TEST PLAN
+#    T4  datapath quiet after the weight-load flush
+#    T1  live result bus matches C = A x W (back-to-back burst)
+#    T5  same for the gapped burst
+#    T2  output_mem read-back matches C, checked lane by lane
+#    T7  the activation preload is still intact at the end
+# =====================================================================
+# 
+#   -----------------------------------------------------------------
+#   HOST PRELOAD (datapath held in reset)
+#   -----------------------------------------------------------------
+#     activation memory:
+#        addr | a_wdata    | decoded rows 0..3
+#       ------+------------+--------------------------
+#           0 | 0x179096de |  -34 -106 -112   23
+#           1 | 0x148683de |  -34 -125 -122   20
+#           2 | 0xb24f5ccd |  -51   92   79  -78
+#           3 | 0xac1eff97 | -105   -1   30  -84
+#           4 | 0x859ee42c |   44  -28  -98 -123
+#           5 | 0xad529bb2 |  -78 -101   82  -83
+#           6 | 0xc0991831 |   49   24 -103  -64
+#           7 | 0x88e18c02 |    2 -116  -31 -120
+#     weight memory (address r holds weight row r):
+#        addr | w_wdata    | decoded cols 0..3
+#       ------+------------+--------------------------
+#           0 | 0x1c9c7ce7 |  -25  124 -100   28
+#           1 | 0xc416a7e8 |  -24  -89   22  -60
+#           2 | 0xfbf85900 |    0   89   -8   -5
+#           3 | 0xa5fca211 |   17  -94   -4  -91
+#     preload complete, reset released
+# 
+#     schedule: WLOAD at cycles 2..5 (w_addr 3 down to 0)
+#               FLUSH  for 10 cycles
+#               vectors issued at cycles:
+#                 vec 0 -> a_addr at cycle 16, store at cycle 24
+#                 vec 1 -> a_addr at cycle 17, store at cycle 25
+#                 vec 2 -> a_addr at cycle 18, store at cycle 26
+#                 vec 3 -> a_addr at cycle 19, store at cycle 27
+#                 vec 4 -> a_addr at cycle 20, store at cycle 28
+#                 vec 5 -> a_addr at cycle 29, store at cycle 37
+#                 vec 6 -> a_addr at cycle 30, store at cycle 38
+#                 vec 7 -> a_addr at cycle 31, store at cycle 39
+# 
+#   -----------------------------------------------------------------
+#   CYCLE-BY-CYCLE CAPTURE of the live result bus
+#   -----------------------------------------------------------------
+#     cycle | host activity        |        col0        col1        col2        col3
+#     ------+----------------------+-------------------------------------------------
+#         2 | WLOAD w[3]           |           0           0           0           0
+#         3 | WLOAD w[2]           |           0           0           0           0
+#         4 | WLOAD w[1]           |           0           0           0           0
+#         5 | WLOAD w[0]           |           0           0           0           0
+#         6 | idle                 |           0           0           0         -91
+#         7 | idle                 |           0           0          -4          -5
+#         8 | idle                 |           0         -94          -8         -60
+#         9 | idle                 |          17          89          22          28
+#        10 | idle                 |           0         -89        -100           0
+#        11 | idle                 |         -24         124           0           0
+#        12 | idle                 |         -25           0           0           0
+#        13 | idle                 |           0           0           0           0
+#        14 | idle                 |           0           0           0           0
+#        15 | idle                 |           0           0           0           0
+#        16 | a_addr=0             |           0           0           0           0
+#        17 | a_addr=1             |           0           0           0           0
+#        18 | a_addr=2             |           0           0           0           0
+#        19 | a_addr=3             |           0           0           0           0
+#        20 | a_addr=4             |           0           0           0           0
+#        21 | idle                 |           0           0           0           0
+#        22 | idle                 |           0           0           0           0
+#        23 | idle                 |        3785       -6912        1872        3875
+#        24 |  store=0             |        4190       -5829        1546        5338
+#        25 |  store=1             |       -2259        -149        6804        -245
+#        26 |  store=2             |        1221       -2365       10574        4614
+#        27 |  store=3             |       -2519       10788       -3740       14595
+#        28 |  store=4             |           0           0           0           0
+#        29 | a_addr=5             |           0           0           0           0
+#        30 | a_addr=6             |           0           0           0           0
+#        31 | a_addr=7             |           0           0           0           0
+#        32 | idle                 |           0           0           0           0
+#        33 | idle                 |           0           0           0           0
+#        34 | idle                 |           0           0           0           0
+#        35 | idle                 |           0           0           0           0
+#        36 | idle                 |        2963       14417        5254       11019
+#        37 |  store=5             |       -2889         789       -3292        6271
+#        38 |  store=6             |         694       19093       -2024       18091
+#        39 |  store=7             |           0           0           0           0
+#        40 | idle                 |           0           0           0           0
+#        41 | idle                 |           0           0           0           0
+#        42 | idle                 |           0           0           0           0
+#        43 | idle                 |           0           0           0           0
+#        44 | idle                 |           0           0           0           0
+#        45 | idle                 |           0           0           0           0
+#        46 | idle                 |           0           0           0           0
+# 
+#   -----------------------------------------------------------------
+#   T4 : datapath quiet after the weight-load flush
+#   -----------------------------------------------------------------
+#     cycle 15 result bus = 0 0 0 0
+#     T4 ends: 4 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T1/T5 : live result bus vs C = A x W
+#   -----------------------------------------------------------------
+#       vec   col  cycle |    captured |      golden | result
+#     -------------------+-------------+-------------+-------
+#         0     0     23 |        3785 |        3785 |       ok
+#         0     1     23 |       -6912 |       -6912 |       ok
+#         0     2     23 |        1872 |        1872 |       ok
+#         0     3     23 |        3875 |        3875 |       ok
+#         1     0     24 |        4190 |        4190 |       ok
+#         1     1     24 |       -5829 |       -5829 |       ok
+#         1     2     24 |        1546 |        1546 |       ok
+#         1     3     24 |        5338 |        5338 |       ok
+#         2     0     25 |       -2259 |       -2259 |       ok
+#         2     1     25 |        -149 |        -149 |       ok
+#         2     2     25 |        6804 |        6804 |       ok
+#         2     3     25 |        -245 |        -245 |       ok
+#         3     0     26 |        1221 |        1221 |       ok
+#         3     1     26 |       -2365 |       -2365 |       ok
+#         3     2     26 |       10574 |       10574 |       ok
+#         3     3     26 |        4614 |        4614 |       ok
+#         4     0     27 |       -2519 |       -2519 |       ok
+#         4     1     27 |       10788 |       10788 |       ok
+#         4     2     27 |       -3740 |       -3740 |       ok
+#         4     3     27 |       14595 |       14595 |       ok
+#         5     0     36 |        2963 |        2963 |       ok
+#         5     1     36 |       14417 |       14417 |       ok
+#         5     2     36 |        5254 |        5254 |       ok
+#         5     3     36 |       11019 |       11019 |       ok
+#         6     0     37 |       -2889 |       -2889 |       ok
+#         6     1     37 |         789 |         789 |       ok
+#         6     2     37 |       -3292 |       -3292 |       ok
+#         6     3     37 |        6271 |        6271 |       ok
+#         7     0     38 |         694 |         694 |       ok
+#         7     1     38 |       19093 |       19093 |       ok
+#         7     2     38 |       -2024 |       -2024 |       ok
+#         7     3     38 |       18091 |       18091 |       ok
+#     T1/T5 ends: 32 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T2 : output_mem read-back, lane by lane
+#   -----------------------------------------------------------------
+#      addr | o_rdata (128 bits)                 | decoded cols 0..3 vs golden
+#     ------+------------------------------------+---------------------------
+#         0 | 0x00000f2300000750ffffe50000000ec9 |
+#           |   lane 0 =        3785  golden        3785 |       ok
+#           |   lane 1 =       -6912  golden       -6912 |       ok
+#           |   lane 2 =        1872  golden        1872 |       ok
+#           |   lane 3 =        3875  golden        3875 |       ok
+#         1 | 0x000014da0000060affffe93b0000105e |
+#           |   lane 0 =        4190  golden        4190 |       ok
+#           |   lane 1 =       -5829  golden       -5829 |       ok
+#           |   lane 2 =        1546  golden        1546 |       ok
+#           |   lane 3 =        5338  golden        5338 |       ok
+#         2 | 0xffffff0b00001a94ffffff6bfffff72d |
+#           |   lane 0 =       -2259  golden       -2259 |       ok
+#           |   lane 1 =        -149  golden        -149 |       ok
+#           |   lane 2 =        6804  golden        6804 |       ok
+#           |   lane 3 =        -245  golden        -245 |       ok
+#         3 | 0x000012060000294efffff6c3000004c5 |
+#           |   lane 0 =        1221  golden        1221 |       ok
+#           |   lane 1 =       -2365  golden       -2365 |       ok
+#           |   lane 2 =       10574  golden       10574 |       ok
+#           |   lane 3 =        4614  golden        4614 |       ok
+#         4 | 0x00003903fffff16400002a24fffff629 |
+#           |   lane 0 =       -2519  golden       -2519 |       ok
+#           |   lane 1 =       10788  golden       10788 |       ok
+#           |   lane 2 =       -3740  golden       -3740 |       ok
+#           |   lane 3 =       14595  golden       14595 |       ok
+#         5 | 0x00002b0b000014860000385100000b93 |
+#           |   lane 0 =        2963  golden        2963 |       ok
+#           |   lane 1 =       14417  golden       14417 |       ok
+#           |   lane 2 =        5254  golden        5254 |       ok
+#           |   lane 3 =       11019  golden       11019 |       ok
+#         6 | 0x0000187ffffff32400000315fffff4b7 |
+#           |   lane 0 =       -2889  golden       -2889 |       ok
+#           |   lane 1 =         789  golden         789 |       ok
+#           |   lane 2 =       -3292  golden       -3292 |       ok
+#           |   lane 3 =        6271  golden        6271 |       ok
+#         7 | 0x000046abfffff81800004a95000002b6 |
+#           |   lane 0 =         694  golden         694 |       ok
+#           |   lane 1 =       19093  golden       19093 |       ok
+#           |   lane 2 =       -2024  golden       -2024 |       ok
+#           |   lane 3 =       18091  golden       18091 |       ok
+#     T2 ends: 32 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T7 : activation preload still intact
+#   -----------------------------------------------------------------
+#     a_mem shares its address port with the compute reads, so
+#     read it back now that streaming is over.
+#      addr | a_rdata    | expected   | result
+#     ------+------------+------------+-------
+#         0 | 0x179096de | 0x179096de |       ok
+#         1 | 0x148683de | 0x148683de |       ok
+#         2 | 0xb24f5ccd | 0xb24f5ccd |       ok
+#         3 | 0xac1eff97 | 0xac1eff97 |       ok
+#         4 | 0x859ee42c | 0x859ee42c |       ok
+#         5 | 0xad529bb2 | 0xad529bb2 |       ok
+#         6 | 0xc0991831 | 0xc0991831 |       ok
+#         7 | 0x88e18c02 | 0x88e18c02 |       ok
+# 
+#   GOLDEN REFERENCE  C = A x W
+#       vec |        col0        col1        col2        col3
+#     ------+-------------------------------------------------
+#         0 |        3785       -6912        1872        3875
+#         1 |        4190       -5829        1546        5338
+#         2 |       -2259        -149        6804        -245
+#         3 |        1221       -2365       10574        4614
+#         4 |       -2519       10788       -3740       14595
+#         5 |        2963       14417        5254       11019
+#         6 |       -2889         789       -3292        6271
+#         7 |         694       19093       -2024       18091
+#     T7 ends: 8 checks, 0 errors  [PASS]
+# 
+#   =================================================================
+#    SECTION SUMMARY : tb_accelerator_top
+#   =================================================================
+#    SEC    DESCRIPTION                                     CHECKS  ERRORS  STATUS
+#    ------ ---------------------------------------------- ------- -------  ------
+#    T4     datapath quiet after the weight-load flush           4       0  PASS
+#    T1/T5  live result bus vs C = A x W                        32       0  PASS
+#    T2     output_mem read-back, lane by lane                  32       0  PASS
+#    T7     activation preload still intact                      8       0  PASS
+#    ------ ---------------------------------------------- ------- -------
+#    TOTAL                                                      76       0
+#   =================================================================
+#    TOTALS: 76 checks, 0 errors
+#    simulated time : 786 ns
+#    RESULT: PASS - tb_accelerator_top
+#   =================================================================
+# ** Note: $finish    : C:/Users/nanda/Desktop/verification_individual/test_benches/tb_accelerator_top.sv(423)
+#    Time: 786 ns  Iteration: 0  Instance: /tb_accelerator_top
+# End time: 17:37:29 on Jul 30,2026, Elapsed time: 0:00:06
+# Errors: 0, Warnings: 9

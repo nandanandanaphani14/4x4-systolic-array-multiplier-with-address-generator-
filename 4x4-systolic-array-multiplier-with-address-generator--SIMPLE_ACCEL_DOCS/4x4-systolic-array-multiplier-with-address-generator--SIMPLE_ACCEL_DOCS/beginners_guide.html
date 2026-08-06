@@ -1,0 +1,1472 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Beginner's Guide — 4×4 Systolic Accelerator, Explained From Zero</title>
+<style>
+:root{
+  --bg:#ffffff; --fg:#191c21; --muted:#5e6773; --line:#e4e8ee; --line2:#ccd3dd;
+  --panel:#f7f9fb; --panel2:#eef2f7; --code:#f4f6f9;
+  --accent:#0b5fd0; --accent-w:#e8f0fd;
+  --w:#1747c9; --wbg:#e8eeff;
+  --a:#b4470b; --abg:#fdefe4;
+  --p:#0d7a49; --pbg:#e4f6ec;
+  --warn:#9a6700; --warnbg:#fdf6e3;
+  --mono:ui-monospace,"Cascadia Mono","SFMono-Regular",Consolas,"Liberation Mono",monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0f1216; --fg:#e6eaf0; --muted:#98a3b2; --line:#242a33; --line2:#343c48;
+    --panel:#161b21; --panel2:#1c222a; --code:#141920;
+    --accent:#5aa2ff; --accent-w:#132234;
+    --w:#7fa8ff; --wbg:#16223c; --a:#f0a06a; --abg:#33210f;
+    --p:#5ed49a; --pbg:#0f2a1e; --warn:#e0b341; --warnbg:#2a2210;
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);
+     font-size:16.5px;line-height:1.72;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:0 28px 120px}
+header.mast{border-bottom:1px solid var(--line);padding:56px 0 34px;margin-bottom:30px}
+.eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:700;margin:0 0 12px}
+h1{font-size:clamp(28px,4.6vw,46px);line-height:1.12;margin:0 0 16px;letter-spacing:-.024em;font-weight:750}
+.sub{font-size:18.5px;color:var(--muted);margin:0 0 20px;max-width:70ch}
+h2{font-size:27px;margin:60px 0 8px;letter-spacing:-.017em;font-weight:730;scroll-margin-top:16px}
+h2 .num{color:var(--accent);font-family:var(--mono);font-size:19px;margin-right:10px;font-weight:600}
+h3{font-size:20px;margin:36px 0 6px;font-weight:690;letter-spacing:-.01em}
+h4{font-size:16.5px;margin:26px 0 4px;font-weight:690}
+h2+p,h3+p,h4+p{margin-top:8px}
+p{margin:0 0 15px;max-width:80ch}
+ul,ol{max-width:80ch;padding-left:24px;margin:0 0 16px}
+li{margin:6px 0}
+a{color:var(--accent);text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--accent) 35%,transparent)}
+a:hover{border-bottom-color:var(--accent)}
+b,strong{font-weight:670}
+code{font-family:var(--mono);font-size:.87em;background:var(--code);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+pre{font-family:var(--mono);font-size:13px;line-height:1.62;background:var(--code);border:1px solid var(--line);
+    border-radius:8px;padding:15px 17px;overflow-x:auto;margin:0 0 18px}
+pre code{background:none;border:0;padding:0;font-size:inherit}
+.cmt{color:var(--muted)} .kw{color:var(--accent);font-weight:600}
+table{border-collapse:collapse;width:100%;margin:0 0 20px;font-size:14.5px;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+th{background:var(--panel);font-weight:650;font-size:13px}
+tbody tr:nth-child(even){background:color-mix(in srgb,var(--panel) 55%,transparent)}
+.box{border-left:3px solid var(--accent);background:var(--accent-w);padding:14px 18px;border-radius:0 8px 8px 0;margin:0 0 20px;font-size:15.5px}
+.box.warn{border-left-color:var(--warn);background:var(--warnbg)}
+.box.key{border-left-color:var(--p);background:var(--pbg)}
+.box.ind{border-left-color:var(--a);background:var(--abg)}
+.box p:last-child{margin-bottom:0}
+.lbl{font-size:11.5px;text-transform:uppercase;letter-spacing:.1em;font-weight:750;display:block;margin-bottom:4px}
+.box .lbl{color:var(--accent)} .box.warn .lbl{color:var(--warn)} .box.key .lbl{color:var(--p)} .box.ind .lbl{color:var(--a)}
+.toc{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:20px 26px;margin:0 0 24px}
+.toc ol{columns:2;column-gap:44px;margin:0;padding-left:20px;font-size:15px}
+.toc li{margin:3px 0;break-inside:avoid}
+.toc ol ol{columns:1;font-size:13.5px;margin:2px 0 6px;padding-left:18px}
+.toc ol ol li{margin:1px 0}
+
+/* line-by-line walkthrough */
+.lw{border:1px solid var(--line2);border-radius:10px;overflow:hidden;margin:0 0 26px;background:var(--bg)}
+.lw-h{background:var(--panel2);border-bottom:1px solid var(--line);padding:9px 15px;
+      font:650 13px var(--mono);color:var(--fg)}
+.lw-h span{color:var(--muted);font-weight:400;font-family:var(--sans);font-size:12.5px}
+.lw-r{display:grid;grid-template-columns:36px minmax(0,1fr) minmax(0,1.15fr);
+      border-top:1px solid var(--line);align-items:start}
+.lw-r:first-of-type{border-top:0}
+.lw-r:hover{background:color-mix(in srgb,var(--accent) 5%,transparent)}
+.lw-n{font:500 11px var(--mono);color:var(--muted);text-align:right;padding:8px 7px 8px 0;user-select:none}
+.lw-c{font:400 12.5px/1.55 var(--mono);white-space:pre;overflow-x:auto;padding:8px 12px 8px 0;margin:0;
+      background:none;border:0;border-radius:0;border-right:1px solid var(--line)}
+.lw-e{font-size:14px;line-height:1.55;padding:8px 14px;color:var(--fg)}
+.lw-e code{font-size:.85em;padding:0 3px}
+.lw-r.blank .lw-e{color:var(--muted)}
+.lw-r.hi{background:var(--pbg)}
+.lw-r.hi:hover{background:var(--pbg)}
+
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin:0 0 20px}
+.card{border:1px solid var(--line);border-radius:10px;padding:15px 18px;background:var(--panel)}
+.card h4{margin-top:0} .card p:last-child{margin-bottom:0}
+dl.gloss{margin:0 0 22px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+dl.gloss>div{display:grid;grid-template-columns:minmax(150px,220px) 1fr;border-top:1px solid var(--line)}
+dl.gloss>div:first-child{border-top:0}
+dl.gloss>div:nth-child(even){background:color-mix(in srgb,var(--panel) 60%,transparent)}
+dt{font:650 14px var(--mono);padding:10px 14px;color:var(--accent);border-right:1px solid var(--line)}
+dd{margin:0;padding:10px 16px;font-size:14.5px;line-height:1.6}
+figure{margin:0 0 24px}
+figcaption{font-size:13.5px;color:var(--muted);margin-top:9px;max-width:80ch}
+.art{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;overflow-x:auto}
+.art pre{background:none;border:0;margin:0;padding:0;font-size:12.5px}
+hr{border:0;border-top:1px solid var(--line);margin:46px 0}
+.foot{border-top:1px solid var(--line);margin-top:60px;padding-top:22px;font-size:14px;color:var(--muted)}
+.step{counter-reset:st;list-style:none;padding-left:0}
+.step>li{counter-increment:st;position:relative;padding-left:42px;margin:14px 0}
+.step>li::before{content:counter(st);position:absolute;left:0;top:1px;width:27px;height:27px;border-radius:50%;
+  background:var(--accent);color:#fff;font:700 13px var(--mono);display:flex;align-items:center;justify-content:center}
+.tagrow{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 18px}
+.tag{font:600 12px var(--mono);padding:3px 11px;border-radius:999px;border:1px solid var(--line2);
+     color:var(--muted);background:var(--panel)}
+@media (max-width:820px){
+  .wrap{padding:0 16px 80px}
+  .toc ol{columns:1}
+  .lw-r{grid-template-columns:32px 1fr}
+  .lw-c{border-right:0;border-bottom:1px dashed var(--line)}
+  .lw-e{grid-column:1 / -1;background:color-mix(in srgb,var(--panel) 70%,transparent)}
+  dl.gloss>div{grid-template-columns:1fr}
+  dt{border-right:0;border-bottom:1px dashed var(--line)}
+}
+@media print{
+  :root{--bg:#fff;--fg:#000;--muted:#444;--line:#bbb;--line2:#999;--panel:#f6f6f6;--panel2:#eee;
+        --code:#f6f6f6;--accent:#0b5fd0;--wbg:#e8eeff;--abg:#fdefe4;--pbg:#e4f6ec;--warnbg:#fdf6e3}
+  body{font-size:9.8pt;line-height:1.48}
+  .wrap{max-width:none;padding:0}
+  /* nothing may be clipped on paper: every scroll container becomes a flow container */
+  table{display:table;overflow:visible;font-size:8.6pt;word-break:break-word}
+  th,td{padding:4px 7px}
+  pre{overflow:visible;white-space:pre-wrap;word-break:break-word;font-size:8.4pt;line-height:1.5}
+  .art{overflow:visible} .art pre{font-size:8pt;white-space:pre}
+  h2{page-break-after:avoid;margin-top:22pt} h3,h4{page-break-after:avoid}
+  figure,.box,.card,.grid2,dl.gloss>div{page-break-inside:avoid}
+  pre,table{page-break-inside:auto}
+  .lw{page-break-inside:auto} .lw-r{page-break-inside:avoid}
+  .lw-r{grid-template-columns:26px minmax(0,0.95fr) minmax(0,1.15fr)}
+  .lw-c{font-size:7.8pt;line-height:1.45;white-space:pre-wrap;overflow:visible;padding:5px 8px 5px 0}
+  .lw-e{font-size:8.6pt;line-height:1.42;padding:5px 9px}
+  .lw-n{font-size:7pt;padding:5px 5px 5px 0}
+  dt{font-size:8.6pt;padding:6px 9px} dd{font-size:8.8pt;padding:6px 10px;line-height:1.42}
+  .toc ol{columns:2}
+  a{color:#000;border:0}
+  header.mast{padding-top:0}
+  @page{margin:14mm 12mm}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">Companion guide · No prior hardware knowledge assumed</p>
+  <h1>The Beginner's Guide to a Systolic Accelerator</h1>
+  <p class="sub">What this chip does, why it is built the way it is, and what every single line of
+  its code means — written for someone who has never seen a hardware description language before.</p>
+  <div class="tagrow">
+    <span class="tag">13 modules</span><span class="tag">~800 lines of SystemVerilog</span>
+    <span class="tag">every line explained</span><span class="tag">glossary included</span>
+    <span class="tag">industry context</span>
+  </div>
+</header>
+
+<div class="box">
+  <span class="lbl">How to read this document</span>
+  <p>Sections 1–5 are background: what a chip is, what the code is describing, and the maths the
+  design performs. If you already know what a flip-flop and a clock edge are, skip to section 6,
+  which walks through every file line by line. Section 10 collects every new term in one place — it
+  is fine to jump there whenever a word is unfamiliar.</p>
+  <p>The companion document <a href="architecture_and_dataflow.html">architecture_and_dataflow.html</a>
+  covers the same design at a technical level, with <b>animated cycle-by-cycle figures</b> of the
+  delay pipes and the matrix multiply. Read this one first, then that one.</p>
+</div>
+
+<nav class="toc">
+<ol>
+  <li><a href="#b1">What is this thing?</a></li>
+  <li><a href="#b2">What a chip actually is</a></li>
+  <li><a href="#b3">Reading SystemVerilog: the 12 things you need</a></li>
+  <li><a href="#b4">The maths: matrix multiplication</a></li>
+  <li><a href="#b5">Why a systolic array? (and why not a CPU)</a></li>
+  <li><a href="#b6">Every file, line by line</a>
+    <ol>
+      <li><a href="#b6-1">delay_pipe.sv — the simplest module</a></li>
+      <li><a href="#b6-2">MAC.sv — the processing element</a></li>
+      <li><a href="#b6-3">array.sv — wiring 16 PEs together</a></li>
+      <li><a href="#b6-4">input_buf.sv — the skew buffer</a></li>
+      <li><a href="#b6-5">output_skewbuf.sv — the de-skew buffer</a></li>
+      <li><a href="#b6-6">a_mem / weight_mem / outmem — the memories</a></li>
+      <li><a href="#b6-7">controller.sv — the state machine</a></li>
+      <li><a href="#b6-8">agu.sv — the address generator</a></li>
+      <li><a href="#b6-9">The three wrappers</a></li>
+    </ol></li>
+  <li><a href="#b7">Running a job from start to finish</a></li>
+  <li><a href="#b8">How the design is tested</a></li>
+  <li><a href="#b9">Architecture choices &amp; what industry actually does</a></li>
+  <li><a href="#b10">Full glossary</a></li>
+  <li><a href="#b11">Where to go next</a></li>
+</ol>
+</nav>
+
+<!-- ================================================================= -->
+<h2 id="b1"><span class="num">1</span>What is this thing?</h2>
+
+<p>This project is the <b>design and verification of a small piece of custom computer hardware</b>.
+It is not a program that runs on a computer. It is a description of a circuit — of actual wires,
+adders and memory cells — written in a language that a tool can turn into a real chip layout.</p>
+
+<p>The circuit does one job: it multiplies matrices. Specifically, it computes
+<b>C = A × W</b>, where <code>W</code> is a fixed 4×4 grid of numbers and <code>A</code> is a stream
+of 4-number vectors fed in one after another.</p>
+
+<div class="box key">
+  <span class="lbl">Why anyone would build this</span>
+  <p>Matrix multiplication is what neural networks spend almost all of their time doing. Every layer
+  of a neural network is, at heart, "multiply this vector of inputs by that matrix of weights, then
+  add them up". A general-purpose processor can do it, but slowly and while burning a lot of power.
+  A circuit built <i>specifically</i> to do it can be dozens or hundreds of times more
+  efficient — and that is exactly what a Google TPU, an Apple Neural Engine or an NVIDIA Tensor Core
+  is. This project is a small, complete, honest version of the same idea.</p>
+</div>
+
+<h3>An analogy: the factory line</h3>
+
+<p>Imagine a factory floor laid out as a 4×4 grid of workstations, 16 in total.</p>
+
+<ul>
+<li><b>Each workstation is given one number to remember</b> — its <i>weight</i>. It is handed this
+number once at the start of the shift and keeps it all day. That is the "weight-stationary" part.</li>
+<li><b>Parts enter from the left</b> and move right, one station per minute. Every station that a
+part passes through multiplies it by its remembered number.</li>
+<li><b>A running total travels downward</b> through each column. When it reaches a station, that
+station adds its own multiplication result to the total and hands it on.</li>
+<li><b>Finished totals fall off the bottom</b> of the grid. Each one is a completed dot product.</li>
+</ul>
+
+<p>Nothing ever waits. Every station works every minute. The parts keep moving, the totals keep
+moving, and the weights never move at all. That constant, rhythmic pulse of data through a fixed grid
+is why it is called <b>systolic</b> — the word comes from <i>systole</i>, the contraction of a heart
+that pushes blood through the body.</p>
+
+<h3>What is actually in this repository</h3>
+
+<table>
+<thead><tr><th>Folder</th><th>What is in it</th><th>Is it "the chip"?</th></tr></thead>
+<tbody>
+<tr><td><code>design_rtl/</code></td><td>13 SystemVerilog files describing the circuit</td><td><b>Yes</b> — this is the design</td></tr>
+<tr><td><code>test_benches/</code></td><td>13 test programs that poke the design and check its answers</td><td>No — testing only, never becomes hardware</td></tr>
+<tr><td><code>indi_ver_rep/</code></td><td>Test results and raw simulator transcripts</td><td>No — evidence</td></tr>
+<tr><td><code>DOCS/</code></td><td>Documentation, including this file</td><td>No</td></tr>
+<tr><td><code>context_mkdwn/</code></td><td>Why decisions were made; derivations of the timing numbers</td><td>No</td></tr>
+</tbody>
+</table>
+
+<!-- ================================================================= -->
+<h2 id="b2"><span class="num">2</span>What a chip actually is</h2>
+
+<p>Before any code makes sense, four ideas.</p>
+
+<h3>2.1 Everything is wires and gates</h3>
+
+<p>A digital chip is millions of tiny switches (transistors) wired into <b>logic gates</b> — AND, OR,
+NOT — which combine into adders, multipliers and multiplexers. A wire carries either a 0 or a 1.
+A group of wires carries a number: 8 wires can carry any value from 0 to 255, or −128 to +127 if you
+agree to treat the top wire as a sign.</p>
+
+<p>Logic built purely from gates is called <b>combinational</b>. It has no memory: change the inputs
+and the outputs change almost immediately (after a tiny propagation delay). <code>2 + 3 = 5</code>
+happens as fast as electricity can cross the adder.</p>
+
+<h3>2.2 The clock, and why it exists</h3>
+
+<p>A <b>clock</b> is a wire that alternates 0,1,0,1,… millions or billions of times per second. It is
+the heartbeat that everything in the chip marches to. In this design the clock is drawn with a period
+of 10 ns in simulation, so one "cycle" is 10 ns.</p>
+
+<p>The moment the clock goes from 0 to 1 is the <b>positive edge</b> (or <i>posedge</i>). This is
+the instant at which the chip's memory elements take a snapshot.</p>
+
+<h3>2.3 Registers: the chip's short-term memory</h3>
+
+<p>A <b>register</b> (or <b>flip-flop</b>) is a one-bit storage cell. It has an input, an output and a
+clock. On every positive clock edge it copies whatever is on its input to its output, and holds that
+value until the next edge. A 32-bit register is just 32 of them side by side.</p>
+
+<div class="box">
+  <span class="lbl">The single most important consequence</span>
+  <p>A register introduces a <b>delay of exactly one clock cycle</b> between its input and its output.
+  Almost every timing number in this entire design — 3, 6, 7, 8, 19 — is a count of how many
+  registers a value has to pass through. Once you internalise "one register = one cycle", the whole
+  design becomes arithmetic.</p>
+</div>
+
+<h3>2.4 Pipelining: why chips are fast</h3>
+
+<p>Suppose a calculation takes four steps. You could do all four in one clock cycle, but then the
+cycle must be long enough for the slowest path — so the clock is slow.</p>
+
+<p>Instead you put a register between each step. Now each cycle only has to be long enough for
+<i>one</i> step, so the clock can be four times faster. Any individual result takes four cycles to
+emerge (that is the <b>latency</b>), but a new result comes out <i>every</i> cycle once the pipeline
+is full (that is the <b>throughput</b>).</p>
+
+<div class="art"><pre>Without a pipeline           With a 4-stage pipeline
+--------------------         -------------------------------
+cycle 1: A B C D  -> r1      cycle 1: A₁
+cycle 2: A B C D  -> r2      cycle 2: A₂ B₁
+cycle 3: A B C D  -> r3      cycle 3: A₃ B₂ C₁
+                             cycle 4: A₄ B₃ C₂ D₁  -> r1
+slow clock, 1 result/cycle   cycle 5: A₅ B₄ C₃ D₂  -> r2
+                             fast clock, still 1 result/cycle
+                             ...but each cycle is 4× shorter</pre></div>
+
+<p>This accelerator is one long pipeline. A result takes 7 cycles to appear, but a new result appears
+every cycle. That trade — latency for throughput — is the defining move of digital design, and it is
+why "it takes 8 cycles" is not a complaint about the design.</p>
+
+<!-- ================================================================= -->
+<h2 id="b3"><span class="num">3</span>Reading SystemVerilog: the 12 things you need</h2>
+
+<p>SystemVerilog is a <b>hardware description language</b>. It looks like C, and that is the single
+biggest trap for a newcomer: it does not <i>execute</i>, it <i>describes</i>. When you write a loop,
+you are not asking the chip to iterate — you are asking the tool to <b>build four copies of
+something</b>.</p>
+
+<dl class="gloss">
+<div><dt>module … endmodule</dt><dd>A named block of hardware with a list of connections. The closest
+software analogy is a class, but a better one is a physical component with pins. Everything in this
+design is a module.</dd></div>
+
+<div><dt>input / output</dt><dd>The pins. <code>input logic clk</code> means "a one-wire input called
+<code>clk</code>".</dd></div>
+
+<div><dt>logic</dt><dd>The universal wire type. <code>logic [7:0] x</code> is an 8-wire bundle named
+<code>x</code>, with bit 7 on the left (most significant) and bit 0 on the right. The tool works out
+whether it needs to be a register or a plain wire from how you use it.</dd></div>
+
+<div><dt>signed</dt><dd>Declares that the top bit means "negative". <code>logic signed [7:0]</code>
+holds −128 … +127. Leave it off and the same 8 wires mean 0 … 255. Getting this wrong is one of the
+classic silent bugs.</dd></div>
+
+<div><dt>parameter</dt><dd>A compile-time constant that can be overridden when the module is
+instantiated. <code>parameter ROWS = 4</code> lets the same source describe a 4×4 or an 8×8 array.
+Parameters are how hardware is made reusable.</dd></div>
+
+<div><dt>assign</dt><dd>A permanent, continuous connection — a piece of wire.
+<code>assign y = a + b;</code> means "there is an adder here, and its output is permanently connected
+to <code>y</code>". It is not an event that happens once; it is always true.</dd></div>
+
+<div><dt>always_ff @(posedge clk)</dt><dd>"Build registers." Everything assigned inside this block
+becomes a flip-flop that updates on the rising clock edge. <code>ff</code> stands for
+<i>flip-flop</i>.</dd></div>
+
+<div><dt>always_comb</dt><dd>"Build combinational logic." Everything assigned inside is pure gates
+with no memory, recomputed whenever any input changes.</dd></div>
+
+<div><dt>&lt;= (non-blocking)</dt><dd>Used inside <code>always_ff</code>. It means "all the
+right-hand sides are read <b>first</b>, using the values from before this clock edge, and only then
+are the left-hand sides updated." This is what makes <code>a &lt;= b; b &lt;= a;</code> a genuine swap
+rather than a bug, and it is what makes shift registers work.</dd></div>
+
+<div><dt>= (blocking)</dt><dd>Used inside <code>always_comb</code>. Ordinary immediate assignment,
+like in C. Using <code>=</code> inside <code>always_ff</code> is a classic beginner error that
+produces a circuit which simulates differently from how it synthesises.</dd></div>
+
+<div><dt>generate / genvar</dt><dd>A loop that runs at <b>compile time</b> and stamps out copies of
+hardware. <code>for (r = 0; r &lt; 4; r++) processing_element pe(...)</code> does not run four times
+at runtime — it creates four separate physical PEs.</dd></div>
+
+<div><dt>[0:ROWS-1]</dt><dd>An <b>unpacked array</b> — four separate bundles of wires, written after
+the name: <code>logic [7:0] a [0:3]</code> is four 8-bit buses. Compare
+<code>logic [31:0] a</code>, a <b>packed</b> 32-wire bundle you can slice. The difference matters:
+packed can be treated as one number, unpacked cannot.</dd></div>
+</dl>
+
+<h3>Two syntax details that appear constantly in this code</h3>
+
+<h4>Part-select with <code>+:</code></h4>
+<pre><code>a_rdata[r*DATA_W +: DATA_W]     <span class="cmt">// DATA_W bits starting at bit r*DATA_W</span></code></pre>
+<p>Read it as "start here, take this many bits, going up". With <code>DATA_W = 8</code> and
+<code>r = 2</code> it means bits <code>[23:16]</code>. It exists because <code>[r*8+7 : r*8]</code>
+is illegal when <code>r</code> is not a constant, and this form is legal.</p>
+
+<h4>Width casts and sign casts</h4>
+<pre><code>32'(weight_q * a_in)            <span class="cmt">// force the result to be 32 bits wide</span>
+signed'(w_rdata[c*8 +: 8])      <span class="cmt">// reinterpret those 8 bits as a signed number</span>
+PSUM_W'(signed'( ... ))         <span class="cmt">// then sign-extend it out to 32 bits</span></code></pre>
+<p>Casts are everywhere in this design because SystemVerilog's automatic width and sign rules are
+notoriously surprising. Writing the cast makes the intent explicit and stops the tool from silently
+zero-extending a negative number.</p>
+
+<!-- ================================================================= -->
+<h2 id="b4"><span class="num">4</span>The maths: matrix multiplication</h2>
+
+<p>A <b>matrix</b> is a rectangular grid of numbers. A <b>vector</b> is a single row or column of
+them.</p>
+
+<p>The core operation is the <b>dot product</b>: take two lists of numbers of the same length,
+multiply them element by element, and add up all the products.</p>
+
+<div class="art"><pre>a = [ 1,  2,  3,  4 ]
+b = [ 2,  1, -3,  0 ]
+
+a · b  =  (1×2) + (2×1) + (3×−3) + (4×0)
+       =    2   +   2   +   −9   +   0
+       =  −5</pre></div>
+
+<p>Matrix multiplication is just a lot of dot products arranged neatly. To multiply activation vector
+<code>A</code> by weight matrix <code>W</code>, the result's element in column <i>c</i> is the dot
+product of <code>A</code> with column <i>c</i> of <code>W</code>:</p>
+
+<div class="art"><pre>              W  (4×4, stationary)
+              c0   c1   c2   c3
+       r0 [    2   -1    3    0 ]
+       r1 [    1    4   -2    5 ]
+       r2 [   -3    2    1    1 ]
+       r3 [    0    1    2   -4 ]
+
+A = [ 1, 2, 3, 4 ]        ← one activation vector, one element per ROW of W
+
+C[0] = 1×2  + 2×1  + 3×(−3) + 4×0    =  −5     ← uses column 0 of W
+C[1] = 1×(−1)+ 2×4  + 3×2    + 4×1   =  17     ← uses column 1
+C[2] = 1×3  + 2×(−2)+ 3×1    + 4×2   =  10     ← uses column 2
+C[3] = 1×0  + 2×5  + 3×1    + 4×(−4) =  −3     ← uses column 3
+
+C = [ −5, 17, 10, −3 ]</pre></div>
+
+<p>Written as one formula, this is the entire specification of the chip:</p>
+
+<pre><code>C[i][c] = Σ<sub>r</sub>  A[i][r] × W[r][c]</code></pre>
+
+<div class="box key">
+  <span class="lbl">How this maps onto the grid</span>
+  <p>The 4×4 array has exactly 16 processing elements and <code>W</code> has exactly 16 numbers.
+  <b>PE at row <i>r</i>, column <i>c</i> holds <code>W[r][c]</code>.</b> Element <i>r</i> of the
+  activation vector enters row <i>r</i> from the west and passes through all four PEs in that row.
+  Column <i>c</i>'s running total collects <code>A[r] × W[r][c]</code> from each row as it descends.
+  When it exits the bottom of column <i>c</i>, it is <code>C[c]</code>.</p>
+  <p>Every multiply in the formula happens in exactly one place, and every sum happens on exactly
+  one wire. The grid <i>is</i> the equation.</p>
+</div>
+
+<h3>Why int8 in and int32 out</h3>
+
+<p>The inputs are 8-bit signed integers (<b>int8</b>): −128 to +127. Multiplying two of them gives at
+most <code>128 × 128 = 16 384</code>, which needs 15 bits. Adding four such products needs
+<code>4 × 16 384 = 65 536</code>, about 17 bits. The design uses 32 bits for the running total, which
+is far more than needed here — but it is the standard width, it costs little at this size, and it
+leaves headroom if the array ever grows.</p>
+
+<p>Using 8-bit inputs at all is a deliberate industry-standard choice called <b>quantisation</b>:
+neural networks are usually trained in 32-bit floating point and then converted to 8-bit integers for
+deployment, because an 8-bit multiplier is roughly <i>16 times</i> smaller and cheaper than a 32-bit
+floating-point one, and the accuracy loss is usually negligible.</p>
+
+<!-- ================================================================= -->
+<h2 id="b5"><span class="num">5</span>Why a systolic array? (and why not a CPU)</h2>
+
+<h3>The real problem is memory, not maths</h3>
+
+<p>Multiplying two numbers is cheap. <i>Fetching</i> two numbers from memory is expensive — it costs
+far more energy and takes far longer than the multiply itself. A rough industry rule of thumb: reading
+a value from off-chip DRAM costs on the order of <b>hundreds of times</b> more energy than the
+arithmetic you then do with it.</p>
+
+<p>So the whole game in accelerator design is <b>data reuse</b>: get a number on-chip once, then use
+it as many times as possible before throwing it away.</p>
+
+<h3>How a CPU does it, and why that is slow</h3>
+
+<div class="art"><pre>for i in vectors:
+    for c in columns:
+        sum = 0
+        for r in rows:
+            sum += A[i][r] * W[r][c]      ← two memory reads per multiply
+        C[i][c] = sum</pre></div>
+
+<p>A classic CPU executes this one multiply at a time, and for each multiply it must fetch the
+operands, decode an instruction, and update a loop counter. Caches help enormously, but the
+fundamental structure — fetch, decode, execute, write back, for every single operation — is overhead
+that the arithmetic does not need.</p>
+
+<h3>What the systolic array does instead</h3>
+
+<div class="grid2">
+<div class="card"><h4>Weights are fetched once</h4><p>Four SRAM reads load all 16 weights. Every
+activation vector afterwards reuses them with <b>zero</b> further weight traffic. Stream 200 vectors
+and you have amortised those four reads 200 times over.</p></div>
+
+<div class="card"><h4>Activations are fetched once</h4><p>One 32-bit read supplies all four elements
+of a vector. Each element is then reused across all four columns as it travels east, without ever
+being read again.</p></div>
+
+<div class="card"><h4>Partial sums never touch memory</h4><p>The running total lives on a wire
+between two adjacent PEs. In a CPU it would be a register write and read every step; here it is
+simply passed down.</p></div>
+
+<div class="card"><h4>No instructions at all</h4><p>There is no fetch, no decode, no branch
+prediction. A tiny state machine says "we are in COMPUTE" and 16 multipliers do their thing. All the
+transistors are doing arithmetic.</p></div>
+</div>
+
+<div class="box ind">
+  <span class="lbl">Industry context</span>
+  <p>This is precisely the architecture of Google's first <b>Tensor Processing Unit</b> (2016), which
+  used a 256×256 weight-stationary systolic array of 8-bit multipliers — 65 536 PEs, versus 16 here.
+  The structure is identical; only the numbers differ. The same family of ideas appears in NVIDIA's
+  Tensor Cores, Apple's Neural Engine, and essentially every "NPU" shipped in a phone since 2018.</p>
+  <p>The three named dataflows you will meet in the literature are <b>weight-stationary</b> (weights
+  stay put — this design), <b>output-stationary</b> (each PE owns one output and accumulates in
+  place), and <b>row-stationary</b> (used by the MIT Eyeriss chip, which optimises for convolution).
+  Weight-stationary is the simplest and wins when the same weights are reused across many inputs,
+  which is the common case for a fully-connected neural network layer.</p>
+</div>
+
+<h3>The cost of all this</h3>
+
+<p>It is worth being honest about what the architecture gives up:</p>
+
+<ul>
+<li><b>It does exactly one thing.</b> A CPU can run a web browser. This can multiply 4×4 matrices.</li>
+<li><b>The shape is fixed.</b> A 4×4 array is efficient for 4×4 problems. Feed it a 3×3 problem and
+one row and one column of PEs sit idle, doing nothing but burning power.</li>
+<li><b>There is no back-pressure.</b> The design cannot say "wait, I'm busy". The controller must
+know the exact latency and respect it. That is simpler and faster, but it means a timing mistake is
+a silent wrong answer rather than a stall.</li>
+<li><b>Everything is latency, not choice.</b> The design's correctness is a set of arithmetic
+identities about cycle counts. Get one off by one, and it still runs — just wrongly.</li>
+</ul>
+
+<!-- ================================================================= -->
+<h2 id="b6"><span class="num">6</span>Every file, line by line</h2>
+
+<p>We now walk through the design from the smallest module to the largest. Each module builds on the
+one before it, so reading in order is worth it.</p>
+
+<div class="box">
+  <span class="lbl">One naming quirk to know first</span>
+  <p>In this repository, eight files have a module inside them whose name is different from the
+  filename. For example the module <code>processing_element</code> lives in a file called
+  <code>MAC.sv</code>. This is not good practice — most teams enforce one-module-per-file with
+  matching names — but it is what this repository does, so both names are given in every heading
+  below.</p>
+</div>
+
+<!-- ---------------------------------------------------------------- -->
+<h3 id="b6-1">6.1 <code>delay_pipe.sv</code> — the simplest module</h3>
+
+<p><b>Job:</b> make a value come out <code>DELAY</code> clock cycles after it went in. That is all.
+It is used twelve times in the design and everything else depends on it working.</p>
+
+<p>Think of it as a conveyor belt with <code>DELAY</code> slots. Put a value on one end; it appears
+at the other end <code>DELAY</code> cycles later, with everything else on the belt shifting along
+one slot per cycle.</p>
+
+<div class="lw">
+<div class="lw-h">design_rtl/delay_pipe.sv <span>— 33 lines, all of them</span></div>
+
+<div class="lw-r"><span class="lw-n">1</span><pre class="lw-c">module delay_pipe #(</pre><div class="lw-e">Start of the module. The <code>#(</code> opens the <b>parameter</b> list — the settings you can change each time you use this module.</div></div>
+<div class="lw-r"><span class="lw-n">2</span><pre class="lw-c">    parameter WIDTH = 8,</pre><div class="lw-e">How many wires wide the value is. Default 8. When the de-skew buffer uses this module it passes 32 instead.</div></div>
+<div class="lw-r"><span class="lw-n">3</span><pre class="lw-c">    parameter DELAY = 1,</pre><div class="lw-e">How many cycles of delay — how many slots on the conveyor belt. This is the parameter that makes the whole skew mechanism work.</div></div>
+<div class="lw-r"><span class="lw-n">4</span><pre class="lw-c">)(</pre><div class="lw-e">Close the parameter list, open the <b>port</b> list — the actual pins of this block of hardware.</div></div>
+<div class="lw-r"><span class="lw-n">5</span><pre class="lw-c">    input  logic             clk,</pre><div class="lw-e">The clock. One wire, ticking 0,1,0,1. Every register inside will update on its rising edge.</div></div>
+<div class="lw-r"><span class="lw-n">6</span><pre class="lw-c">    input  logic             rst_n,</pre><div class="lw-e">Reset. The <code>_n</code> suffix is a universal convention meaning <b>active low</b>: the reset is happening when this wire is <b>0</b>, not 1.</div></div>
+<div class="lw-r"><span class="lw-n">7</span><pre class="lw-c">    input  logic [WIDTH-1:0] din,</pre><div class="lw-e">Data in. <code>[WIDTH-1:0]</code> means bits numbered from <code>WIDTH-1</code> down to 0 — so 8 wires if <code>WIDTH</code> is 8.</div></div>
+<div class="lw-r"><span class="lw-n">8</span><pre class="lw-c">    output logic [WIDTH-1:0] dout</pre><div class="lw-e">Data out, same width. No comma — it is the last port.</div></div>
+<div class="lw-r"><span class="lw-n">9</span><pre class="lw-c">);</pre><div class="lw-e">End of the port list. Everything after this is the module's contents.</div></div>
+<div class="lw-r"><span class="lw-n">10</span><pre class="lw-c">    generate</pre><div class="lw-e">Start of a <b>compile-time</b> region. Code here decides <i>what hardware gets built</i>, not what happens at runtime.</div></div>
+<div class="lw-r hi"><span class="lw-n">11</span><pre class="lw-c">        if (DELAY == 0) begin : gen_no_delay</pre><div class="lw-e">If someone asked for zero delay, build the version below. The <code>: gen_no_delay</code> gives this branch a name, which is what you will see in a waveform viewer. <b>Naming generate blocks is a real best practice</b> — unnamed ones get tool-invented names like <code>genblk1</code> that change between tool versions.</div></div>
+<div class="lw-r hi"><span class="lw-n">12</span><pre class="lw-c">            assign dout = din;</pre><div class="lw-e">Zero delay means <b>literally a piece of wire</b>. No register, no clock, no reset. The output changes the instant the input does. This branch is not a tolerated edge case — it is used deliberately, by row 0 of the skew buffer and column 3 of the de-skew buffer.</div></div>
+<div class="lw-r"><span class="lw-n">13</span><pre class="lw-c">        end</pre><div class="lw-e">End of the zero-delay branch.</div></div>
+<div class="lw-r"><span class="lw-n">14</span><pre class="lw-c">        else begin : gen_with_delay</pre><div class="lw-e">Otherwise build a real shift register. Also named.</div></div>
+<div class="lw-r"><span class="lw-n">15</span><pre class="lw-c">            logic [WIDTH-1:0] pipe [0:DELAY-1];</pre><div class="lw-e">The conveyor belt: <code>DELAY</code> separate storage slots, each <code>WIDTH</code> bits wide. The <code>[0:DELAY-1]</code> <i>after</i> the name makes it an <b>unpacked array</b> — a list of separate registers rather than one wide number. This declaration is also why line 11 exists: with <code>DELAY = 0</code> this would be a zero-element array, which is illegal.</div></div>
+<div class="lw-r"><span class="lw-n">16</span><pre class="lw-c">            integer i;</pre><div class="lw-e">A loop counter used below. It never becomes hardware — it only exists while the tool is elaborating the loops.</div></div>
+<div class="lw-r blank"><span class="lw-n">17</span><pre class="lw-c"> </pre><div class="lw-e">Blank line.</div></div>
+<div class="lw-r"><span class="lw-n">18</span><pre class="lw-c">            always_ff @(posedge clk) begin</pre><div class="lw-e"><b>"Build registers that update on the rising clock edge."</b> Everything assigned inside this block becomes a flip-flop. <code>always_ff</code> also asks the tool to <i>check</i> that you really did describe registers, and to complain if you accidentally described something else.</div></div>
+<div class="lw-r"><span class="lw-n">19</span><pre class="lw-c">                if (!rst_n) begin</pre><div class="lw-e">"If reset is active" (remember: active low, so <code>!rst_n</code> means reset <i>is</i> asserted). Because this test is <i>inside</i> the <code>always_ff</code> and not in the <code>@(...)</code> list, this is a <b>synchronous reset</b> — it only takes effect on a clock edge.</div></div>
+<div class="lw-r"><span class="lw-n">20</span><pre class="lw-c">                    for (i = 0; i &lt; DELAY; i = i + 1)</pre><div class="lw-e">A loop the tool unrolls at compile time. With <code>DELAY = 3</code> it produces three copies of the next line, one per slot.</div></div>
+<div class="lw-r"><span class="lw-n">21</span><pre class="lw-c">                        pipe[i] &lt;= '0;</pre><div class="lw-e">Clear every slot to zero. <code>'0</code> is shorthand for "all bits zero, however many there are" — safer than writing <code>8'b0</code>, which breaks silently if <code>WIDTH</code> changes.</div></div>
+<div class="lw-r"><span class="lw-n">22</span><pre class="lw-c">                end</pre><div class="lw-e">End of the reset branch.</div></div>
+<div class="lw-r"><span class="lw-n">23</span><pre class="lw-c">                else begin</pre><div class="lw-e">Normal operation — not in reset.</div></div>
+<div class="lw-r hi"><span class="lw-n">24</span><pre class="lw-c">                    pipe[0] &lt;= din;</pre><div class="lw-e">The newest value enters slot 0. Note <code>&lt;=</code>, the <b>non-blocking</b> assignment: it schedules the update for the end of the clock edge rather than doing it immediately.</div></div>
+<div class="lw-r"><span class="lw-n">25</span><pre class="lw-c">                    for (i = 1; i &lt; DELAY; i = i + 1)</pre><div class="lw-e">For every other slot…</div></div>
+<div class="lw-r hi"><span class="lw-n">26</span><pre class="lw-c">                        pipe[i] &lt;= pipe[i-1];</pre><div class="lw-e">…copy from the slot before it. <b>This is where non-blocking assignment earns its keep.</b> All the right-hand sides are read using the values from <i>before</i> the edge, so every slot shifts along by exactly one. With <code>=</code> instead, slot 0's new value would immediately overwrite slot 1, then slot 2, and the whole belt would collapse into one value.</div></div>
+<div class="lw-r"><span class="lw-n">27</span><pre class="lw-c">                end</pre><div class="lw-e">End of the normal branch.</div></div>
+<div class="lw-r"><span class="lw-n">28</span><pre class="lw-c">            end</pre><div class="lw-e">End of the <code>always_ff</code> block.</div></div>
+<div class="lw-r blank"><span class="lw-n">29</span><pre class="lw-c"> </pre><div class="lw-e">Blank line.</div></div>
+<div class="lw-r"><span class="lw-n">30</span><pre class="lw-c">            assign dout = pipe[DELAY-1];</pre><div class="lw-e">The output is permanently wired to the <b>last</b> slot — the end of the conveyor belt, holding the oldest value.</div></div>
+<div class="lw-r"><span class="lw-n">31</span><pre class="lw-c">        end</pre><div class="lw-e">End of the with-delay branch.</div></div>
+<div class="lw-r"><span class="lw-n">32</span><pre class="lw-c">    endgenerate</pre><div class="lw-e">End of the compile-time region.</div></div>
+<div class="lw-r"><span class="lw-n">33</span><pre class="lw-c">endmodule</pre><div class="lw-e">End of the module.</div></div>
+</div>
+
+<h4>What this module does, in one picture</h4>
+<div class="art"><pre>DELAY = 3
+
+  din ──▶│ pipe[0] │──▶│ pipe[1] │──▶│ pipe[2] │──▶ dout
+          └────────┘    └────────┘    └────────┘
+          newest                       oldest
+
+cycle:      1    2    3    4    5    6
+din:        7   -3   12    0   25   -8
+dout:       0    0    0    7   -3   12      ← din, three cycles later</pre></div>
+
+<p>The rule is <code>dout at cycle m = din at cycle m − DELAY</code>. See this animated in
+<a href="architecture_and_dataflow.html#s6">the technical document, section 6</a>.</p>
+
+<!-- ---------------------------------------------------------------- -->
+<h3 id="b6-2">6.2 <code>MAC.sv</code> — the processing element</h3>
+
+<p><b>Job:</b> hold one weight; multiply every activation that passes through by it; add the result to
+the running total coming down from above. Sixteen of these make the array, and <b>every arithmetic
+operation in the whole chip happens inside one of them</b>.</p>
+
+<p>"MAC" stands for <b>Multiply-ACcumulate</b> — the single most common operation in signal
+processing and machine learning, and the thing every DSP and every AI chip is built around.</p>
+
+<div class="box">
+  <span class="lbl">The one clever trick in this module</span>
+  <p>The vertical (north–south) bus is <b>time-multiplexed</b>: it carries weights while
+  <code>wload = 1</code>, and running totals the rest of the time. This saves building a second
+  32-wire network across the entire array, at the cost of one multiplexer per PE. Reusing a bus for
+  two purposes in two different phases is a very standard hardware economy.</p>
+</div>
+
+<div class="lw">
+<div class="lw-h">design_rtl/MAC.sv <span>— module processing_element, 64 lines</span></div>
+
+<div class="lw-r"><span class="lw-n">1</span><pre class="lw-c">`timescale 1ns / 1ps</pre><div class="lw-e">A simulator directive: "one time unit means 1 nanosecond; round to 1 picosecond". It affects simulation only and has no effect on the hardware built.</div></div>
+<div class="lw-r"><span class="lw-n">3</span><pre class="lw-c">module processing_element (</pre><div class="lw-e">Module start. Note: <b>no parameter list</b> — this module's widths are hard-coded at 8 and 32. That is a real limitation of the design, and it is the reason the whole project is only verified at 4×4 with int8.</div></div>
+<div class="lw-r"><span class="lw-n">4</span><pre class="lw-c">    input  logic               clk,</pre><div class="lw-e">Clock.</div></div>
+<div class="lw-r"><span class="lw-n">5</span><pre class="lw-c">    input  logic               rst_n,</pre><div class="lw-e">Active-low synchronous reset.</div></div>
+<div class="lw-r"><span class="lw-n">8</span><pre class="lw-c">    input  logic               wload,</pre><div class="lw-e"><b>Mode select.</b> 1 = we are loading weights into the array; 0 = we are computing. This one wire changes what the vertical bus means and what this PE does with it.</div></div>
+<div class="lw-r"><span class="lw-n">9</span><pre class="lw-c">    input  logic               valid_in,</pre><div class="lw-e">"The activation arriving this cycle is real data, not a gap." When it is 0, this PE will not accumulate.</div></div>
+<div class="lw-r"><span class="lw-n">12</span><pre class="lw-c">    input  logic signed [7:0]  a_in,</pre><div class="lw-e">The activation arriving from the <b>west</b> (the PE to the left, or the array boundary). <code>signed</code> means −128…+127.</div></div>
+<div class="lw-r"><span class="lw-n">13</span><pre class="lw-c">    output logic signed [7:0]  a_out,</pre><div class="lw-e">The same activation leaving to the <b>east</b>, one clock later. This is how an activation gets reused by all four PEs in its row.</div></div>
+<div class="lw-r"><span class="lw-n">14</span><pre class="lw-c">    output logic               valid_out,</pre><div class="lw-e">The valid flag travelling east alongside <code>a_out</code>, delayed by the same one cycle so the two can never separate.</div></div>
+<div class="lw-r"><span class="lw-n">17</span><pre class="lw-c">    input  logic signed [31:0] psum_in,</pre><div class="lw-e">From the <b>north</b>. During <code>wload</code> this carries a weight (in its low 8 bits); otherwise it carries the running total. "psum" = <b>partial sum</b>.</div></div>
+<div class="lw-r"><span class="lw-n">18</span><pre class="lw-c">    output logic signed [31:0] psum_out</pre><div class="lw-e">To the <b>south</b> — either the next weight to shift down, or this PE's updated running total.</div></div>
+<div class="lw-r"><span class="lw-n">19</span><pre class="lw-c">);</pre><div class="lw-e">End of ports. Four inputs of data, three outputs, two control wires, plus clock and reset.</div></div>
+<div class="lw-r"><span class="lw-n">22</span><pre class="lw-c">    logic signed [7:0]  weight_q;</pre><div class="lw-e"><b>Register 1 of 4.</b> The resident weight. The <code>_q</code> suffix is a long-standing convention meaning "the Q output of a flip-flop", i.e. this is stored state rather than a wire.</div></div>
+<div class="lw-r"><span class="lw-n">23</span><pre class="lw-c">    logic signed [7:0]  a_q;</pre><div class="lw-e"><b>Register 2.</b> The activation, held for one cycle so it can be handed east next cycle.</div></div>
+<div class="lw-r"><span class="lw-n">24</span><pre class="lw-c">    logic               valid_q;</pre><div class="lw-e"><b>Register 3.</b> The valid flag, delayed to match <code>a_q</code>.</div></div>
+<div class="lw-r"><span class="lw-n">25</span><pre class="lw-c">    logic signed [31:0] psum_q;</pre><div class="lw-e"><b>Register 4.</b> The running total this PE will hand south. These four registers are the PE's entire state.</div></div>
+<div class="lw-r"><span class="lw-n">28</span><pre class="lw-c">    logic signed [31:0] product_ext;</pre><div class="lw-e">A wire (not a register) carrying the multiplier's output.</div></div>
+<div class="lw-r"><span class="lw-n">29</span><pre class="lw-c">    logic signed [31:0] adder_out;</pre><div class="lw-e">A wire carrying the adder's output.</div></div>
+<div class="lw-r hi"><span class="lw-n">32</span><pre class="lw-c">    assign product_ext = 32'(weight_q * a_in);</pre><div class="lw-e"><b>The multiplier.</b> Multiply the stored weight by the arriving activation. The <code>32'(...)</code> cast forces the result to 32 bits, sign-extended. Without it, SystemVerilog's width rules would give a 16-bit result and the later addition could go wrong. Note this uses <code>a_in</code> — the value arriving <i>now</i>, not the stored <code>a_q</code>.</div></div>
+<div class="lw-r hi"><span class="lw-n">33</span><pre class="lw-c">    assign adder_out   = psum_in + product_ext;</pre><div class="lw-e"><b>The adder.</b> Add this PE's product to the running total coming from the north. Both <code>assign</code> statements are pure combinational logic — a real multiplier and a real adder, always live.</div></div>
+<div class="lw-r"><span class="lw-n">36</span><pre class="lw-c">    always_ff @(posedge clk) begin</pre><div class="lw-e">Everything below becomes registers clocked on the rising edge.</div></div>
+<div class="lw-r"><span class="lw-n">37</span><pre class="lw-c">        if (!rst_n) begin</pre><div class="lw-e">Synchronous reset.</div></div>
+<div class="lw-r"><span class="lw-n">38-41</span><pre class="lw-c">            weight_q &lt;= '0;
+            a_q      &lt;= '0;
+            valid_q  &lt;= '0;
+            psum_q   &lt;= '0;</pre><div class="lw-e">Clear all four registers. Unlike the memories (which deliberately have no reset), registers here are reset so the array starts in a known, all-zero state.</div></div>
+<div class="lw-r"><span class="lw-n">42</span><pre class="lw-c">        end else begin</pre><div class="lw-e">Normal operation.</div></div>
+<div class="lw-r hi"><span class="lw-n">44-46</span><pre class="lw-c">            if (wload) begin
+                weight_q &lt;= psum_in[7:0];
+            end</pre><div class="lw-e"><b>Weight capture.</b> Only while <code>wload</code> is high, grab the low 8 bits of the vertical bus and store them as this PE's weight. When <code>wload</code> is 0 there is no <code>else</code>, so <code>weight_q</code> simply keeps its value — that is the "stationary" in weight-stationary.</div></div>
+<div class="lw-r"><span class="lw-n">49</span><pre class="lw-c">            a_q     &lt;= a_in;</pre><div class="lw-e">The horizontal pipeline: whatever arrived from the west this cycle will be handed to the east next cycle. This one register is why an activation takes one cycle to cross one column.</div></div>
+<div class="lw-r"><span class="lw-n">50</span><pre class="lw-c">            valid_q &lt;= valid_in;</pre><div class="lw-e">The valid flag rides along, delayed identically.</div></div>
+<div class="lw-r hi"><span class="lw-n">53</span><pre class="lw-c">            psum_q  &lt;= valid_in ? adder_out : psum_in;</pre><div class="lw-e"><b>The accumulator, with a bypass.</b> If the arriving activation is real, store the sum. If not, store the incoming total <b>unchanged</b> — do not add garbage to it. Note carefully: even when invalid, the total still <i>moves down one row</i>. There is no stalling. Partial sums march south at exactly one row per cycle no matter what, which is why a gap in the input stream can never corrupt a real calculation — the two occupy different pipeline slots at all times.</div></div>
+<div class="lw-r"><span class="lw-n">54-55</span><pre class="lw-c">        end
+    end</pre><div class="lw-e">End of the else branch and the <code>always_ff</code>.</div></div>
+<div class="lw-r"><span class="lw-n">58</span><pre class="lw-c">    assign a_out     = a_q;</pre><div class="lw-e">The east output is just the stored activation. Simple wire from a register.</div></div>
+<div class="lw-r"><span class="lw-n">59</span><pre class="lw-c">    assign valid_out = valid_q;</pre><div class="lw-e">Same for the valid flag.</div></div>
+<div class="lw-r hi"><span class="lw-n">62</span><pre class="lw-c">    assign psum_out  = wload ? 32'(weight_q) : psum_q;</pre><div class="lw-e"><b>The most consequential line in the entire design.</b> During compute it outputs the stored running total — ordinary. But during <code>wload</code> it outputs <code>weight_q</code> <i>combinationally</i>, skipping the register. That means the PE below sees this PE's current weight immediately, and captures it on the next edge. A whole column therefore behaves as a <b>downward shift register</b>, and <b>the weight fed in first travels the furthest</b>. See the box below.</div></div>
+<div class="lw-r"><span class="lw-n">64</span><pre class="lw-c">endmodule</pre><div class="lw-e">End.</div></div>
+</div>
+
+<h4>Why weights must be loaded bottom row first</h4>
+
+<p>Because of line 62, feeding four weight values <code>w₁ w₂ w₃ w₄</code> into the top of a column
+on four consecutive cycles produces this:</p>
+
+<div class="art"><pre>After edge  │ PE row 0 │ PE row 1 │ PE row 2 │ PE row 3
+     1      │    w₁    │    –     │    –     │    –
+     2      │    w₂    │    w₁    │    –     │    –
+     3      │    w₃    │    w₂    │    w₁    │    –
+     4      │    w₄    │    w₃    │    w₂    │    w₁   ← w₁ travelled furthest</pre></div>
+
+<div class="box warn">
+  <span class="lbl">Rule you must not break</span>
+  <p>To get weight row <i>r</i> into array row <i>r</i>, feed <b>W[3] first</b>, then W[2], W[1],
+  W[0]. The address generator does this by counting the weight address <b>down</b>: 3, 2, 1, 0.</p>
+  <p><b>Getting this wrong is completely silent.</b> The design still runs, the "done" signal still
+  fires, and plausible-looking numbers still appear in memory. They are simply the answer to a
+  <i>different</i> question — the weight matrix flipped upside down. Nothing detects it. This is why
+  every test in this project uses a <b>random, non-symmetric</b> weight matrix: with a symmetric or
+  identity matrix, flipping the rows would produce the same answer and the bug would pass every
+  test.</p>
+</div>
+
+<!-- ---------------------------------------------------------------- -->
+<h3 id="b6-3">6.3 <code>array.sv</code> — wiring 16 PEs together</h3>
+
+<p><b>Job:</b> create 16 processing elements and connect them into a grid. This module contains
+<b>no arithmetic at all</b> — it only names wires. That is a deliberate and very common structuring
+choice: keep computation in leaf modules, keep interconnect in structural modules, and never mix the
+two.</p>
+
+<div class="lw">
+<div class="lw-h">design_rtl/array.sv <span>— module systolic_array, key lines</span></div>
+
+<div class="lw-r"><span class="lw-n">3-6</span><pre class="lw-c">module systolic_array #(
+    parameter ROWS = 4,
+    parameter COLS = 4
+)(</pre><div class="lw-e">Grid dimensions as parameters, so the same source could build an 8×8 array. (In practice the PE's hard-coded widths limit this — see the limitations section.)</div></div>
+<div class="lw-r"><span class="lw-n">14</span><pre class="lw-c">    input logic signed [7:0] a_in_left [0:ROWS-1],</pre><div class="lw-e">The <b>west boundary</b>: four separate 8-bit inputs, one per row. The <code>[0:ROWS-1]</code> after the name makes it an <b>unpacked array</b> — four independent buses, not one 32-bit number.</div></div>
+<div class="lw-r"><span class="lw-n">15</span><pre class="lw-c">    input logic valid_in_left [0:ROWS-1],</pre><div class="lw-e">One valid flag per row. Note that in this design all four are always driven with the same value — per-row valid is supported by the hardware but never actually used.</div></div>
+<div class="lw-r"><span class="lw-n">18</span><pre class="lw-c">    input logic signed [31:0] psum_in_top [0:COLS-1],</pre><div class="lw-e">The <b>north boundary</b>: four 32-bit inputs, one per column. Carries weight values during load, and zeros during compute (because every dot product must start from 0).</div></div>
+<div class="lw-r"><span class="lw-n">21</span><pre class="lw-c">    output logic signed [31:0] psum_out_bottom [0:COLS-1]</pre><div class="lw-e">The <b>south boundary</b>: the finished dot products leaving the array.</div></div>
+<div class="lw-r hi"><span class="lw-n">25-27</span><pre class="lw-c">    logic signed [7:0]  a_net     [0:ROWS-1][0:COLS];
+    logic               valid_net [0:ROWS-1][0:COLS];
+    logic signed [31:0] psum_net  [0:ROWS]  [0:COLS-1];</pre><div class="lw-e"><b>The three interconnect meshes.</b> Look carefully at the sizes: <code>a_net</code> has <code>COLS+1</code> columns, and <code>psum_net</code> has <code>ROWS+1</code> rows — one more than the grid, in the direction the data travels. That extra slot holds the boundary, which means feeding an input is just an ordinary <code>assign</code> rather than a special case. It is a small trick that removes a lot of awkward code.</div></div>
+<div class="lw-r"><span class="lw-n">29</span><pre class="lw-c">    genvar r, c;</pre><div class="lw-e">Compile-time loop variables. <code>genvar</code> (not <code>integer</code>) is required for loops that build hardware.</div></div>
+<div class="lw-r"><span class="lw-n">32-35</span><pre class="lw-c">    for (r = 0; r &lt; ROWS; r++) begin : left_bind
+        assign a_net[r][0]     = a_in_left[r];
+        assign valid_net[r][0] = valid_in_left[r];
+    end</pre><div class="lw-e">Wire the west inputs into column 0 of the mesh. Because of the oversized mesh, this is four plain wires and nothing more.</div></div>
+<div class="lw-r"><span class="lw-n">37-39</span><pre class="lw-c">    for (c = 0; c &lt; COLS; c++) begin : top_bind
+        assign psum_net[0][c] = psum_in_top[c];
+    end</pre><div class="lw-e">Same for the north inputs into row 0.</div></div>
+<div class="lw-r hi"><span class="lw-n">42-43</span><pre class="lw-c">    for (r = 0; r &lt; ROWS; r++) begin : row_gen
+        for (c = 0; c &lt; COLS; c++) begin : col_gen</pre><div class="lw-e"><b>The nested generate loop that builds the grid.</b> This does not "run" — it instructs the tool to stamp out 4 × 4 = 16 physical copies of the PE. In a waveform viewer, PE row 2 column 3 will be called <code>row_gen[2].col_gen[3].pe_inst</code>.</div></div>
+<div class="lw-r hi"><span class="lw-n">50-53</span><pre class="lw-c">            .valid_in  (valid_net[r][c]),
+            .a_in      (a_net[r][c]),
+            .valid_out (valid_net[r][c+1]),
+            .a_out     (a_net[r][c+1]),</pre><div class="lw-e"><b>The horizontal link.</b> Each PE reads from mesh position <code>[r][c]</code> and writes to <code>[r][c+1]</code> — so PE <i>c</i>'s output is automatically PE <i>c</i>+1's input. The chain builds itself; there is no wiring list to get wrong.</div></div>
+<div class="lw-r hi"><span class="lw-n">56-57</span><pre class="lw-c">            .psum_in  (psum_net[r][c]),
+            .psum_out (psum_net[r+1][c])</pre><div class="lw-e"><b>The vertical link.</b> Identical idea in the other direction: read from row <i>r</i>, write to row <i>r</i>+1.</div></div>
+<div class="lw-r"><span class="lw-n">63-65</span><pre class="lw-c">    for (c = 0; c &lt; COLS; c++) begin : bottom_bind
+        assign psum_out_bottom[c] = psum_net[ROWS][c];
+    end</pre><div class="lw-e">Export the extra row of the mesh — row <code>ROWS</code>, which no PE writes to except as an output — as the array's south boundary.</div></div>
+</div>
+
+<h4>The resulting picture</h4>
+<div class="art"><pre>                north: weights (during load) or zeros (during compute)
+                  │        │        │        │
+                  ▼        ▼        ▼        ▼
+   A[0] ──▶ ┌────────┬────────┬────────┬────────┐
+            │ W[0][0]│ W[0][1]│ W[0][2]│ W[0][3]│   row 0
+   A[1] ──▶ ├────────┼────────┼────────┼────────┤
+            │ W[1][0]│ W[1][1]│ W[1][2]│ W[1][3]│   row 1
+   A[2] ──▶ ├────────┼────────┼────────┼────────┤
+            │ W[2][0]│ W[2][1]│ W[2][2]│ W[2][3]│   row 2
+   A[3] ──▶ ├────────┼────────┼────────┼────────┤
+            │ W[3][0]│ W[3][1]│ W[3][2]│ W[3][3]│   row 3
+            └────────┴────────┴────────┴────────┘
+                  │        │        │        │
+                  ▼        ▼        ▼        ▼
+                C[0]     C[1]     C[2]     C[3]
+
+activations move ──▶ east          partial sums move ▼ south</pre></div>
+
+<!-- ---------------------------------------------------------------- -->
+<h3 id="b6-4">6.4 <code>input_buf.sv</code> — the skew buffer</h3>
+
+<p><b>Job:</b> delay row <i>r</i>'s activation by <i>r</i> cycles, turning a "all four numbers at
+once" vector into a diagonal staircase.</p>
+
+<h4>Why this is necessary</h4>
+
+<p>An activation entering row 0 reaches column 3 after three cycles of travel. Meanwhile the running
+total in column 3 descends from row 0 to row 3, also taking cycles. For the sum arriving at the
+bottom of column 3 to contain four products <b>from the same activation vector</b>, the four elements
+have to arrive at the array's west edge at staggered times — element <i>r</i> exactly <i>r</i> cycles
+after element 0.</p>
+
+<p>If you fed all four in at once instead, the sum leaving the bottom of a column would mix element 0
+of one vector with element 1 of the previous vector, element 2 of the one before that, and so on.
+The design would still produce numbers. They would just be meaningless.</p>
+
+<div class="lw">
+<div class="lw-h">design_rtl/input_buf.sv <span>— module input_skew_buffer, 36 lines</span></div>
+<div class="lw-r"><span class="lw-n">1-4</span><pre class="lw-c">module input_skew_buffer #(
+    parameter ROWS  = 4,
+    parameter WIDTH = 8
+)(</pre><div class="lw-e">Parameters: how many rows, and how wide each activation is.</div></div>
+<div class="lw-r"><span class="lw-n">7-8</span><pre class="lw-c">    input logic signed [WIDTH-1:0] dense_a_in     [0:ROWS-1],
+    input logic                    dense_valid_in [0:ROWS-1],</pre><div class="lw-e">"Dense" means <b>un-staggered</b> — all four elements of one vector, presented on the same cycle. This is what memory naturally gives you.</div></div>
+<div class="lw-r"><span class="lw-n">9-10</span><pre class="lw-c">    output logic signed [WIDTH-1:0] skew_a_out     [0:ROWS-1],
+    output logic                    skew_valid_out [0:ROWS-1]</pre><div class="lw-e">"Skewed" means staggered — what the array actually needs.</div></div>
+<div class="lw-r"><span class="lw-n">14</span><pre class="lw-c">    for (r = 0; r &lt; ROWS; r = r + 1) begin : gen_input_skew</pre><div class="lw-e">Build one delay path per row.</div></div>
+<div class="lw-r hi"><span class="lw-n">15-23</span><pre class="lw-c">        delay_pipe #(
+            .WIDTH(WIDTH),
+            .DELAY(r)
+        ) u_a_delay (
+            .clk(clk), .rst_n(rst_n),
+            .din (dense_a_in[r]),
+            .dout(skew_a_out[r])
+        );</pre><div class="lw-e"><b>The whole idea, in one instantiation.</b> <code>.DELAY(r)</code> — the delay is the row number. Row 0 gets <code>DELAY = 0</code> (a plain wire), row 1 gets one register, row 3 gets three. That is why <code>delay_pipe</code> had to handle <code>DELAY = 0</code> properly: it is used here, in the most ordinary way possible.</div></div>
+<div class="lw-r hi"><span class="lw-n">25-33</span><pre class="lw-c">        delay_pipe #(
+            .WIDTH(1),
+            .DELAY(r)
+        ) u_v_delay (
+            .clk(clk), .rst_n(rst_n),
+            .din (dense_valid_in[r]),
+            .dout(skew_valid_out[r])
+        );</pre><div class="lw-e">A <b>second</b> pipe, one bit wide, for the valid flag — with the <i>same</i> delay. This matters: the PE decides whether to accumulate by looking at <code>valid_in</code> in the same cycle it consumes <code>a_in</code>. If data and valid got out of step by even one cycle, the array would accumulate garbage or skip real data.</div></div>
+</div>
+
+<div class="art"><pre>cycle:        1     2     3     4     5     6
+dense in:    A0    A1    A2     –     –     –      (whole vectors)
+
+west edge, after skewing:
+  row 0 →   A0[0] A1[0] A2[0]    –     –     –     delay 0
+  row 1 →     –   A0[1] A1[1] A2[1]    –     –     delay 1
+  row 2 →     –     –   A0[2] A1[2] A2[2]   –      delay 2
+  row 3 →     –     –     –   A0[3] A1[3] A2[3]    delay 3
+                              ↖ A0 now forms a diagonal</pre></div>
+
+<!-- ---------------------------------------------------------------- -->
+<h3 id="b6-5">6.5 <code>output_skewbuf.sv</code> — the de-skew buffer</h3>
+
+<p><b>Job:</b> undo the staircase on the way out. Column <i>c</i> is delayed by
+<code>COLS − 1 − c</code>.</p>
+
+<p>Column 0 finishes first (its activations had the shortest journey east), so it is delayed the most
+— 3 cycles. Column 3 finishes last, so it is not delayed at all. The two effects cancel exactly, and
+all four results emerge on the <b>same</b> cycle.</p>
+
+<div class="lw">
+<div class="lw-h">design_rtl/output_skewbuf.sv <span>— module output_deskew_buffer, 24 lines</span></div>
+<div class="lw-r"><span class="lw-n">7-8</span><pre class="lw-c">    input  logic signed [WIDTH-1:0] psum_in     [0:COLS-1],
+    output logic signed [WIDTH-1:0] aligned_out [0:COLS-1]</pre><div class="lw-e">In: the staircase straight off the bottom of the array. Out: all four lanes aligned. Here <code>WIDTH</code> is 32 — these are full 32-bit results, not 8-bit activations.</div></div>
+<div class="lw-r hi"><span class="lw-n">13-16</span><pre class="lw-c">        delay_pipe #(
+            .WIDTH(WIDTH),
+            .DELAY(COLS-1-c)
+        ) u_psum_delay (</pre><div class="lw-e"><b>The mirror of the input skew.</b> <code>COLS-1-c</code> gives 3, 2, 1, 0 for columns 0, 1, 2, 3 — the exact reverse of the input side. Column 3's instance has <code>DELAY = 0</code> and is a plain wire.</div></div>
+</div>
+
+<div class="art"><pre>The cancellation, written out:
+
+  column c result leaves the array at   n + (ROWS−1) + c
+  de-skew adds                                   + (COLS−1−c)
+                                        ─────────────────────
+  arrives at                            n + ROWS + COLS − 2        ← no "c" left!
+
+  For 4×4:  n + 6, for every column.</pre></div>
+
+<p>Because the answer no longer depends on <i>c</i>, the four lanes can simply be glued together into
+one 128-bit memory word. That is the entire reason this module exists.</p>
+
+<!-- ---------------------------------------------------------------- -->
+<h3 id="b6-6">6.6 The three memories</h3>
+
+<p><code>a_mem.sv</code>, <code>weight_mem.sv</code> and <code>outmem.sv</code> are the <b>same
+module three times</b>, with different sizes. Once you understand one, you understand all three.</p>
+
+<div class="lw">
+<div class="lw-h">design_rtl/a_mem.sv <span>— 21 lines; weight_mem.sv and outmem.sv are identical apart from sizes</span></div>
+<div class="lw-r"><span class="lw-n">3-6</span><pre class="lw-c">module a_mem #(
+    parameter DATA_W = 32,
+    parameter ADDR_W = 8,
+    parameter DEPTH  = (1 &lt;&lt; ADDR_W)
+)(</pre><div class="lw-e"><code>DATA_W</code> = how many bits per word. <code>ADDR_W</code> = how many address wires. <code>DEPTH</code> is <i>derived</i>: <code>1 &lt;&lt; 8</code> is 1 shifted left 8 times = 256. Deriving it means the address width and the depth can never disagree.</div></div>
+<div class="lw-r"><span class="lw-n">8</span><pre class="lw-c">    input  logic              clk,</pre><div class="lw-e">Clock — this is a <b>synchronous</b> memory.</div></div>
+<div class="lw-r"><span class="lw-n">9</span><pre class="lw-c">    input  logic              we,</pre><div class="lw-e"><b>Write enable.</b> 1 = write this cycle, 0 = do not.</div></div>
+<div class="lw-r hi"><span class="lw-n">10</span><pre class="lw-c">    input  logic [ADDR_W-1:0] addr,</pre><div class="lw-e"><b>One address, shared by reads and writes.</b> This is a <b>single-port</b> memory — there is only one way in, so you cannot read one location while writing another. This single fact is what forces the arbitration logic at the top of the design.</div></div>
+<div class="lw-r"><span class="lw-n">11</span><pre class="lw-c">    input  logic [DATA_W-1:0] wdata,</pre><div class="lw-e">Data to write.</div></div>
+<div class="lw-r"><span class="lw-n">12</span><pre class="lw-c">    output logic [DATA_W-1:0] rdata</pre><div class="lw-e">Data read back.</div></div>
+<div class="lw-r"><span class="lw-n">14</span><pre class="lw-c">    logic [DATA_W-1:0] mem [0:DEPTH-1];</pre><div class="lw-e">The storage itself: 256 separate words of 32 bits. In simulation this is an array; in real silicon the synthesis tool replaces it with a purpose-built SRAM block.</div></div>
+<div class="lw-r"><span class="lw-n">16</span><pre class="lw-c">    always_ff @(posedge clk) begin</pre><div class="lw-e">Everything happens on the clock edge.</div></div>
+<div class="lw-r"><span class="lw-n">17-18</span><pre class="lw-c">        if (we)
+            mem[addr] &lt;= wdata;</pre><div class="lw-e">If write enable is high, store the data at the given address.</div></div>
+<div class="lw-r hi"><span class="lw-n">19</span><pre class="lw-c">        rdata &lt;= mem[addr];</pre><div class="lw-e"><b>Three separate things are happening here, all of them deliberate.</b><br>(1) The read is <i>outside</i> the <code>if (we)</code>, so it happens every single cycle. Guarding it would infer a "read enable" that many real memory blocks do not have.<br>(2) It uses <code>&lt;=</code>, so <code>rdata</code> is a register: data comes back <b>one cycle after</b> the address is presented. This one-cycle read latency is the reason the design has to re-time its control signals.<br>(3) Because both assignments are non-blocking, reading and writing the same address on the same cycle returns the <b>old</b> value — "read-before-write" behaviour.</div></div>
+</div>
+
+<div class="box ind">
+  <span class="lbl">Why the code looks exactly like this</span>
+  <p>This is the <b>canonical inference template</b> for a single-port synchronous RAM. Every FPGA and
+  ASIC synthesis tool recognises this exact shape and maps it onto a dedicated memory block —
+  a Block RAM on an FPGA, a compiled SRAM macro on an ASIC. Write it slightly differently and the
+  tool may build the memory out of thousands of individual flip-flops instead, which can be 20–50×
+  larger and slower.</p>
+  <p>Notice also there is <b>no reset</b>. That is intentional: real SRAM macros physically cannot be
+  cleared in one cycle, so adding a reset would prevent the tool from using one. The trade-off is
+  that reading an address you never wrote returns <code>X</code> ("unknown") in simulation — which is
+  arguably a feature, because it makes the mistake visible instead of silently returning zero.</p>
+</div>
+
+<h4>What each memory holds</h4>
+<table>
+<thead><tr><th>Memory</th><th>Size</th><th>One word contains</th></tr></thead>
+<tbody>
+<tr><td><code>a_mem</code></td><td>256 words × 32 bits</td><td>Four int8 activations — one activation vector. Lane <i>r</i> (bits <code>[r*8+7 : r*8]</code>) feeds array <b>row</b> <i>r</i>.</td></tr>
+<tr><td><code>weight_mem</code></td><td>4 words × 32 bits</td><td>Four int8 weights — one row of W. Lane <i>c</i> feeds array <b>column</b> <i>c</i>. Address <i>r</i> holds weight row <i>r</i>.</td></tr>
+<tr><td><code>output_mem</code></td><td>256 words × 128 bits</td><td>Four int32 results — one result vector. Lane <i>c</i> is the output of array <b>column</b> <i>c</i>.</td></tr>
+</tbody>
+</table>
+
+<div class="art"><pre>a_mem word (32 bits)
+ ┌────────┬────────┬────────┬────────┐
+ │[31:24] │[23:16] │ [15:8] │  [7:0] │
+ │ row 3  │ row 2  │ row 1  │ row 0  │
+ └────────┴────────┴────────┴────────┘
+
+output_mem word (128 bits)
+ ┌──────────┬─────────┬─────────┬────────┐
+ │ [127:96] │ [95:64] │ [63:32] │ [31:0] │
+ │  col 3   │  col 2  │  col 1  │  col 0 │
+ └──────────┴─────────┴─────────┴────────┘</pre></div>
+
+<!-- ---------------------------------------------------------------- -->
+<h3 id="b6-7">6.7 <code>controller.sv</code> — the state machine</h3>
+
+<p><b>Job:</b> run the job through its phases, in order, for the right number of cycles each. It is
+the conductor of the orchestra.</p>
+
+<p>A <b>finite state machine</b> (FSM) is the standard way to build sequential control in hardware. It
+is a register holding "which state am I in", plus rules for when to move to the next state. Almost
+every piece of control logic you will ever see in hardware is an FSM.</p>
+
+<div class="box key">
+  <span class="lbl">The division of labour</span>
+  <p>The controller owns <b>durations only</b> — how many cycles each phase lasts. It never produces
+  an address. The address generator (next section) owns <b>addresses only</b> and never decides when
+  a phase starts or ends. Neither one knows that the memories have a one-cycle read latency.</p>
+  <p>Splitting responsibilities this cleanly is what allows each to be tested completely on its own,
+  and it is why the <code>agu.sv</code> file contains no timing constants at all.</p>
+</div>
+
+<h4>The five phases</h4>
+<table>
+<thead><tr><th>State</th><th>How long</th><th>What is happening</th></tr></thead>
+<tbody>
+<tr><td><code>IDLE</code></td><td>Until <code>start</code></td><td>Doing nothing. Waiting for the host to say go.</td></tr>
+<tr><td><code>WLOAD</code></td><td>4 cycles (= <code>ROWS</code>), or <b>0 &mdash; skipped entirely</b> when the weight matrix has not changed since the last job</td><td>Shifting the four weight rows into the array, bottom row first.</td></tr>
+<tr><td><code>COMPUTE</code></td><td><code>num_vectors</code> cycles</td><td>The real work: one activation vector per clock.</td></tr>
+<tr><td><code>DRAIN</code></td><td>8 cycles (= <code>STORE_LATENCY</code>)</td><td>The last vector is still travelling through the pipeline. Wait for it to come out and be stored.</td></tr>
+<tr><td><code>DONE</code></td><td>1 cycle</td><td>Pulse the <code>done</code> signal, then return to IDLE.</td></tr>
+</tbody>
+</table>
+
+<p>Total job length: <code>4 + num_vectors + 8 + 1 = num_vectors + 13</code> cycles &mdash; <b>17 cycles</b> for a 4&times;4 product. Skip the weight load and it is <code>num_vectors + 9</code> = <b>13 cycles</b>.</p>
+<p>There is <b>no FLUSH phase</b>. Earlier revisions inserted <code>ROWS + 2 = 6</code> cycles here to push weight residue out of the accumulator registers; it was never load-bearing and has been removed. See the box at the end of this section.</p>
+
+<div class="lw">
+<div class="lw-h">design_rtl/controller.sv <span>— module controller, the logic (comments omitted)</span></div>
+<div class="lw-r hi"><span class="lw-n">43</span><pre class="lw-c">    parameter int STORE_LATENCY = 1 + ROWS + COLS - 2 + 1</pre><div class="lw-e"><b>The single most important number in the design</b>, written as its derivation rather than as "8": one cycle of memory read latency, plus <code>ROWS+COLS-2</code> cycles through the array and buffers, plus one cycle for the write strobe to line up. The same expression appears in the AGU and in the wrapper, so all three always agree.</div></div>
+<div class="lw-r"><span class="lw-n">64-69</span><pre class="lw-c">    localparam logic [2:0] PH_IDLE    = 3'd0;
+    localparam logic [2:0] PH_WLOAD   = 3'd1;
+    localparam logic [2:0] PH_COMPUTE = 3'd2;
+    localparam logic [2:0] PH_DRAIN   = 3'd3;
+    localparam logic [2:0] PH_DONE    = 3'd4;</pre><div class="lw-e">Names for the five states. <code>localparam</code> is a constant that <i>cannot</i> be overridden from outside — the right choice for internal encodings. Six states need 3 bits (<code>3'd0</code> means "3 bits wide, decimal value 0").</div></div>
+<div class="lw-r"><span class="lw-n">71-73</span><pre class="lw-c">    logic [2:0]           state;
+    logic [VEC_CNT_W-1:0] cnt;
+    logic [VEC_CNT_W-1:0] vec_n;</pre><div class="lw-e">Three registers, and that is the entire state of the controller: which phase we are in, how many cycles we have been in it, and how many vectors this job asked for.</div></div>
+<div class="lw-r"><span class="lw-n">83-89</span><pre class="lw-c">    PH_IDLE: begin
+        cnt &lt;= '0;
+        if (start) begin
+            vec_n &lt;= num_vectors;
+            if (load_weights)
+                state &lt;= PH_WLOAD;
+            else
+                state &lt;= (num_vectors == '0) ? PH_DRAIN : PH_COMPUTE;
+        end
+    end</pre><div class="lw-e">In IDLE, keep the counter cleared. When <code>start</code> arrives, <b>latch</b> <code>num_vectors</code> into <code>vec_n</code>. If the array already holds the right weights (<code>load_weights = 0</code>) the machine goes <b>straight to COMPUTE</b>, saving <code>ROWS</code> = 4 cycles; otherwise it loads them first. Latching matters: the host is free to change <code>num_vectors</code> immediately afterwards without affecting the running job.</div></div>
+<div class="lw-r"><span class="lw-n">91-97</span><pre class="lw-c">    PH_WLOAD: begin
+        if (cnt == VEC_CNT_W'(ROWS-1)) begin
+            cnt   &lt;= '0;
+            state &lt;= (vec_n == '0) ? PH_DRAIN : PH_COMPUTE;
+        end
+        else cnt &lt;= cnt + 1'b1;
+    end</pre><div class="lw-e">The pattern used by every phase: count up; when the counter reaches "length − 1", reset it and move on. Counting to <code>ROWS-1</code> starting from 0 gives exactly <code>ROWS</code> cycles in this state. The <code>VEC_CNT_W'(...)</code> cast makes the widths match explicitly, avoiding a class of silent comparison bug.</div></div>
+<div class="lw-r hi"><span class="lw-n">118-124</span><pre class="lw-c">    /* the exit from PH_WLOAD, and the same test in PH_IDLE */
+            state &lt;= (vec_n == '0) ? PH_DRAIN : PH_COMPUTE;</pre><div class="lw-e"><b>A one-line guard that prevents a disaster.</b> If the host asked for zero vectors, skip COMPUTE entirely. Without it, COMPUTE would test <code>cnt == vec_n - 1</code> = <code>0 - 1</code> = 255, and the machine would sit there for 256 cycles issuing garbage addresses and 256 write strobes, actively corrupting memory. One comparator turns a malformed command from destructive into harmless. <b>The guard appears twice</b> — once on the WLOAD exit and once on the IDLE exit — because there are now two ways into COMPUTE.</div></div>
+<div class="lw-r"><span class="lw-n">108-114</span><pre class="lw-c">    PH_COMPUTE: begin
+        if (cnt == (vec_n - 1'b1)) begin
+            cnt   &lt;= '0;
+            state &lt;= PH_DRAIN;
+        end
+        else cnt &lt;= cnt + 1'b1;
+    end</pre><div class="lw-e">Stay in COMPUTE for exactly <code>vec_n</code> cycles — one activation vector per cycle.</div></div>
+<div class="lw-r"><span class="lw-n">116-122</span><pre class="lw-c">    PH_DRAIN: begin
+        if (cnt == VEC_CNT_W'(STORE_LATENCY-1)) begin
+            cnt   &lt;= '0;
+            state &lt;= PH_DONE;
+        end
+        else cnt &lt;= cnt + 1'b1;
+    end</pre><div class="lw-e">Wait exactly as long as the pipeline is deep, so the last result has time to emerge and be written.</div></div>
+<div class="lw-r"><span class="lw-n">129</span><pre class="lw-c">    default: state &lt;= PH_IDLE;</pre><div class="lw-e">If the state register somehow held an illegal value (states 6 or 7 are unused), go back to IDLE. This is standard defensive practice: it guarantees the machine can never get permanently stuck.</div></div>
+<div class="lw-r hi"><span class="lw-n">134-140</span><pre class="lw-c">    assign phase         = state;
+    assign wload_phase   = (state == PH_WLOAD);
+    assign compute_phase = (state == PH_COMPUTE);
+    assign drain_phase   = (state == PH_DRAIN);
+    assign busy   = (state != PH_IDLE) && (state != PH_DONE);
+    assign done   = (state == PH_DONE);</pre><div class="lw-e">All outputs are <b>pure functions of the state register</b>. This makes it a <b>Moore machine</b>, which is the safer of the two standard FSM styles — the outputs cannot glitch in response to a changing input, because they do not depend on inputs at all. Note that <code>busy</code> is already <i>low</i> when <code>done</code> pulses, which is exactly what lets the host start reading results on the very cycle it sees <code>done</code>.</div></div>
+</div>
+
+<!-- ---------------------------------------------------------------- -->
+<h3 id="b6-8">6.8 <code>agu.sv</code> — the address generator</h3>
+
+<p><b>Job:</b> for each phase, produce the memory addresses that phase needs. AGU stands for
+<b>Address Generation Unit</b> — a standard term you will meet in CPUs, DMA engines and every kind of
+accelerator.</p>
+
+<div class="lw">
+<div class="lw-h">design_rtl/agu.sv <span>— module agu, the logic</span></div>
+
+<div class="lw-r"><span class="lw-n">75</span><pre class="lw-c">    logic [W_ADDR_W-1:0] w_cnt;</pre><div class="lw-e">A 2-bit counter for the weight address. Two bits = values 0…3, which is exactly the four weight rows.</div></div>
+<div class="lw-r hi"><span class="lw-n">77-81</span><pre class="lw-c">    always_ff @(posedge clk) begin
+        if (!rst_n)            w_cnt &lt;= W_ADDR_W'(ROWS-1);
+        else if (!wload_phase) w_cnt &lt;= W_ADDR_W'(ROWS-1);
+        else                   w_cnt &lt;= w_cnt - 1'b1;
+    end</pre><div class="lw-e"><b>Counting down: 3, 2, 1, 0.</b> This is the RTL implementation of the bottom-first weight loading rule from section 6.2. Two details worth noticing:<br>(1) The counter is <b>re-armed to 3 whenever we are not in WLOAD</b>, not just on reset. That means the very first WLOAD cycle already presents 3, and a second job starts from 3 again rather than continuing from where the last one stopped.<br>(2) It is allowed to wrap past 0 — but by then WLOAD is over and the counter is re-armed anyway.</div></div>
+<div class="lw-r"><span class="lw-n">83-85</span><pre class="lw-c">    assign w_addr  = w_cnt;
+    assign w_rd_en = wload_phase;
+    assign wload   = wload_phase;</pre><div class="lw-e">The address is the counter; the read enable and the <code>wload</code> mode signal are simply the phase itself. Note <code>wload</code> is issued in the <b>same</b> cycle as its address — the wrapper delays it internally to match memory latency.</div></div>
+<div class="lw-r"><span class="lw-n">92-96</span><pre class="lw-c">    always_ff @(posedge clk) begin
+        if (!rst_n)              act_cnt &lt;= '0;
+        else if (!compute_phase) act_cnt &lt;= '0;
+        else                     act_cnt &lt;= act_cnt + 1'b1;
+    end</pre><div class="lw-e">The activation counter, counting <b>up</b> this time: 0, 1, 2, … Same re-arm-while-idle pattern, so every job starts from 0.</div></div>
+<div class="lw-r"><span class="lw-n">98</span><pre class="lw-c">    assign act_addr = act_base + act_cnt;</pre><div class="lw-e">The actual address is a programmable <b>base</b> plus the counter. That is what lets the host store several different batches of activations in the same memory and choose which one to run.</div></div>
+<div class="lw-r"><span class="lw-n">106-107</span><pre class="lw-c">    logic                out_we_pipe   [0:STORE_LATENCY-1];
+    logic [O_ADDR_W-1:0] out_addr_pipe [0:STORE_LATENCY-1];</pre><div class="lw-e">Two 8-deep shift registers — one carrying a write-enable bit, one carrying an address.</div></div>
+<div class="lw-r hi"><span class="lw-n">117-122</span><pre class="lw-c">        out_we_pipe[0]   &lt;= compute_phase;
+        out_addr_pipe[0] &lt;= out_base + O_ADDR_W'(act_cnt);
+        for (int i = 1; i &lt; STORE_LATENCY; i++) begin
+            out_we_pipe[i]   &lt;= out_we_pipe[i-1];
+            out_addr_pipe[i] &lt;= out_addr_pipe[i-1];
+        end</pre><div class="lw-e"><b>The nicest design decision in the project.</b> When a result will be ready, it is 8 cycles in the future. The obvious solution is to compute "assert the write strobe when the counter reaches n + 8". Instead, the AGU pushes the pair {write-enable, address} onto a conveyor belt exactly 8 slots long. It falls off the far end precisely when the data arrives.<br><br>Why this is better: the strobe <b>structurally cannot</b> drift away from its data. If the pipeline depth ever changes, you change one parameter and everything follows — instead of re-deriving an equation and hoping you found every place that used the old number. The cost is 8 flip-flops. That is a trade almost any hardware engineer would take.</div></div>
+<div class="lw-r"><span class="lw-n">126-127</span><pre class="lw-c">    assign out_we   = out_we_pipe[STORE_LATENCY-1];
+    assign out_addr = out_addr_pipe[STORE_LATENCY-1];</pre><div class="lw-e">The end of the belt drives the output memory's write port.</div></div>
+</div>
+
+<!-- ---------------------------------------------------------------- -->
+<h3 id="b6-9">6.9 The three wrappers</h3>
+
+<p>A <b>wrapper</b> (also called a top-level or integration module) is a module whose job is to
+instantiate other modules and connect them. The design has three, one per level of completeness.</p>
+
+<div class="box key">
+  <span class="lbl">The rule this project follows</span>
+  <p><b>Each level instantiates the level below it</b> — it does not re-create the same wiring. So the
+  datapath tested at level 2 is <i>literally the same hardware</i> running inside level 3. They cannot
+  drift apart, and a bug that appears only at level 3 must therefore be in the control logic that
+  level 3 adds.</p>
+  <p>And: <b>no wrapper file ever overwrites another.</b> Adding a fourth level means adding a fourth
+  file, not editing the third.</p>
+</div>
+
+<h4>Level 1 — <code>wrapper_array_buf.sv</code> (module <code>array_buf_top</code>)</h4>
+<p>Skew buffer + array + de-skew buffer. No memory, no sequencing: the caller hands it one dense
+vector per clock and reads the result back 6 cycles later. It is three instantiations and one
+constant:</p>
+<pre><code>localparam int RESULT_LATENCY = ROWS + COLS - 2;   <span class="cmt">// = 6, stated for testbenches</span>
+
+input_skew_buffer    u_input_skew    ( dense_a_in  -&gt; skew_a  );
+systolic_array       u_array         ( skew_a      -&gt; psum_raw );
+output_deskew_buffer u_output_deskew ( psum_raw    -&gt; result   );</code></pre>
+<p>It also exports <code>psum_raw</code> — the results <i>before</i> de-skewing. Nothing uses it. It
+exists purely so a testbench can look at the staircase directly and confirm it is real. Deliberately
+exposing internal signals for observability is standard practice, and it costs nothing.</p>
+
+<h4>Level 2 — <code>wrapper_mem_arr_buf.sv</code> (module <code>accelerator_top</code>)</h4>
+<p>Adds the three memories, the control re-timing, and the packing/unpacking of memory words.</p>
+
+<div class="lw">
+<div class="lw-h">wrapper_mem_arr_buf.sv <span>— the four pieces of logic it adds</span></div>
+<div class="lw-r hi"><span class="lw-n">94-103</span><pre class="lw-c">    always_ff @(posedge clk) begin
+        if (!rst_n) begin
+            wload_q &lt;= 1'b0;
+            valid_q &lt;= 1'b0;
+        end else begin
+            wload_q &lt;= wload;
+            valid_q &lt;= valid_in;
+        end
+    end</pre><div class="lw-e"><b>The re-timing.</b> The memories take one cycle to return data, so the control signals must be delayed by one cycle to line up with it. Two registers do it.<br><br>Why here and not at the caller? Because it makes the rule the user sees uniform and hard to get wrong: <b>issue control in the same cycle as its address.</b> Everything else in the design follows that one rule, and no other module needs to know about memory latency.</div></div>
+<div class="lw-r"><span class="lw-n">147-152</span><pre class="lw-c">    always_comb begin : unpack_activations
+        for (int r = 0; r &lt; ROWS; r++) begin
+            dense_a[r] = signed'(a_rdata[r*DATA_W +: DATA_W]);
+            dense_v[r] = valid_q;
+        end
+    end</pre><div class="lw-e"><b>Unpacking.</b> Split the 32-bit memory word into four separate signed 8-bit values, one per array row. <code>signed'(...)</code> is essential — without it the tool treats the bits as unsigned and a weight of −5 becomes +251.<br><br>Note <code>dense_v[r] = valid_q</code> for every <i>r</i>: one valid bit broadcast to all four rows. Per-row valid is supported by the hardware but never used.</div></div>
+<div class="lw-r"><span class="lw-n">159-163</span><pre class="lw-c">    always_comb begin : drive_array_top
+        for (int c = 0; c &lt; COLS; c++)
+            psum_top[c] = wload_q ? PSUM_W'(signed'(w_rdata[c*DATA_W +: DATA_W]))
+                                  : '0;
+    end</pre><div class="lw-e"><b>The north edge multiplexer.</b> During weight load, feed sign-extended weights in. Otherwise feed <b>zeros</b> — because every dot product must start from zero, and the top of each column is where it starts. The double cast <code>PSUM_W'(signed'(…))</code> first says "these 8 bits are signed", then "widen to 32 bits" — in that order, so −5 becomes 32 bits of −5 rather than 32 bits of 251.</div></div>
+<div class="lw-r"><span class="lw-n">190-193</span><pre class="lw-c">    always_comb begin : pack_output
+        for (int c = 0; c &lt; COLS; c++)
+            o_wdata[c*PSUM_W +: PSUM_W] = result[c];
+    end</pre><div class="lw-e"><b>Packing.</b> Glue the four aligned 32-bit results into one 128-bit memory word. This is the "Output Processing" block of the architecture diagram — for this design that is exactly lane packing, nothing more. It only works because the de-skew buffer already aligned all four lanes onto the same cycle.</div></div>
+</div>
+
+<h4>Level 3 — <code>wrapper_full_system.sv</code> (module <code>accelerator_system_top</code>)</h4>
+<p>The complete design. It adds the controller, the AGU, and one piece of logic that has not appeared
+yet: <b>port arbitration</b>.</p>
+
+<div class="lw">
+<div class="lw-h">wrapper_full_system.sv <span>— the arbitration block</span></div>
+<div class="lw-r hi"><span class="lw-n">164-176</span><pre class="lw-c">    always_comb begin : port_arbitration
+        if (busy) begin
+            a_we_mux    = 1'b0;
+            a_addr_mux  = agu_act_addr;
+            a_wdata_mux = '0;
+
+            w_we_mux    = 1'b0;
+            w_addr_mux  = agu_w_addr;
+            w_wdata_mux = '0;
+
+            o_we_mux    = agu_out_we;
+            o_addr_mux  = agu_out_addr;
+        end</pre><div class="lw-e"><b>While a job is running, the AGU owns all three memory ports.</b> Because each memory has only one address port (section 6.6), exactly one master can drive it — so this multiplexer is not optional, it is forced by the memory design.<br><br>Notice that the host's write enables are hard-wired to <code>1'b0</code> here, not simply ignored. That means a stray host write during a job <b>cannot</b> corrupt anything. This is verified adversarially: one test hammers <code>0xDEADBEEF</code> into the weight write port on every single cycle of a live job and requires the results to be bit-identical to a clean run.</div></div>
+<div class="lw-r"><span class="lw-n">177-188</span><pre class="lw-c">        else begin
+            a_we_mux    = host_a_we;
+            a_addr_mux  = host_a_addr;
+            a_wdata_mux = host_a_wdata;
+            ...
+            o_we_mux    = 1'b0;
+            o_addr_mux  = host_o_addr;
+        end
+    end</pre><div class="lw-e">While idle, the host owns the ports and can load matrices or read results. Note <code>o_we_mux = 1'b0</code> even here: the host side of the output memory is <b>read-only</b>, because only the datapath should ever write results.</div></div>
+</div>
+
+<!-- ================================================================= -->
+<h2 id="b7"><span class="num">7</span>Running a job from start to finish</h2>
+
+<p>Here is the complete life of one job, in plain language.</p>
+
+<ol class="step">
+<li><b>Reset.</b> Hold <code>rst_n</code> low for a few cycles, then release it. All registers clear
+to zero. The memories do <i>not</i> clear — they hold whatever they held, or unknown values if never
+written.</li>
+
+<li><b>Load the weights.</b> While <code>busy</code> is low, write four words into
+<code>weight_mem</code>: address 0 gets weight row 0, address 1 gets row 1, and so on. Each word packs
+four int8 weights, one per array column.</li>
+
+<li><b>Load the activations.</b> Still while idle, write your activation vectors into
+<code>a_mem</code>, starting at whatever address you plan to use as <code>act_base</code>. Each word
+packs four int8 values, one per array row.</li>
+
+<li><b>Start.</b> Pulse <code>start</code> high for one cycle, with <code>num_vectors</code>,
+<code>act_base</code> and <code>out_base</code> valid at the same time. The controller latches
+<code>num_vectors</code> and moves to WLOAD. <code>busy</code> goes high.</li>
+
+<li><b>Weight load (4 cycles, or skipped).</b> The AGU counts the weight address <i>down</i>: 3, 2, 1, 0.
+Each weight row is read from memory, sign-extended, driven onto the array's north edge, and shifted
+down one row per cycle. After four cycles every PE holds its correct weight — and it <b>keeps</b> it,
+so if the next job uses the same weight matrix this phase is skipped altogether.</li>
+
+<li><b>Compute (<code>num_vectors</code> cycles).</b> One activation vector is read per cycle, split
+into four int8 values, staggered by the skew buffer, and fed into the array. Sixteen multiplies and
+sixteen adds happen every single cycle.</li>
+
+<li><b>Results emerge and are stored.</b> Seven cycles after each activation address was issued, its
+four results appear together on the result bus. One cycle after that — 8 cycles after the address —
+the AGU's write strobe reaches the end of its conveyor belt and the 128-bit result word is written to
+<code>output_mem</code>.</li>
+
+<li><b>Drain (8 cycles).</b> The last vector is still in the pipeline. Wait exactly as many cycles as
+the pipeline is deep.</li>
+
+<li><b>Done.</b> <code>busy</code> goes low and <code>done</code> pulses for exactly one cycle. Read
+your results back through <code>host_o_addr</code> / <code>o_rdata</code> — one 128-bit word per
+result vector, four int32 values per word.</li>
+</ol>
+
+<div class="box">
+  <span class="lbl">Things that are safe to do</span>
+  <p>Pulsing <code>start</code> while a job is already running does <b>nothing</b> — it is only
+  sampled in IDLE. Asking for <code>num_vectors = 0</code> is legal and completes normally in 19
+  cycles. Writing to memory during a job is masked off and cannot corrupt anything. All three of
+  these are explicitly tested.</p>
+</div>
+
+<div class="box warn">
+  <span class="lbl">Things that are not safe to do</span>
+  <p>There is <b>no back-pressure</b>. The design will never tell you it is not ready. If you read
+  the output memory before <code>done</code>, you will get whatever happens to be there. If you
+  computed the latency wrong and stored a result one cycle early, the design will not object — it
+  will simply store the wrong number, and only a comparison against an independently computed
+  expected value will ever notice.</p>
+</div>
+
+<!-- ================================================================= -->
+<h2 id="b8"><span class="num">8</span>How the design is tested</h2>
+
+<p>Hardware cannot be debugged after it is manufactured. A chip costs millions of dollars and months
+of time to fabricate, and once it exists you cannot patch it. So verification is not a phase that
+happens at the end — in industry it typically consumes <b>more effort than the design itself</b>,
+often by a factor of two or three.</p>
+
+<h3>What a testbench is</h3>
+
+<p>A <b>testbench</b> is a piece of SystemVerilog that is <i>not</i> meant to become hardware. It
+creates a fake clock, wiggles the inputs of the module under test, watches the outputs, and compares
+them against what they should be. It runs in a <b>simulator</b> — here, QuestaSim.</p>
+
+<div class="art"><pre>┌─────────────────────────────────────────────┐
+│  testbench (simulation only)                │
+│                                             │
+│   clock generator     golden model          │
+│         │             (computes the         │
+│         ▼              expected answer)     │
+│   ┌─────────────┐            │              │
+│   │   the DUT   │──── output ┴──▶ compare   │
+│   │ (real RTL)  │                    │      │
+│   └─────────────┘                    ▼      │
+│                              PASS / FAIL    │
+└─────────────────────────────────────────────┘
+  DUT = Device Under Test</pre></div>
+
+<h3>The golden model idea</h3>
+
+<p>The critical question in verification is: <i>where does the expected answer come from?</i></p>
+
+<p>If you write the expected answer by copying the design's own logic, you have proved only that two
+copies of the same idea agree — and if the idea is wrong, both are wrong together. So from the array
+level upwards, this project computes the expected answer <b>from the mathematical definition</b>:</p>
+
+<pre><code>for (int c = 0; c &lt; COLS; c++) begin
+    golden[i][c] = '0;
+    for (int r = 0; r &lt; ROWS; r++)
+        golden[i][c] = golden[i][c] + 32'(A[i][r] * W[r][c]);
+end</code></pre>
+
+<p>Nothing in that loop knows about skew buffers, pipeline depth, weight shift direction or lane
+packing. It is the <b>specification, written as arithmetic</b>. If the design disagrees with it, the
+design is wrong — full stop.</p>
+
+<h3>Negative checks: the thing most beginners miss</h3>
+
+<p>A test that only checks "the right answer appeared" can be passed by a broken design. Suppose the
+result actually appears one cycle early — a test that just waits and then looks will still find the
+right number.</p>
+
+<p>So this project also checks things that must <b>not</b> happen:</p>
+
+<table>
+<thead><tr><th>Negative check</th><th>What it would catch</th></tr></thead>
+<tbody>
+<tr><td>The result is <b>not</b> present one cycle early</td><td>A wrong pipeline depth that happens to still produce the right value</td></tr>
+<tr><td>The de-skew output is <b>empty</b> until the last column is fed</td><td>A de-skew delay that is too short</td></tr>
+<tr><td>A word past the end of a short run is <b>untouched</b></td><td>A write strobe that fires one time too many</td></tr>
+<tr><td>The total number of write strobes equals the vector count <b>exactly</b></td><td>A pipeline that drops one strobe and emits a spurious one elsewhere</td></tr>
+<tr><td><code>start</code> during a job changes <b>nothing</b></td><td>An FSM that can be knocked out of sequence</td></tr>
+<tr><td>Results match the golden <code>C = A×W</code> on a job that follows a weight load</td><td>Weight residue leaking into real results</td></tr>
+</tbody>
+</table>
+
+<h3>The results</h3>
+
+<table>
+<thead><tr><th>Metric</th><th>Value</th></tr></thead>
+<tbody>
+<tr><td>Testbenches</td><td>13 — one per module, never two modules in one file</td></tr>
+<tr><td>Individual checks</td><td>3 902</td></tr>
+<tr><td>Passing</td><td>13/13, 0 mismatches</td></tr>
+<tr><td>Defects found</td><td>3 — <b>all three were bugs in the testbenches, not the design</b></td></tr>
+</tbody>
+</table>
+
+<p>Two of those three defects were the same underlying mistake: <b>sampling a signal after the clock
+edge that consumes it</b>. If you look at a wire just after an edge, a plain piece of wire and a
+one-cycle register look identical — both show the value that was there before the edge. You have to
+look <i>before</i> the edge to tell them apart. That is why every testbench in this project states,
+in its header comment, which of two sampling conventions it uses.</p>
+
+<div class="box ind">
+  <span class="lbl">What industry does beyond this</span>
+  <p>This project's approach — directed tests plus algorithmic golden models plus negative checks —
+  is solid, and it is what a small team or a student project would do. A production chip adds:
+  <b>constrained-random verification</b> (generate millions of legal random stimuli rather than
+  hand-picked ones), <b>functional coverage</b> (measure which behaviours were actually exercised, so
+  "all tests pass" becomes a measured number rather than a hope), <b>assertions</b> (SVA properties
+  checked continuously throughout simulation rather than at chosen moments), <b>UVM</b> (a standard
+  library for building reusable, layered testbenches), and <b>formal verification</b> (mathematically
+  proving a property holds for <i>all</i> inputs rather than testing a sample).</p>
+  <p>This project documents honestly that it has none of those. "13/13 passing" is a pass rate, not a
+  coverage number — and knowing the difference is itself an important piece of the skill.</p>
+</div>
+
+<!-- ================================================================= -->
+<h2 id="b9"><span class="num">9</span>Architecture choices &amp; what industry actually does</h2>
+
+<p>Every design is a pile of decisions. Here are the ones that shaped this project, each with the
+alternative that was rejected and why.</p>
+
+<h3>9.1 Weight-stationary dataflow</h3>
+<p><b>Chosen because</b> the same weights are reused across every activation vector in a job, so
+keeping them put eliminates almost all memory traffic.<br>
+<b>Alternatives:</b> <i>output-stationary</i> (each PE owns one output element and accumulates in
+place — better when there are very many inputs per output) and <i>row-stationary</i> (used by the MIT
+Eyeriss chip, optimised for convolutions where a filter row is reused in a specific pattern).<br>
+<b>Industry:</b> weight-stationary is what Google's TPU v1 used, at 256×256 instead of 4×4.</p>
+
+<h3>9.2 int8 operands, int32 accumulator</h3>
+<p><b>Chosen because</b> an 8-bit multiplier is dramatically smaller and cheaper than a floating-point
+one, and neural networks tolerate the precision loss.<br>
+<b>Industry:</b> this is <b>quantisation</b>, and it is now completely standard for inference.
+Frameworks like TensorFlow Lite, ONNX Runtime and PyTorch all ship int8 quantisation paths. Newer
+accelerators push further to int4 and various 8-bit floating-point formats.</p>
+
+<h3>9.3 A fixed pipeline with no back-pressure</h3>
+<p><b>Chosen because</b> the latency is known exactly and never varies, so a handshake would cost
+logic and buy nothing.<br>
+<b>Alternative:</b> a ready/valid handshake (the AXI-Stream style used almost everywhere in
+SoC design), which lets blocks stall each other and makes systems composable.<br>
+<b>Trade-off:</b> the fixed pipeline is smaller and faster, but any latency mistake is a silent
+wrong answer instead of a stall. For a fixed-function datapath this is the normal choice; for
+anything that talks to a bus or a variable-latency memory it would not be.</p>
+
+<h3>9.4 Three abstraction levels in three files</h3>
+<p><b>Chosen because</b> each level can be verified independently, and a failure at level 3 must
+therefore be in the control logic that level 3 adds.<br>
+<b>Industry:</b> this is standard hierarchical design and hierarchical verification. Real projects go
+further with formal interface contracts and separately signed-off IP blocks, but the principle —
+verify the leaves, then verify the integration, and never re-wire what you already verified — is
+exactly the same.</p>
+
+<h3>9.5 The write strobe as a shift register, not an equation</h3>
+<p><b>Chosen because</b> it makes the strobe structurally unable to drift from its data.<br>
+<b>Alternative:</b> compute the target cycle arithmetically, which costs fewer flip-flops.<br>
+<b>Principle:</b> <b>prefer a structural guarantee to a computed one.</b> An equation can be right
+today and wrong after someone adds a pipeline stage; a shift register of the right length simply
+follows. This is one of the most transferable ideas in the whole project.</p>
+
+<h3>9.6 Synchronous, active-low reset</h3>
+<p><b>Chosen because</b> it is the house style throughout: <code>rst_n</code> is tested inside the
+<code>always_ff</code> rather than in the sensitivity list.<br>
+<b>Industry:</b> both synchronous and asynchronous reset are common; the important thing is
+<i>consistency</i>. Active-low naming (<code>_n</code>) is near-universal because in CMOS it is
+cheaper to drive a signal low reliably, and an undriven line naturally pulls high — so a broken
+connection asserts reset rather than releasing it.</p>
+
+<h3>9.7 Parameters everywhere, derived constants never duplicated</h3>
+<p><code>STORE_LATENCY = 1 + ROWS + COLS - 2 + 1</code> appears in the controller, the AGU and the
+wrapper — but always as that expression, never as the literal 8. Change the array size and all three
+follow.<br>
+<b>Industry:</b> this is the <b>single source of truth</b> principle, and it is one of the clearest
+markers of professional RTL. The most common real-world bug pattern in accelerators is a magic number
+that got updated in three places out of four.</p>
+
+<h3>9.8 Things this project deliberately does not do</h3>
+<ul>
+<li><b>No synthesis or timing closure.</b> The design has never been run through a tool that turns it
+into actual gates and checks that it can hit a target clock frequency. Simulation says the logic is
+right; it says nothing about whether it is fast enough or small enough.</li>
+<li><b>No clock domain crossing.</b> Everything runs on one clock. Real SoCs have dozens, and moving
+a signal between them safely is an entire discipline of its own.</li>
+<li><b>No power management.</b> No clock gating, no power domains. Real accelerators gate the clock
+on idle PEs aggressively, because a PE that is not doing useful work still burns power every cycle.</li>
+<li><b>No overflow protection.</b> The 32-bit accumulator cannot overflow at 4×4 with int8 (worst
+case 65 536), but nothing guards it if the array grows. Production designs saturate instead of
+wrapping, because wrapping turns a large positive number into a large negative one — a spectacular
+and hard-to-diagnose failure.</li>
+</ul>
+
+<!-- ================================================================= -->
+<h2 id="b10"><span class="num">10</span>Full glossary</h2>
+
+<dl class="gloss">
+<div><dt>accumulator</dt><dd>A register that holds a running total, added to repeatedly. Here it is <code>psum_q</code>, 32 bits wide.</dd></div>
+<div><dt>activation</dt><dd>Machine-learning term for an input value to a layer. In this design, an 8-bit number entering the array from the west.</dd></div>
+<div><dt>active low</dt><dd>A signal that means "yes" when it is 0. Marked with an <code>_n</code> suffix, e.g. <code>rst_n</code>.</dd></div>
+<div><dt>AGU</dt><dd>Address Generation Unit. The block that produces memory addresses. <code>agu.sv</code>.</dd></div>
+<div><dt>always_comb</dt><dd>SystemVerilog block that describes combinational (memoryless) logic.</dd></div>
+<div><dt>always_ff</dt><dd>SystemVerilog block that describes flip-flops (registers) clocked on an edge.</dd></div>
+<div><dt>ASIC</dt><dd>Application-Specific Integrated Circuit — a chip manufactured for one purpose. Expensive to make, unbeatable once made.</dd></div>
+<div><dt>back-pressure</dt><dd>A downstream block's ability to tell an upstream block to wait. This design has none.</dd></div>
+<div><dt>combinational</dt><dd>Logic made only of gates, with no memory. Output depends only on the present inputs.</dd></div>
+<div><dt>cycle</dt><dd>One tick of the clock. "Cycle <i>n</i>" here means the <i>n</i>-th rising clock edge.</dd></div>
+<div><dt>de-skew</dt><dd>Removing a stagger so that values that were spread across several cycles line up on one.</dd></div>
+<div><dt>dot product</dt><dd>Multiply two lists element by element and sum the products. The core operation of matrix multiply.</dd></div>
+<div><dt>DUT</dt><dd>Device Under Test — the module a testbench is exercising.</dd></div>
+<div><dt>elaboration</dt><dd>The stage where the tool resolves parameters, expands generate loops and connects instances. Some errors (notably port type mismatches) appear only here, not at compile time.</dd></div>
+<div><dt>flip-flop</dt><dd>A one-bit storage element that captures its input on a clock edge. Also called a register.</dd></div>
+<div><dt>FPGA</dt><dd>Field-Programmable Gate Array — a chip you can reconfigure. Used to prototype designs before committing to an ASIC.</dd></div>
+<div><dt>FSM</dt><dd>Finite State Machine. A register holding "which state" plus rules for moving between states. <code>controller.sv</code>.</dd></div>
+<div><dt>generate</dt><dd>A compile-time construct that stamps out multiple copies of hardware.</dd></div>
+<div><dt>golden model</dt><dd>An independent computation of the expected answer, written from the specification rather than from the design.</dd></div>
+<div><dt>HDL</dt><dd>Hardware Description Language. SystemVerilog and VHDL are the two in industrial use.</dd></div>
+<div><dt>int8 / int32</dt><dd>Signed integers 8 and 32 bits wide. Ranges −128…127 and roughly ±2.1 billion.</dd></div>
+<div><dt>latency</dt><dd>How long one result takes to appear, measured in cycles. Here: 7 from address to result.</dd></div>
+<div><dt>localparam</dt><dd>A constant that cannot be overridden from outside the module. Used for internal encodings.</dd></div>
+<div><dt>MAC</dt><dd>Multiply-ACcumulate: multiply two numbers and add the result to a running total. The fundamental operation of this chip.</dd></div>
+<div><dt>Moore machine</dt><dd>An FSM whose outputs depend only on the current state, not on the inputs. Safer against glitches. This design's controller is one.</dd></div>
+<div><dt>multiplexer (mux)</dt><dd>A hardware switch that selects one of several inputs. Written as <code>sel ? a : b</code>.</dd></div>
+<div><dt>non-blocking assignment</dt><dd><code>&lt;=</code> — reads all right-hand sides first, then updates all left-hand sides. Required for correct register behaviour.</dd></div>
+<div><dt>packed / unpacked array</dt><dd>Packed (<code>logic [31:0] x</code>) is one wide number you can slice. Unpacked (<code>logic [7:0] x [0:3]</code>) is four separate buses.</dd></div>
+<div><dt>parameter</dt><dd>A compile-time constant that can be overridden at instantiation. How hardware is made reusable.</dd></div>
+<div><dt>part-select</dt><dd><code>x[base +: width]</code> — take <code>width</code> bits starting at <code>base</code>. Legal with a variable base, unlike <code>[a:b]</code>.</dd></div>
+<div><dt>PE</dt><dd>Processing Element — one cell of the array. Here, one MAC plus four registers.</dd></div>
+<div><dt>pipelining</dt><dd>Splitting work across cycles with registers between the stages, so the clock can be faster and a new result emerges every cycle.</dd></div>
+<div><dt>posedge</dt><dd>The rising edge of the clock — the moment registers capture their inputs.</dd></div>
+<div><dt>psum / partial sum</dt><dd>A dot product that is only partly accumulated, still travelling down a column.</dd></div>
+<div><dt>quantisation</dt><dd>Converting a model from 32-bit floating point to small integers (usually int8) for cheaper inference.</dd></div>
+<div><dt>read-before-write</dt><dd>Memory behaviour where a read concurrent with a write to the same address returns the <i>old</i> value.</dd></div>
+<div><dt>regression</dt><dd>Running the full set of tests to confirm nothing broke. Here: <code>run_all_testbenches.ps1</code>.</dd></div>
+<div><dt>RTL</dt><dd>Register Transfer Level — describing hardware as registers plus the logic that moves data between them. The abstraction all of this code is written at.</dd></div>
+<div><dt>shift register</dt><dd>A chain of registers where each passes its value to the next every cycle. <code>delay_pipe</code> is one.</dd></div>
+<div><dt>sign extension</dt><dd>Widening a signed number by copying its top bit. −5 in 8 bits becomes −5 in 32 bits, not 251.</dd></div>
+<div><dt>simulator</dt><dd>Software that pretends to be the hardware so you can test it. QuestaSim here.</dd></div>
+<div><dt>skew</dt><dd>Deliberately staggering values across cycles. The opposite of de-skew.</dd></div>
+<div><dt>SoC</dt><dd>System on Chip — a chip containing processors, memories and accelerators together.</dd></div>
+<div><dt>SRAM</dt><dd>Static RAM. Fast on-chip memory. All three memories here are SRAM-style.</dd></div>
+<div><dt>synchronous</dt><dd>Everything happens on clock edges. Reset here is synchronous: it only takes effect at an edge.</dd></div>
+<div><dt>synthesis</dt><dd>Turning RTL into actual logic gates. Not done in this project.</dd></div>
+<div><dt>systolic array</dt><dd>A grid of simple processors through which data flows rhythmically, each cell computing and passing on. Named after the heartbeat.</dd></div>
+<div><dt>testbench</dt><dd>Simulation-only code that drives a design and checks its outputs.</dd></div>
+<div><dt>throughput</dt><dd>How many results emerge per cycle once the pipeline is full. Here: one result vector per cycle.</dd></div>
+<div><dt>TPU</dt><dd>Tensor Processing Unit — Google's machine-learning accelerator. Its first version was a 256×256 weight-stationary systolic array.</dd></div>
+<div><dt>weight</dt><dd>A learned constant in a neural network. Here, an int8 value held in a PE.</dd></div>
+<div><dt>weight-stationary</dt><dd>A dataflow where weights are loaded once and stay put while data streams past them.</dd></div>
+<div><dt>wrapper</dt><dd>A module whose job is to instantiate and connect other modules.</dd></div>
+<div><dt>X (unknown)</dt><dd>A simulation value meaning "this wire's value is not determined". Reading uninitialised memory produces X.</dd></div>
+</dl>
+
+<!-- ================================================================= -->
+<h2 id="b11"><span class="num">11</span>Where to go next</h2>
+
+<h3>To understand this design more deeply</h3>
+<ol>
+<li>Read <a href="architecture_and_dataflow.html">architecture_and_dataflow.html</a> and step through
+the <b>animated matrix-multiply figure</b> cycle by cycle. Everything in section 6 above becomes much
+more concrete once you have watched the weights shift down and the sums accumulate.</li>
+<li>Open <code>indi_ver_rep/sim_logs/tb_accelerator_system_top.log</code> and read an actual
+simulation transcript. It prints the weight matrix, the activation vectors, and a per-transaction
+trace with expected values alongside.</li>
+<li>Read <code>test_benches/tb_processing_element.sv</code>. It is the most approachable testbench —
+a single module, hand-computed expected values, and every one of its 500 random cycles traced.</li>
+</ol>
+
+<h3>To try changing something</h3>
+<ol>
+<li><b>Put the FLUSH phase back.</b> The design used to insert <code>ROWS + 2 = 6</code> cycles between
+WLOAD and COMPUTE. Re-add that state, rerun, and confirm the regression still passes but every job is
+6 cycles longer — evidence that the phase was margin, not function. Then read
+<code>context_mkdwn/12_dataflow_and_timing.md</code> for the cycle-by-cycle argument for why it could
+be deleted, and satisfy yourself that the margin is now exactly one cycle.</li>
+<li><b>Break the weight order deliberately.</b> Make the AGU count <i>up</i> instead of down. Watch
+the regression fail, and note that it fails only because the weight matrix is random and
+non-symmetric.</li>
+<li><b>Add a testbench check.</b> Pick any existing testbench, add one more <code>check(...)</code>
+call, and confirm the reported count goes up by exactly one. That count invariant is what the project
+uses to prove no check was accidentally dropped.</li>
+</ol>
+
+<h3>To learn the field</h3>
+<ul>
+<li><b>SystemVerilog:</b> <i>SystemVerilog for Design</i> (Sutherland) and <i>RTL Modeling with
+SystemVerilog for Simulation and Synthesis</i> (Sutherland) are the standard references for the
+synthesisable subset.</li>
+<li><b>Digital design:</b> <i>Digital Design and Computer Architecture</i> (Harris &amp; Harris) —
+the standard first course, and it builds up to a working processor.</li>
+<li><b>Accelerators:</b> the TPU paper (<i>In-Datacenter Performance Analysis of a Tensor Processing
+Unit</i>, Jouppi et al., 2017) is readable and describes exactly this architecture at scale. The
+Eyeriss papers cover the dataflow taxonomy in depth.</li>
+<li><b>Verification:</b> once directed testing feels natural, the next step is constrained-random
+verification, functional coverage and SystemVerilog Assertions — the three things section 8 notes
+this project does not have.</li>
+</ul>
+
+<div class="foot">
+  <p><b>Companion documents.</b>
+  <a href="architecture_and_dataflow.html">architecture_and_dataflow.html</a> — technical reference
+  with cycle-accurate animations. ·
+  <a href="description_index.md">description_index.md</a> — master file index. ·
+  <a href="design_files_description.md">design_files_description.md</a> — per-module reference. ·
+  <a href="testbench_description.md">testbench_description.md</a> — per-testbench reference. ·
+  <a href="../indi_ver_rep/verification_report.md">verification_report.md</a> — full results. ·
+  <a href="../context_mkdwn/00-index.md">context_mkdwn/</a> — derivations and design decisions.</p>
+  <p>Design: 13 SystemVerilog modules, ~800 lines. Verification: 13 testbenches, 3 902 checks,
+  13/13 passing, 0 mismatches. QuestaSim 2021.1, run 2026-07-30.</p>
+</div>
+
+</div>
+</body>
+</html>
+
+
+

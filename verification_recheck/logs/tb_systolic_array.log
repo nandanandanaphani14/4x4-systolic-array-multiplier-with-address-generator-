@@ -1,0 +1,88 @@
+﻿Reading pref.tcl
+
+# 2021.1
+
+# vsim -c -do "run -all; quit -f" tb_systolic_array 
+# Start time: 16:58:13 on Aug 06,2026
+# ** Note: (vsim-3812) Design is being optimized...
+# ** Warning: C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\array.sv(14): (vopt-13314) Defaulting port 'a_in_left' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\array.sv(15): (vopt-13314) Defaulting port 'valid_in_left' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\array.sv(18): (vopt-13314) Defaulting port 'psum_in_top' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Note: (vsim-12126) Error and warning message counts have been restored: Errors=0, Warnings=3.
+# //  Questa Sim-64
+# //  Version 2021.1 win64 Jan 19 2021
+# //
+# //  Copyright 1991-2021 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  QuestaSim and its associated documentation contain trade
+# //  secrets and commercial or financial information that are the property of
+# //  Mentor Graphics Corporation and are privileged, confidential,
+# //  and exempt from disclosure under the Freedom of Information Act,
+# //  5 U.S.C. Section 552. Furthermore, this information
+# //  is prohibited from disclosure under the Trade Secrets Act,
+# //  18 U.S.C. Section 1905.
+# //
+# Loading sv_std.std
+# Loading work.tb_systolic_array(fast)
+# run -all
+# =====================================================================
+#  tb_systolic_array  --  DUT: systolic_array (array.sv)
+# =====================================================================
+#  ROWS=4 COLS=4   golden C = A x W (nested-loop reference)
+#  Weights loaded bottom-first; W is random + non-symmetric.
+# 
+#  TEST PLAN
+#    T1  load weights, stream 6 vectors, check every dot product
+#    T2  negative: array drains to 0 after the last valid input
+# =====================================================================
+#  Weight matrix W (row r, col c):
+#    W[0] =   -25   124  -100    28
+#    W[1] =   -24   -89    22   -60
+#    W[2] =     0    89    -8    -5
+#    W[3] =    17   -94    -4   -91
+#  Expected results C[i] = A[i] x W:
+#    C[0] =   3785  -6912   1872   3875
+#    C[1] =   4190  -5829   1546   5338
+#    C[2] =  -2259   -149   6804   -245
+#    C[3] =   1221  -2365  10574   4614
+#    C[4] =  -2519  10788  -3740  14595
+#    C[5] =   2963  14417   5254  11019
+# 
+#   -----------------------------------------------------------------
+#   T1 : load + stream, per-column dot-product check
+#   -----------------------------------------------------------------
+#     WLOAD: driving weight rows bottom-first (row 3 first)
+#     cyc 13: C[0] bottom =   3785      0      0      0 (exp   3785  -6912   1872   3875)
+#     cyc 14: C[1] bottom =   4190  -6912      0      0 (exp   4190  -5829   1546   5338)
+#     cyc 15: C[2] bottom =  -2259  -5829   1872      0 (exp  -2259   -149   6804   -245)
+#     cyc 16: C[3] bottom =   1221   -149   1546   3875 (exp   1221  -2365  10574   4614)
+#     cyc 17: C[4] bottom =  -2519  -2365   6804   5338 (exp  -2519  10788  -3740  14595)
+#     cyc 18: C[5] bottom =   2963  10788  10574   -245 (exp   2963  14417   5254  11019)
+#     checked 24 dot-product lanes across 6 vectors
+#     T1 ends: 24 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T2 : negative: array drains to 0 after last valid
+#   -----------------------------------------------------------------
+#     bottom bus = 0 0 0 0 (all zero)
+#     T2 ends: 4 checks, 0 errors  [PASS]
+# 
+#   =================================================================
+#    SECTION SUMMARY : tb_systolic_array
+#   =================================================================
+#    SEC    DESCRIPTION                                     CHECKS  ERRORS  STATUS
+#    ------ ---------------------------------------------- ------- -------  ------
+#    T1     load + stream, per-column dot-product check       24       0  PASS
+#    T2     negative: array drains to 0 after last valid       4       0  PASS
+#    ------ ---------------------------------------------- ------- -------
+#    TOTAL                                                      28       0
+#   =================================================================
+#    TOTALS: 28 checks, 0 errors
+#    simulated time : 396 ns
+#    RESULT: PASS - tb_systolic_array
+#   =================================================================
+# ** Note: $finish    : C:/Users/VLSI/Desktop/systolic_array_multiplier/verification_recheck/testbenches/tb_systolic_array.sv(115)
+#    Time: 396 ns  Iteration: 0  Instance: /tb_systolic_array
+# End time: 16:58:25 on Aug 06,2026, Elapsed time: 0:00:12
+# Errors: 0, Warnings: 3

@@ -1,0 +1,704 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Dataflow and the Weight-Stationary Systolic Array — how data enters, waits, computes and leaves</title>
+<style>
+@page { size: A4; margin: 16mm 15mm 16mm 15mm; }
+* { box-sizing: border-box; }
+body {
+  font-family: "Segoe UI", "Calibri", "Helvetica Neue", Arial, sans-serif;
+  font-size: 10pt; line-height: 1.45; color: #16181d; margin: 0;
+}
+h1 { font-size: 21pt; line-height: 1.15; margin: 0 0 6px 0; color: #14324f; letter-spacing: -0.3px; }
+h2 {
+  font-size: 14pt; margin: 22px 0 8px 0; color: #14324f;
+  border-bottom: 2px solid #14324f; padding-bottom: 3px;
+  page-break-after: avoid; break-after: avoid;
+}
+h3 { font-size: 11.5pt; margin: 15px 0 5px 0; color: #1d5b7a; page-break-after: avoid; break-after: avoid; }
+h4 { font-size: 10pt; margin: 12px 0 4px 0; color: #2c3540; page-break-after: avoid; break-after: avoid; }
+p { margin: 6px 0; }
+ul, ol { margin: 6px 0; padding-left: 22px; }
+li { margin: 3px 0; }
+code {
+  font-family: "Consolas", "DejaVu Sans Mono", monospace; font-size: 8.8pt;
+  background: #eef2f6; padding: 0.5px 3px; border-radius: 2px; color: #123;
+}
+pre {
+  font-family: "Consolas", "DejaVu Sans Mono", monospace; font-size: 7.9pt;
+  line-height: 1.35; background: #f6f8fa; border: 1px solid #d4dde5;
+  border-left: 3px solid #14324f; border-radius: 3px;
+  padding: 7px 9px; margin: 8px 0; white-space: pre-wrap; overflow-wrap: anywhere;
+  page-break-inside: avoid; break-inside: avoid;
+}
+pre code { background: none; padding: 0; font-size: inherit; }
+table {
+  width: 100%; border-collapse: collapse; margin: 9px 0; font-size: 8.6pt;
+  page-break-inside: avoid; break-inside: avoid;
+}
+th {
+  background: #14324f; color: #fff; text-align: left; padding: 4px 6px;
+  font-weight: 600; border: 1px solid #14324f; vertical-align: top;
+}
+td { border: 1px solid #c6d2dc; padding: 3.5px 6px; vertical-align: top; }
+tbody tr:nth-child(even) { background: #f4f7fa; }
+.mono td:first-child, .mono th:first-child { font-family: "Consolas", monospace; }
+.title-block { border-bottom: 3px solid #14324f; padding-bottom: 12px; margin-bottom: 16px; }
+.subtitle { font-size: 12pt; color: #4a5764; margin: 2px 0 8px 0; }
+.meta { font-size: 8.5pt; color: #6b7885; }
+.note, .warn, .tip {
+  padding: 7px 10px; margin: 9px 0; border-radius: 3px; font-size: 9.2pt;
+  page-break-inside: avoid; break-inside: avoid;
+}
+.note { background: #eaf3fa; border-left: 4px solid #2b7cb8; }
+.warn { background: #fdf1e8; border-left: 4px solid #d2691e; }
+.tip  { background: #edf7ee; border-left: 4px solid #3d8b45; }
+.note b, .warn b, .tip b { display: block; margin-bottom: 2px; font-size: 8.8pt;
+  text-transform: uppercase; letter-spacing: 0.5px; }
+.note b { color: #1c5c8c; } .warn b { color: #a2500f; } .tip b { color: #2c6b33; }
+.toc { background: #f6f8fa; border: 1px solid #d4dde5; border-radius: 4px; padding: 10px 14px; margin: 14px 0; }
+.toc ol { margin: 0; padding-left: 20px; column-count: 2; column-gap: 26px; font-size: 9.2pt; }
+.toc li { margin: 2px 0; break-inside: avoid; }
+.pb { page-break-before: always; break-before: page; }
+.ascii {
+  font-family: "Consolas", "DejaVu Sans Mono", monospace; font-size: 7.2pt; line-height: 1.25;
+  background: #fbfcfd; border: 1px solid #d4dde5; border-radius: 3px;
+  padding: 8px 10px; margin: 9px 0; white-space: pre; overflow-x: auto;
+  page-break-inside: avoid; break-inside: avoid;
+}
+.tag { display: inline-block; background: #14324f; color: #fff; font-size: 7.5pt;
+  padding: 1px 6px; border-radius: 8px; letter-spacing: 0.4px; vertical-align: 1px; }
+.small { font-size: 8.5pt; color: #55606c; }
+hr { border: none; border-top: 1px solid #d4dde5; margin: 16px 0; }
+.eq { background:#f6f8fa; border:1px solid #d4dde5; border-left:3px solid #3d8b45; border-radius:3px;
+  padding:8px 11px; margin:9px 0; font-family:"Consolas",monospace; font-size:8.6pt;
+  page-break-inside: avoid; break-inside: avoid; }
+.big { font-size: 12pt; font-weight: 600; color:#14324f; }
+.hl { background: #fff6d9; }
+</style>
+</head>
+<body>
+
+<div class="title-block">
+  <div class="tag">DATAFLOW &nbsp;·&nbsp; SKEW BUFFERS &nbsp;·&nbsp; WEIGHT-STATIONARY FUNDAMENTALS</div>
+  <h1>How data enters the array, waits in the delay buffers, and leaves</h1>
+  <div class="subtitle">A cycle-by-cycle account of the 4×4 weight-stationary systolic multiplier —
+  what the skew buffers are for, what they hold at every instant, what the DRAIN phase is actually
+  draining, and where the 17 cycles go</div>
+  <div class="meta">
+    Design <code>accelerator_system_top</code> &nbsp;·&nbsp; ROWS = COLS = 4, int8 × int8 → int32
+    &nbsp;·&nbsp; 100 MHz, single clock, no back-pressure<br>
+    Job length <b>N + 13</b> cycles loading weights, <b>N + 9</b> reusing them
+    (<b>17</b> / <b>13</b> for a 4×4 × 4×4 product)<br>
+    Companion documents: <code>timing.pdf</code> (STA and performance),
+    <code>architecture_and_dataflow.pdf</code> (module reference),
+    <code>context_mkdwn/12_dataflow_and_timing.md</code> (constants)
+  </div>
+</div>
+
+<div class="toc">
+<b style="font-size:9.5pt;color:#14324f;">Contents</b>
+<ol>
+  <li>The one-page answer</li>
+  <li>What "weight-stationary" means, and why anyone chose it</li>
+  <li>The three dataflows compared</li>
+  <li>Why a systolic array needs skewing at all</li>
+  <li>The input skew buffer — staggering the wavefront</li>
+  <li>Inside the PE: two streams, one register file</li>
+  <li>Loading the weights — the shift-register trick</li>
+  <li>The compute wavefront, cycle by cycle</li>
+  <li>The output de-skew buffer — putting the staircase back together</li>
+  <li>What DRAIN is actually draining</li>
+  <li>The complete 17-cycle timeline</li>
+  <li>Where every cycle goes — the latency budget</li>
+  <li>Why the weight residue never corrupts a result</li>
+  <li>Throughput, efficiency and the reuse path</li>
+  <li>Common misconceptions</li>
+</ol>
+</div>
+
+<div class="note"><b>Who this is for</b>
+Someone who can read the RTL but wants the <i>mental model</i>: why the data arrives diagonally, what
+is sitting in each delay line at any moment, and why the answer pops out aligned at the bottom. Every
+number here is taken from the RTL and confirmed by the QuestaSim regression
+(<code>verification_recheck/</code>, 11/11 testbenches, 3 680 checks, 0 mismatches).</div>
+
+<h2>1. The one-page answer</h2>
+
+<p>A systolic array is a grid of tiny processors that pass data to their immediate neighbours once per
+clock, like a heart pumping — that is where the name comes from. Nothing broadcasts, nothing has a long
+wire, and every value moves exactly one hop per cycle. That constraint is what makes it fast, and it is
+also what forces the awkward-looking skewed input.</p>
+
+<p>In <b>this</b> design:</p>
+
+<table>
+<thead><tr><th style="width:22%">Stage</th><th style="width:14%">Cycles</th><th>What is happening</th></tr></thead>
+<tbody>
+<tr><td><b>Weight load</b> (WLOAD)</td><td>4</td>
+    <td>The 4×4 weight matrix is pushed down the array's vertical bus, one row per cycle,
+    <b>bottom row first</b>. Each PE grabs the value passing through it into <code>weight_q</code>,
+    where it then <b>stays for the rest of the job</b>.</td></tr>
+<tr><td><b>Compute</b> (COMPUTE)</td><td>N</td>
+    <td>One activation vector enters per cycle. The input skew buffer delays row <i>r</i> by <i>r</i>
+    cycles so the vector enters the array as a <b>diagonal wavefront</b>, not a straight line.</td></tr>
+<tr><td><b>Drain</b> (DRAIN)</td><td>8</td>
+    <td>Nothing new enters. The last vector is still walking through the array, the de-skew buffer and
+    the output write port. The FSM waits exactly as long as that pipeline is deep.</td></tr>
+<tr><td><b>Done</b></td><td>1</td><td>The <code>done</code> pulse.</td></tr>
+</tbody>
+</table>
+
+<div class="eq">
+<b>Total = ROWS + N + STORE_LATENCY + 1 = 4 + N + 8 + 1 = N + 13</b><br>
+For a 4×4 × 4×4 product (N = 4): <b class="big">17 cycles = 170 ns at 100 MHz</b><br><br>
+Skip the weight load, because the array still holds the matrix from last time:<br>
+<b>Total = N + 9</b> → <b class="big">13 cycles = 130 ns</b>
+</div>
+
+<p>The rest of this document explains each of those lines properly.</p>
+
+<h2 class="pb">2. What "weight-stationary" means, and why anyone chose it</h2>
+
+<p>A matrix multiply <code>C = A × W</code> needs three things to meet inside each multiplier: an
+activation, a weight, and a running partial sum. Only one of them can afford to sit still. Whichever
+one you pin down names the dataflow.</p>
+
+<p><b>Weight-stationary</b> pins the weights. Each PE loads one weight once, and then that weight never
+moves again for the entire job. Activations flow past it horizontally; partial sums flow past it
+vertically; the weight just sits there being multiplied by whatever arrives.</p>
+
+<div class="ascii">
+                    a_in  ──────►  [ PE ]  ──────►  a_out        (activations flow EAST)
+                                      ▲
+                                 weight_q                        (weight STAYS PUT)
+                                      │
+                    psum_in ─────►  [ PE ]  ─────►  psum_out     (partial sums flow SOUTH)
+
+           psum_out = psum_in + (weight_q x a_in)
+</div>
+
+<p>Why that is the right choice here:</p>
+
+<table>
+<thead><tr><th style="width:30%">Property</th><th>Consequence</th></tr></thead>
+<tbody>
+<tr><td><b>Weights are read once, used N times</b></td>
+    <td>The whole point. Load a 4×4 matrix in 4 cycles, then stream as many activation vectors past it
+    as you like. The load cost amortises to nothing for large N — and in this design it can be
+    <b>skipped entirely</b> for a repeat job (§14).</td></tr>
+<tr><td><b>The weight never crosses a wire during compute</b></td>
+    <td>No fetch, no bandwidth, no energy. In the measured power report the entire 4×4 PE array burns
+    <b>3 mW</b>; the memory holding the results burns 8 mW.</td></tr>
+<tr><td><b>Partial sums accumulate in place as they fall</b></td>
+    <td>A column of 4 PEs computes a complete 4-term dot product with no adder tree and no
+    accumulator register file — just one 32-bit add per PE.</td></tr>
+<tr><td><b>Every link is register-to-register and one hop long</b></td>
+    <td>This is what lets the design close timing at 100 MHz with +0.714 ns of slack. There is no
+    combinational path that spans the array.</td></tr>
+</tbody>
+</table>
+
+<h2>3. The three dataflows compared</h2>
+
+<table>
+<thead><tr><th style="width:18%">Dataflow</th><th style="width:20%">What stays put</th><th style="width:30%">Best when</th><th>Cost</th></tr></thead>
+<tbody>
+<tr><td><b>Weight-stationary</b><br><span class="small">(this design, Google TPU v1)</span></td>
+    <td>The weight, in <code>weight_q</code></td>
+    <td>One weight matrix is reused across many activation vectors — exactly a neural-network layer, or
+    a filter applied to a whole image.</td>
+    <td>You pay a load phase whenever the weights change, and partial sums have to move.</td></tr>
+<tr><td><b>Output-stationary</b></td>
+    <td>The accumulator for one output element</td>
+    <td>Very deep reductions, where you want the partial sum never to move.</td>
+    <td>Both weights and activations must stream in every cycle — double the input bandwidth.</td></tr>
+<tr><td><b>Row/input-stationary</b><br><span class="small">(Eyeriss)</span></td>
+    <td>A row of the activation map</td>
+    <td>Convolution with heavy data reuse in two dimensions.</td>
+    <td>Much more complex control and interconnect.</td></tr>
+</tbody>
+</table>
+
+<p>The choice here is the natural one for a demonstrator: the weight matrix is small, fixed for a job,
+and the interesting dimension is "how many activation vectors can I push through".</p>
+
+<h2 class="pb">4. Why a systolic array needs skewing at all</h2>
+
+<p>This is the part that confuses people first, so it is worth being slow about.</p>
+
+<p>Consider computing <code>C[0][0] = A[0][0]·W[0][0] + A[0][1]·W[1][0] + A[0][2]·W[2][0] +
+A[0][3]·W[3][0]</code>. In the array, <code>W[r][0]</code> lives in the PE at row <i>r</i>, column 0.
+So the four products that make up <code>C[0][0]</code> are computed in <b>four different PEs, stacked
+vertically</b>, and their sum falls down the column.</p>
+
+<p>Now the timing problem. The partial sum takes <b>one cycle per row</b> to fall. So:</p>
+
+<ul>
+  <li>The product in <b>row 0</b> must be computed at some cycle <i>t</i>.</li>
+  <li>Its partial sum arrives at row 1 at cycle <i>t</i>+1 — so row 1's product must be computed at
+      <i>t</i>+1, not at <i>t</i>.</li>
+  <li>Row 2 at <i>t</i>+2, row 3 at <i>t</i>+3.</li>
+</ul>
+
+<p>But <code>A[0][0]</code>, <code>A[0][1]</code>, <code>A[0][2]</code> and <code>A[0][3]</code> are all
+elements of the <b>same</b> activation vector, which arrives from memory in <b>one</b> cycle as a single
+32-bit word. If you fed all four into the array simultaneously, row 1 would multiply its weight by
+<code>A[0][1]</code> at cycle <i>t</i> — one cycle <i>before</i> the partial sum from row 0 arrives. The
+sum would be wrong.</p>
+
+<div class="warn"><b>The core insight</b>
+The partial sum travelling down the column is a <b>moving deadline</b>. Each row must present its
+activation at exactly the moment the partial sum from above reaches it. Since the sum moves one row per
+cycle, <b>row <i>r</i>'s activation must be delayed by <i>r</i> cycles</b>. That delay is the entire
+job of the input skew buffer.</div>
+
+<h2>5. The input skew buffer — staggering the wavefront</h2>
+
+<p><code>input_buf.sv</code> is four independent delay lines, one per array row:</p>
+
+<pre><code>for (r = 0; r &lt; ROWS; r++) begin : gen_input_skew
+    delay_pipe #(.WIDTH(WIDTH), .DELAY(r)) u_a_delay ( ... );   // activation
+    delay_pipe #(.WIDTH(1),     .DELAY(r)) u_v_delay ( ... );   // its valid bit
+end</code></pre>
+
+<table>
+<thead><tr><th style="width:16%">Array row</th><th style="width:16%">DELAY</th><th style="width:24%">Storage</th><th>Note</th></tr></thead>
+<tbody>
+<tr><td>0</td><td>0</td><td><b>none — a plain wire</b></td><td><code>delay_pipe</code> with DELAY = 0 is a pass-through. Row 0 needs no delay because its partial sum starts at zero from the top edge.</td></tr>
+<tr><td>1</td><td>1</td><td>1 register (8 bit + 1 valid)</td><td></td></tr>
+<tr><td>2</td><td>2</td><td>2 registers</td><td></td></tr>
+<tr><td>3</td><td>3</td><td>3 registers</td><td>The deepest line — the last row to receive its activation.</td></tr>
+</tbody>
+</table>
+
+<p>Total storage: <b>0 + 1 + 2 + 3 = 6 activation bytes and 6 valid bits</b>. That is the whole input
+buffer — tiny, because it holds only the triangle of data that is "waiting its turn".</p>
+
+<h3>What it holds, instant by instant</h3>
+
+<p>Feed vectors A0, A1, A2, A3 on consecutive cycles. Writing <code>A<sub>k</sub>[r]</code> for element
+<i>r</i> of vector <i>k</i>, this is what the array's west edge sees:</p>
+
+<div class="ascii">
+   cycle       →   t      t+1     t+2     t+3     t+4     t+5     t+6
+             ┌───────┬───────┬───────┬───────┬───────┬───────┬───────┐
+   row 0     │ A0[0] │ A1[0] │ A2[0] │ A3[0] │   -   │   -   │   -   │   delay 0
+   row 1     │   -   │ A0[1] │ A1[1] │ A2[1] │ A3[1] │   -   │   -   │   delay 1
+   row 2     │   -   │   -   │ A0[2] │ A1[2] │ A2[2] │ A3[2] │   -   │   delay 2
+   row 3     │   -   │   -   │   -   │ A0[3] │ A1[3] │ A2[3] │ A3[3] │   delay 3
+             └───────┴───────┴───────┴───────┴───────┴───────┴───────┘
+                 ╲       ╲       ╲       ╲
+                  ╲       ╲       ╲       ╲     each diagonal is ONE activation vector
+                   ╲       ╲       ╲       ╲    entering the array as a WAVEFRONT
+                    A0      A1      A2      A3
+
+   Contents of the delay lines at cycle t+2:
+       row 1 pipe : [ A1[1] ]                  1 byte  in flight
+       row 2 pipe : [ A1[2], A0[2] ]           2 bytes in flight   <- A0[2] about to emerge
+       row 3 pipe : [ A2[3], A1[3], A0[3] ]    3 bytes in flight
+</div>
+
+<p>Read the table by diagonal, not by column. Vector A0 occupies cycles <i>t</i>…<i>t</i>+3 as it
+steps down the rows — that diagonal <b>is</b> the wavefront. The buffer's job is to convert a vertical
+column of data into a diagonal one.</p>
+
+<div class="tip"><b>The valid bit travels with the data</b>
+Each row delays <code>valid</code> by the same amount as the activation byte. This is not decoration:
+a PE accumulates only when <code>valid_in</code> is high, so if valid and data got separated by even one
+cycle the array would accumulate the wrong products. It is the reason
+<code>delay_pipe</code> is instantiated twice per row rather than the valid being computed centrally.</div>
+
+<h2 class="pb">6. Inside the PE: two streams, one register file</h2>
+
+<p>Every one of the sixteen PEs is this (<code>MAC.sv</code>, condensed):</p>
+
+<pre><code>assign product_ext = 32'(weight_q * a_in);        // 8x8 signed multiply
+assign adder_out   = psum_in + product_ext;       // 32-bit signed add
+
+always_ff @(posedge clk) begin
+    if (wload) weight_q &lt;= psum_in[7:0];          // capture a weight, ONLY during load
+    a_q     &lt;= a_in;                              // activation marches east
+    valid_q &lt;= valid_in;                          // valid marches with it
+    psum_q  &lt;= valid_in ? adder_out : psum_in;    // accumulate, or just pass through
+end
+
+assign a_out    = a_q;
+assign psum_out = wload ? 32'(weight_q) : psum_q; // vertical bus is time-multiplexed
+</code></pre>
+
+<table>
+<thead><tr><th style="width:18%">Register</th><th style="width:16%">Written when</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td><code>weight_q</code></td><td><b>only</b> while <code>wload</code></td>
+    <td>The stationary weight. Survives COMPUTE, DRAIN, DONE and IDLE untouched — this is literally
+    what makes the architecture "weight-stationary", and it is what allows the reuse path in §14.</td></tr>
+<tr><td><code>a_q</code></td><td>every cycle</td><td>Passes the activation to the east neighbour one cycle later.</td></tr>
+<tr><td><code>valid_q</code></td><td>every cycle</td><td>Passes the valid flag east, in step with <code>a_q</code>.</td></tr>
+<tr><td><code>psum_q</code></td><td>every cycle</td><td>Holds this PE's contribution to the running dot product, on its way south.</td></tr>
+</tbody>
+</table>
+
+<div class="note"><b>The single most important line in the design</b>
+<code>psum_q &lt;= valid_in ? adder_out : psum_in;</code> and
+<code>adder_out = psum_in + product_ext</code>.<br><br>
+Notice what is <i>absent</i>: <code>psum_q</code> never appears on the right-hand side of the adder.
+The accumulation chain is fed <b>entirely from <code>psum_in</code></b>, i.e. from the PE above. A PE's
+own stored partial sum is only ever an output. That single fact is why stale data left in
+<code>psum_q</code> cannot corrupt a later result — see §13.</div>
+
+<h2>7. Loading the weights — the shift-register trick</h2>
+
+<p>There is no dedicated weight bus. During WLOAD the design <b>reuses the partial-sum bus</b> as a
+downward shift register, which is what the <code>wload</code> multiplexer on <code>psum_out</code> is
+for. While <code>wload</code> is high:</p>
+
+<ul>
+  <li><code>psum_out = weight_q</code> — each PE outputs the weight it is currently holding, instead of
+      its partial sum;</li>
+  <li><code>weight_q &lt;= psum_in[7:0]</code> — and simultaneously captures whatever is arriving from
+      above.</li>
+</ul>
+
+<p>Together those two lines make the whole column a shift register: one value enters the top each
+cycle, and everything already inside moves down one row.</p>
+
+<div class="ascii">
+   Weight rows enter the NORTH edge one per cycle.  Because the column shifts down,
+   the row you feed FIRST travels FURTHEST -- so you must feed the BOTTOM row first.
+
+   cycle 1        cycle 2        cycle 3        cycle 4        after cycle 4
+   ┌───────┐      ┌───────┐      ┌───────┐      ┌───────┐      ┌───────┐
+   │ W[3]  │ row0 │ W[2]  │      │ W[1]  │      │ W[0]  │      │ W[0]  │ row0  ✓
+   ├───────┤      ├───────┤      ├───────┤      ├───────┤      ├───────┤
+   │   -   │ row1 │ W[3]  │      │ W[2]  │      │ W[1]  │      │ W[1]  │ row1  ✓
+   ├───────┤      ├───────┤      ├───────┤      ├───────┤      ├───────┤
+   │   -   │ row2 │   -   │      │ W[3]  │      │ W[2]  │      │ W[2]  │ row2  ✓
+   ├───────┤      ├───────┤      ├───────┤      ├───────┤      ├───────┤
+   │   -   │ row3 │   -   │      │   -   │      │ W[3]  │      │ W[3]  │ row3  ✓
+   └───────┘      └───────┘      └───────┘      └───────┘      └───────┘
+
+   The AGU therefore counts w_addr DOWN: 3, 2, 1, 0.
+</div>
+
+<div class="warn"><b>Load-bearing rule — bottom row first</b>
+Feed <code>W[ROWS-1]</code> first and <code>W[0]</code> last. Get this backwards and the design still
+runs, still reports <code>done</code>, and produces a plausible-looking but wrong matrix — it computes
+<code>A × flipud(W)</code>. A <b>symmetric</b> test matrix will not catch it, which is why the
+regression uses non-symmetric golden vectors.</div>
+
+<p>Each PE captures on every one of the 4 cycles, so it holds several different weights in succession;
+only the last one it captures is the one it keeps. That is fine — and it is also the source of the
+"residue" discussed in §10 and §13, because those in-transit weight bytes are simultaneously being
+written into <code>psum_q</code>.</p>
+
+<h2 class="pb">8. The compute wavefront, cycle by cycle</h2>
+
+<p>Once the weights are in place, each activation vector sweeps through the array diagonally. Track a
+single vector A0 entering at cycle <i>t</i>:</p>
+
+<div class="ascii">
+   cycle t          cycle t+1        cycle t+2        cycle t+3
+   ┌──┬──┬──┬──┐    ┌──┬──┬──┬──┐    ┌──┬──┬──┬──┐    ┌──┬──┬──┬──┐
+   │██│  │  │  │    │  │██│  │  │    │  │  │██│  │    │  │  │  │██│   row 0
+   ├──┼──┼──┼──┤    ├──┼──┼──┼──┤    ├──┼──┼──┼──┤    ├──┼──┼──┼──┤
+   │  │  │  │  │    │██│  │  │  │    │  │██│  │  │    │  │  │██│  │   row 1
+   ├──┼──┼──┼──┤    ├──┼──┼──┼──┤    ├──┼──┼──┼──┤    ├──┼──┼──┼──┤
+   │  │  │  │  │    │  │  │  │  │    │██│  │  │  │    │  │██│  │  │   row 2
+   ├──┼──┼──┼──┤    ├──┼──┼──┼──┤    ├──┼──┼──┼──┤    ├──┼──┼──┼──┤
+   │  │  │  │  │    │  │  │  │  │    │  │  │  │  │    │██│  │  │  │   row 3
+   └──┴──┴──┴──┘    └──┴──┴──┴──┘    └──┴──┴──┴──┘    └──┴──┴──┴──┘
+    col 0 1 2 3
+
+   ██ = a PE computing a product belonging to activation vector A0 this cycle.
+
+   The wavefront is an anti-diagonal moving SOUTH-EAST at one cell per cycle.
+   Reading it two ways:
+     * down a COLUMN  : the four products of one output element C[.][c], summing as they fall
+     * along a ROW    : one activation byte being reused against four different weights
+</div>
+
+<p>Two independent things are being reused here, and that double reuse is the whole efficiency argument
+for a systolic array:</p>
+
+<table>
+<thead><tr><th style="width:26%">Reuse</th><th style="width:20%">Direction</th><th>What it saves</th></tr></thead>
+<tbody>
+<tr><td>One weight, many activations</td><td>stationary</td><td>Weight fetch bandwidth — zero after the load phase.</td></tr>
+<tr><td>One activation, many weights</td><td>eastward</td><td>Activation fetch bandwidth — read once from <code>a_mem</code>, used in 4 PEs.</td></tr>
+<tr><td>Partial sums accumulate in place</td><td>southward</td><td>No adder tree, no accumulator file, no write-back until the answer is complete.</td></tr>
+</tbody>
+</table>
+
+<p>Because column <i>c</i> is reached <i>c</i> cycles after column 0, and the sum then has to fall
+ROWS−1 = 3 rows, the complete dot product for column <i>c</i> emerges from the bottom of the array at:</p>
+
+<div class="eq">
+array latency for column c = (ROWS − 1) + c = <b>3 + c</b> cycles after the vector entered<br>
+→ column 0 at +3, column 1 at +4, column 2 at +5, column 3 at +6
+</div>
+
+<h2>9. The output de-skew buffer — putting the staircase back together</h2>
+
+<p>The results leave the bottom of the array in a <b>staircase</b>: column 0 first, column 3 three
+cycles later. But the output memory is 128 bits wide and stores all four lanes of a result row in one
+word, so they must be presented together. <code>output_skewbuf.sv</code> is the mirror image of the
+input buffer:</p>
+
+<table>
+<thead><tr><th style="width:14%">Column</th><th style="width:18%">Emerges at</th><th style="width:16%">De-skew DELAY</th><th style="width:18%">Storage</th><th>Aligned at</th></tr></thead>
+<tbody>
+<tr><td>0</td><td>+3</td><td>COLS−1−c = <b>3</b></td><td>3 × 32-bit regs</td><td>+6</td></tr>
+<tr><td>1</td><td>+4</td><td><b>2</b></td><td>2 × 32-bit regs</td><td>+6</td></tr>
+<tr><td>2</td><td>+5</td><td><b>1</b></td><td>1 × 32-bit reg</td><td>+6</td></tr>
+<tr><td>3</td><td>+6</td><td><b>0</b> — a wire</td><td>none</td><td>+6</td></tr>
+</tbody>
+</table>
+
+<div class="ascii">
+   BEFORE de-skew (psum_raw)             AFTER de-skew (result[])
+   staircase out of the array            one aligned 4-lane vector
+
+   cyc  +3  +4  +5  +6                   cyc  +3  +4  +5  +6
+   c0 │ C0 │    │    │                   c0 │    │    │    │ C0 │   held 3 cycles
+   c1 │    │ C1 │    │                   c1 │    │    │    │ C1 │   held 2 cycles
+   c2 │    │    │ C2 │                   c2 │    │    │    │ C2 │   held 1 cycle
+   c3 │    │    │    │ C3 │              c3 │    │    │    │ C3 │   straight through
+                     ↑                                      ↑
+        each lane finishes at its own    all four lanes valid on the SAME cycle,
+        time -- unusable as a word       ready to be packed into one 128-bit word
+</div>
+
+<p>Total storage: <b>3 + 2 + 1 + 0 = 6 words of 32 bits</b> — the exact mirror of the input buffer's 6
+bytes. The delays are complementary by construction: the array adds <code>+c</code>, the de-skew adds
+<code>+(COLS−1−c)</code>, and the sum is <code>COLS−1 = 3</code> for every column. Add the ROWS−1 = 3
+for falling down the column and you get the constant that governs the whole design:</p>
+
+<div class="eq">
+<b>L1 result latency = (ROWS − 1) + (COLS − 1) = ROWS + COLS − 2 = 6 cycles</b>, independent of column<br>
++ 1 for the <code>a_mem</code> read → <b>L2 result latency = 7</b><br>
++ 1 for the write-strobe alignment → <b>STORE_LATENCY = 8</b>
+</div>
+
+<div class="tip"><b>Why de-skew rather than four separate write ports</b>
+You could skip the de-skew buffer and write each lane as it arrives, using byte-enables on the output
+BRAM. It would <i>not</i> make the job shorter: the last column still emerges at +6, so DRAIN would be
+unchanged. What you would lose is the single clean "one result word per cycle" interface that makes the
+AGU's write-strobe pipe a plain shift register. Six 32-bit registers is a cheap price for that.</div>
+
+<h2 class="pb">10. What DRAIN is actually draining</h2>
+
+<p>This is the question the phase name answers badly. DRAIN is <b>not</b> flushing garbage. It is the
+FSM sitting still and waiting, because <b>the last activation vector issued is still in flight</b>.</p>
+
+<p>When the FSM leaves COMPUTE, the last vector has only just been <i>addressed</i>. It still has to:</p>
+
+<table>
+<thead><tr><th style="width:8%">#</th><th style="width:34%">Stage still to traverse</th><th style="width:14%">Cycles</th><th>Where it is buffered</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><code>a_mem</code> synchronous read</td><td>1</td><td>The BRAM's own output register</td></tr>
+<tr><td>2</td><td>Input skew delay for the deepest row</td><td>up to 3</td><td><code>input_buf</code> delay lines</td></tr>
+<tr><td>3</td><td>Falling down the PE column</td><td>3</td><td><code>psum_q</code> in each PE</td></tr>
+<tr><td>4</td><td>Travelling east to the last column</td><td>up to 3</td><td><code>a_q</code> in each PE</td></tr>
+<tr><td>5</td><td>De-skew alignment</td><td>0–3</td><td><code>output_skewbuf</code> delay lines</td></tr>
+<tr><td>6</td><td>Write-strobe alignment into <code>output_mem</code></td><td>1</td><td>AGU write-strobe pipe (SRL16E)</td></tr>
+<tr><td colspan="2"><b>Total, and steps 2+3+4+5 collapse to a constant 6</b></td><td><b>8</b></td><td>= <code>STORE_LATENCY</code></td></tr>
+</tbody>
+</table>
+
+<p>So DRAIN's length is not a tuning parameter — it is <b>a mirror of the datapath's physical
+depth</b>. The AGU's write-strobe pipe is <code>STORE_LATENCY</code> deep and keyed off
+<code>compute_phase</code>, so for a 4-vector job the four <code>out_we</code> pulses land in the last
+four DRAIN cycles, the final one in the <b>very last</b> DRAIN cycle.</p>
+
+<div class="warn"><b>DRAIN has zero slack, by construction</b>
+Shorten it and <code>busy</code> drops early; the port-arbitration mux in
+<code>wrapper_full_system.sv</code> then hands the output SRAM back to the host while the AGU is still
+pulsing write strobes, and those writes are <b>silently discarded</b>. Cut DRAIN by <i>k</i> cycles and
+you lose the last <i>k</i> results, with no error and no stall. The only legitimate way to shorten
+DRAIN is to make the datapath physically shallower.</div>
+
+<h2>11. The complete 17-cycle timeline</h2>
+
+<p>Everything above, assembled. Cycle 0 is the edge that samples <code>start</code>; N = 4.</p>
+
+<div class="ascii">
+ cyc │ FSM phase │ what the AGU issues     │ what is inside the buffers / array
+ ────┼───────────┼─────────────────────────┼──────────────────────────────────────────────────
+   0 │ IDLE      │ start sampled           │ array holds whatever it held before
+   1 │ WLOAD     │ w_addr = 3              │ weight row 3 being read from weight_mem
+   2 │ WLOAD     │ w_addr = 2              │ W[3] enters north edge, lands in row 0
+   3 │ WLOAD     │ w_addr = 1              │ W[3]→row1, W[2]→row0
+   4 │ WLOAD     │ w_addr = 0              │ W[3]→row2, W[2]→row1, W[1]→row0
+   5 │ COMPUTE   │ act_addr = base+0       │ W[3]→row3 ... weights now ALL in place
+     │           │                         │ (wload_q is still high this cycle - retimed by 1)
+   6 │ COMPUTE   │ act_addr = base+1       │ A0 enters row 0.  Weight residue starts draining
+   7 │ COMPUTE   │ act_addr = base+2       │ A0→row1/col1, A1→row0.   skew lines filling
+   8 │ COMPUTE   │ act_addr = base+3       │ wavefronts A0,A1,A2 in flight
+   9 │ DRAIN     │  -                      │ A3 entering; A0 reaches row 3 -> first C0 lane out
+  10 │ DRAIN     │  -                      │ residue fully clear of the array
+  11 │ DRAIN     │  -                      │ de-skew buffer holding the C0 staircase
+  12 │ DRAIN     │  -                      │ last residue leaves the de-skew buffer
+  13 │ DRAIN     │  -                      │ ◄ C0 aligned on result[] ; out_we #1 fires
+  14 │ DRAIN     │  -                      │ ◄ C1 aligned            ; out_we #2
+  15 │ DRAIN     │  -                      │ ◄ C2 aligned            ; out_we #3
+  16 │ DRAIN     │  -                      │ ◄ C3 aligned            ; out_we #4  (last DRAIN cycle)
+  17 │ DONE      │  -                      │ done pulses; busy already low
+  18 │ IDLE      │  -                      │ host may read output_mem, or issue the next start
+</div>
+
+<p>Reusing the weights removes rows 1–4 and shifts everything up by 4: COMPUTE at 1–4, DRAIN at 5–12,
+DONE at 13.</p>
+
+<h2 class="pb">12. Where every cycle goes — the latency budget</h2>
+
+<table>
+<thead><tr><th style="width:28%">Contribution</th><th style="width:12%">Cycles</th><th style="width:16%">Scales with</th><th>Can it be removed?</th></tr></thead>
+<tbody>
+<tr><td>Weight load (WLOAD)</td><td>4</td><td>ROWS</td>
+    <td><b>Yes — already is.</b> Skipped automatically when the weight matrix has not changed (§14).</td></tr>
+<tr><td>Useful compute (COMPUTE)</td><td>N</td><td>N</td><td>No — this is the work.</td></tr>
+<tr><td>&nbsp;&nbsp;<i>of which:</i> <code>a_mem</code> read</td><td>1</td><td>—</td>
+    <td>Only by going to asynchronous LUTRAM — costs a BRAM and hits the weakest timing path.</td></tr>
+<tr><td>&nbsp;&nbsp;array traversal + de-skew</td><td>6</td><td>ROWS+COLS−2</td>
+    <td><b>No.</b> This is the geometry of a 4×4 array. Removing the de-skew buffer does not help — the last column still emerges at +6.</td></tr>
+<tr><td>&nbsp;&nbsp;write-strobe alignment</td><td>1</td><td>—</td><td>Coupled to the <code>a_mem</code> read cycle.</td></tr>
+<tr><td>DRAIN (= the three rows above)</td><td>8</td><td>STORE_LATENCY</td><td>Only by making the datapath shallower. See the warning in §10.</td></tr>
+<tr><td>DONE handshake</td><td>1</td><td>—</td><td>No — the pulse the host waits on.</td></tr>
+<tr><td><b>Total</b></td><td><b>N + 13</b></td><td></td><td><b>N + 9</b> reusing weights</td></tr>
+</tbody>
+</table>
+
+<h2>13. Why the weight residue never corrupts a result</h2>
+
+<p>Earlier revisions of this design inserted a <b>FLUSH</b> phase of <code>ROWS + 2 = 6</code> cycles
+between WLOAD and COMPUTE. It has been removed, and the reasoning belongs in this document because it
+is really a dataflow argument.</p>
+
+<p><b>The residue is real.</b> During WLOAD every PE is doing
+<code>psum_q &lt;= psum_in</code> (valid is low), while <code>psum_in</code> carries weight bytes
+shifting down the column. So when WLOAD ends, all sixteen <code>psum_q</code> registers contain weight
+bytes rather than zeros.</p>
+
+<p><b>But it cannot reach a result, for two independent reasons:</b></p>
+
+<table>
+<thead><tr><th style="width:32%">Reason</th><th>Detail</th></tr></thead>
+<tbody>
+<tr><td><b>1. Accumulation is fed from above, never from the local register</b></td>
+    <td><code>adder_out = psum_in + product_ext</code> — <code>psum_q</code> is only ever an output.
+    When the first real wavefront reaches a PE, that PE writes
+    <code>psum_in + product</code>, discarding whatever was in <code>psum_q</code>. Stale content is
+    overwritten, not accumulated into.</td></tr>
+<tr><td><b>2. The residue and the results travel at the same speed, and the residue set off first</b></td>
+    <td>The residue drains out of the bottom at one row per cycle, then through the de-skew buffer,
+    clearing the aligned <code>result[]</code> bus on cycle 12. The first <code>out_we</code> — the
+    AGU's write-strobe pipe, keyed off <code>compute_phase</code> and <code>STORE_LATENCY</code> deep —
+    does not fire until cycle 13. Two trains on the same track at the same speed, with the residue
+    ahead: they cannot converge.</td></tr>
+</tbody>
+</table>
+
+<div class="warn"><b>The honest caveat</b>
+Removing FLUSH removed the <b>cushion</b>, not a function. The separation between the last residue
+(cycle 12) and the first write strobe (cycle 13) is now exactly <b>one cycle</b>. Anyone who adds a
+pipeline stage anywhere in the <code>a_mem</code> → skew → array → de-skew → pack path must re-derive
+this table, because there is no longer any slack absorbing an off-by-one. The regression will catch it
+— <code>tb_accelerator_system_top</code> compares every lane of every result against an
+independently-computed golden <code>C = A × W</code> — but only if it is re-run.</div>
+
+<h2 class="pb">14. Throughput, efficiency and the reuse path</h2>
+
+<p>The array does 16 MACs per cycle while COMPUTE is running — every PE busy, every cycle. At 100 MHz
+that is a peak of <b>1.6 GMAC/s (3.2 GOP/s)</b>. What you actually get depends on how much of the job
+is COMPUTE:</p>
+
+<div class="eq">
+efficiency = N / (N + 13)   loading weights<br>
+efficiency = N / (N + 9)    reusing weights
+</div>
+
+<table>
+<thead><tr><th style="width:16%">N (vectors)</th><th style="width:16%">Cycles (load)</th><th style="width:16%">Cycles (reuse)</th><th style="width:24%">Efficiency load / reuse</th><th>Effective rate (load)</th></tr></thead>
+<tbody>
+<tr><td><b>4</b> <span class="small">(one 4×4 matrix)</span></td><td><b>17</b></td><td><b>13</b></td><td><b>23.5 % / 30.8 %</b></td><td>0.38 GMAC/s</td></tr>
+<tr><td>16</td><td>29</td><td>25</td><td>55.2 % / 64.0 %</td><td>0.88 GMAC/s</td></tr>
+<tr><td>64</td><td>77</td><td>73</td><td>83.1 % / 87.7 %</td><td>1.33 GMAC/s</td></tr>
+<tr><td>255 <span class="small">(max)</span></td><td>268</td><td>264</td><td>95.1 % / 96.6 %</td><td>1.52 GMAC/s</td></tr>
+</tbody>
+</table>
+
+<p><b>A single isolated 4×4 multiplication is the worst case this architecture has.</b> The whole point
+of weight-stationary is amortising the load over many vectors; a 4-vector job barely amortises anything.
+That is the honest framing of the 23.5 % figure — it is not a defect, it is the demonstration being too
+small to show the architecture at its best.</p>
+
+<h3>How the reuse path works</h3>
+
+<p><code>accelerator_system_top</code> keeps one bit, <code>weights_dirty</code>:</p>
+
+<table>
+<thead><tr><th style="width:34%">Event</th><th style="width:14%">Effect</th><th>Why</th></tr></thead>
+<tbody>
+<tr><td>Reset</td><td><b>set</b></td><td>Every <code>weight_q</code> comes up zero, so the first job must load.</td></tr>
+<tr><td><code>host_w_we &amp;&amp; !busy</code></td><td><b>set</b></td><td>A host weight write that actually reached the SRAM. Host writes are masked while busy, hence the <code>!busy</code> gate — hammering the port mid-job cannot force a spurious reload.</td></tr>
+<tr><td>Last WLOAD cycle</td><td><b>cleared</b></td><td>The array now matches <code>weight_mem</code>.</td></tr>
+</tbody>
+</table>
+
+<p>It drives <code>controller.load_weights</code>, so WLOAD is skipped whenever the array already holds
+the right matrix. The flag is deliberately <b>internal</b>: the module's port list is unchanged, so
+<code>fpga_top</code>, <code>vio_debug_top</code> and <code>accel_axi</code> all get the speed-up
+without modification and no host has to learn a new command bit. It is conservative in the safe
+direction — rewriting the same weight values still forces a reload.</p>
+
+<h2>15. Common misconceptions</h2>
+
+<table>
+<thead><tr><th style="width:38%">Belief</th><th>Reality</th></tr></thead>
+<tbody>
+<tr><td>"The skew buffer is a FIFO that buffers bursts."</td>
+    <td>No. It is a set of fixed-length shift registers with no flow control at all. It exists purely to
+    make row <i>r</i>'s data arrive <i>r</i> cycles late. There is no back-pressure anywhere in this
+    design.</td></tr>
+<tr><td>"DRAIN flushes leftover garbage."</td>
+    <td>DRAIN waits for <b>real results</b> still in flight. The garbage it might also be pushing out is
+    incidental — see §10 and §13.</td></tr>
+<tr><td>"The weights must be reloaded for each job."</td>
+    <td>They survive indefinitely in <code>weight_q</code>. Only a host write to <code>weight_mem</code>
+    makes a reload necessary, and the design detects that automatically.</td></tr>
+<tr><td>"Deeper skew buffers would let it run faster."</td>
+    <td>The skew depths are fixed by the geometry (<i>r</i> in, <i>COLS−1−c</i> out). Changing them
+    breaks alignment. What raises F<sub>max</sub> is shortening the PE's combinational path — e.g.
+    forcing the multipliers into DSP48E1 slices.</td></tr>
+<tr><td>"The 128-bit output word means 128-bit datapaths."</td>
+    <td>It is four independent 32-bit lanes packed for storage only. Nothing in the array is wider than
+    32 bits.</td></tr>
+<tr><td>"Efficiency is low, so the architecture is bad."</td>
+    <td>Efficiency is <code>N/(N+13)</code>. At N = 4 you are measuring the pipeline fill and drain, not
+    the array. Stream 255 vectors and it is 95 %.</td></tr>
+</tbody>
+</table>
+
+<hr>
+<p class="small">
+<b>Sources.</b> All structural claims are read from the RTL:
+<code>MAC.sv</code> (PE registers and the accumulate/bypass mux),
+<code>array.sv</code> (interconnect and boundary bindings),
+<code>input_buf.sv</code> / <code>output_skewbuf.sv</code> / <code>delay_pipe.sv</code> (skew depths),
+<code>controller.sv</code> (phase durations),
+<code>agu.sv</code> (address counters and the write-strobe pipe),
+<code>wrapper_array_buf.sv</code> / <code>wrapper_mem_arr_buf.sv</code> / <code>wrapper_full_system.sv</code>
+(latency constants, port arbitration, <code>weights_dirty</code>).<br>
+<b>Measured.</b> Cycle counts are observed, not assumed: <code>tb_controller</code> counts phase-enable
+clocks for <code>num_vectors ∈ {0,1,3,4,6,8,16}</code> on both the loading and skipping paths, and
+<code>tb_accelerator_system_top</code> T7/T8 measure <code>start</code>→<code>done</code> directly.
+Regression: <b>11/11 testbenches, 3 680 checks, 0 mismatches</b> (QuestaSim 2021.1).<br>
+<b>Companions.</b> <code>timing.pdf</code> §14 for performance and energy;
+<code>context_mkdwn/12_dataflow_and_timing.md</code> for the constant table;
+<code>architecture_and_dataflow.pdf</code> for the module-by-module reference.
+</p>
+
+</body>
+</html>

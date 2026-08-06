@@ -1,0 +1,154 @@
+# vsim -c -do "run -all; quit -f" tb_accelerator_system_top 
+# Start time: 17:00:54 on Aug 06,2026
+# ** Note: (vsim-3812) Design is being optimized...
+# ** Warning: C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\input_buf.sv(7): (vopt-13314) Defaulting port 'dense_a_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\input_buf.sv(8): (vopt-13314) Defaulting port 'dense_valid_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\array.sv(14): (vopt-13314) Defaulting port 'a_in_left' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\array.sv(15): (vopt-13314) Defaulting port 'valid_in_left' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\array.sv(18): (vopt-13314) Defaulting port 'psum_in_top' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\output_skewbuf.sv(7): (vopt-13314) Defaulting port 'psum_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\wrapper_array_buf.sv(48): (vopt-13314) Defaulting port 'dense_a_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\wrapper_array_buf.sv(49): (vopt-13314) Defaulting port 'dense_valid_in' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Warning: C:\Users\VLSI\Desktop\systolic_array_multiplier\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\4x4-systolic-array-multiplier-with-address-generator--SIMPLE_ACCEL_RTL\wrapper_array_buf.sv(52): (vopt-13314) Defaulting port 'psum_in_top' kind to 'var' rather than 'wire' due to default compile option setting of -svinputport=relaxed.
+# ** Note: (vsim-12126) Error and warning message counts have been restored: Errors=0, Warnings=9.
+# //  Questa Sim-64
+# //  Version 2021.1 win64 Jan 19 2021
+# //
+# //  Copyright 1991-2021 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  QuestaSim and its associated documentation contain trade
+# //  secrets and commercial or financial information that are the property of
+# //  Mentor Graphics Corporation and are privileged, confidential,
+# //  and exempt from disclosure under the Freedom of Information Act,
+# //  5 U.S.C. Section 552. Furthermore, this information
+# //  is prohibited from disclosure under the Trade Secrets Act,
+# //  18 U.S.C. Section 1905.
+# //
+# Loading sv_std.std
+# Loading work.tb_accelerator_system_top(fast)
+# run -all
+# =====================================================================
+#  tb_accelerator_system_top  --  DUT: accelerator_system_top (LEVEL 3)
+# =====================================================================
+#  Host pulses start / waits done / reads results; FSM+AGU sequence all.
+# 
+#  TEST PLAN
+#    T1  clean job, golden C = A x W, read output_mem back
+#    T2  adversarial host writes while busy -> results unchanged
+#    T3  act_base selects a second activation block
+#    T4  short 3-vector job; neighbour output word untouched
+#    T5  directed 4x4 (A) x 4x4 (W) = 4x4 (C) matrix multiply
+#    T6  general signed 4x4 x 4x4
+#    T7  weight reuse: no weight write -> WLOAD skipped, N+9 cycles
+#    T8  a weight write re-arms WLOAD (N+13), the next job skips again
+# =====================================================================
+# 
+#   -----------------------------------------------------------------
+#   T1 : clean job, golden read-back
+#   -----------------------------------------------------------------
+#     job done in phase sequence; reading output_mem[0x20..]:
+#     out[0x20] =   3785  -6912   1872   3875 (exp   3785  -6912   1872   3875)
+#     out[0x21] =   4190  -5829   1546   5338 (exp   4190  -5829   1546   5338)
+#     out[0x22] =  -2259   -149   6804   -245 (exp  -2259   -149   6804   -245)
+#     out[0x23] =   1221  -2365  10574   4614 (exp   1221  -2365  10574   4614)
+#     out[0x24] =  -2519  10788  -3740  14595 (exp  -2519  10788  -3740  14595)
+#     out[0x25] =   2963  14417   5254  11019 (exp   2963  14417   5254  11019)
+#     T1 ends: 24 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T2 : adversarial host writes while busy
+#   -----------------------------------------------------------------
+#     hammered 0xDEADBEEF/0xBAADF00D into both write ports all job: mismatches=0
+#     earlier output block (0x20) is still intact -> out_base isolation holds
+#     T2 ends: 48 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T3 : act_base selects a second activation block
+#   -----------------------------------------------------------------
+#     act_base=0x80 produced that block's product into out_base=0x60
+#     T3 ends: 16 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T4 : short 3-vector job; neighbour word untouched
+#   -----------------------------------------------------------------
+#     exactly 3 words written (0x70..0x72); 0x73 unchanged before/after
+#     T4 ends: 13 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T5 : directed 4x4 (A) x 4x4 (W) = 4x4 (C)
+#   -----------------------------------------------------------------
+#     A (4x4):                    W (4x4):
+#       [ 1 0 0 0 ]                 [  1  2  3  4 ]
+#       [ 0 1 0 0 ]                 [  5  6  7  8 ]
+#       [ 0 0 1 0 ]                 [  9 10 11 12 ]
+#       [ 1 1 1 1 ]                 [ 13 14 15 16 ]
+#     C = A x W (read from output_mem[0xA0..0xA3]):
+#       C[0] =    1    2    3    4   (exp    1    2    3    4)
+#       C[1] =    5    6    7    8   (exp    5    6    7    8)
+#       C[2] =    9   10   11   12   (exp    9   10   11   12)
+#       C[3] =   28   32   36   40   (exp   28   32   36   40)
+#     row 0..2 reproduce W rows 0..2; row 3 = column sums (28 32 36 40).
+#     T5 ends: 16 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T6 : general 4x4 (A) x 4x4 (W) = 4x4 (C)
+#   -----------------------------------------------------------------
+#     A (4x4):                    W (4x4):
+#       [  2 -1  3  0 ]             [  1  2 -1  3 ]
+#       [  1  4 -2  5 ]             [  0 -2  4  1 ]
+#       [ -3  2  1  1 ]             [  5  1  2 -3 ]
+#       [  0  1  2 -4 ]             [ -1  3  0  2 ]
+#     C = A x W (read from output_mem[0xB0..0xB3]):
+#       C[0] =   17    9    0   -4   (exp   17    9    0   -4)
+#       C[1] =  -14    7   11   23   (exp  -14    7   11   23)
+#       C[2] =    1   -6   13   -8   (exp    1   -6   13   -8)
+#       C[3] =   14  -12    8  -13   (exp   14  -12    8  -13)
+#     expected C = [17 9 0 -4][-14 7 11 23][1 -6 13 -8][14 -12 8 -13]
+#     T6 ends: 16 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T7 : weight reuse: second job skips WLOAD and stays correct
+#   -----------------------------------------------------------------
+#     no weight write since the last job -> WLOAD skipped
+#     phase trace = COMPUTE -> DRAIN -> DONE  (first phase entered = 2, expect 2)
+#     job took 13 cycles (expect 13 = N + 9); a loading job takes 17
+#       C[0] =  -11   14   -3   24   (exp  -11   14   -3   24)
+#       C[1] =   22    9   11  -14   (exp   22    9   11  -14)
+#       C[2] =   10    8   10    6   (exp   10    8   10    6)
+#       C[3] =    9   15  -14    6   (exp    9   15  -14    6)
+#     results identical to a full-load job -> the array really did keep its weights
+#     T7 ends: 23 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T8 : writing weight_mem forces the next job to reload
+#   -----------------------------------------------------------------
+#     one weight row rewritten -> WLOAD ran again, job took 17 cycles (expect 17)
+#     new weight matrix took effect -> the dirty flag is not merely cosmetic
+#     the job right after it skipped again and matched -> flag clears correctly
+#     T8 ends: 43 checks, 0 errors  [PASS]
+# 
+#   =================================================================
+#    SECTION SUMMARY : tb_accelerator_system_top
+#   =================================================================
+#    SEC    DESCRIPTION                                     CHECKS  ERRORS  STATUS
+#    ------ ---------------------------------------------- ------- -------  ------
+#    T1     clean job, golden read-back                       24       0  PASS
+#    T2     adversarial host writes while busy                48       0  PASS
+#    T3     act_base selects a second activation block        16       0  PASS
+#    T4     short 3-vector job; neighbour word untouched      13       0  PASS
+#    T5     directed 4x4 (A) x 4x4 (W) = 4x4 (C)              16       0  PASS
+#    T6     general 4x4 (A) x 4x4 (W) = 4x4 (C)               16       0  PASS
+#    T7     weight reuse: second job skips WLOAD and stays correct      23       0  PASS
+#    T8     writing weight_mem forces the next job to reload      43       0  PASS
+#    ------ ---------------------------------------------- ------- -------
+#    TOTAL                                                     199       0
+#   =================================================================
+#    TOTALS: 199 checks, 0 errors
+#    simulated time : 3271 ns
+#    RESULT: PASS - tb_accelerator_system_top
+#   =================================================================
+# ** Note: $finish    : C:/Users/VLSI/Desktop/systolic_array_multiplier/verification_recheck/testbenches/tb_accelerator_system_top.sv(346)
+#    Time: 3271 ns  Iteration: 0  Instance: /tb_accelerator_system_top
+# End time: 17:01:07 on Aug 06,2026, Elapsed time: 0:00:13
+# Errors: 0, Warnings: 9

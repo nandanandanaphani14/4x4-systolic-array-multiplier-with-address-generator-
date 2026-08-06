@@ -1,0 +1,209 @@
+﻿Reading pref.tcl
+
+# 2021.1
+
+# vsim -c tb_a_mem -do "run -all; quit -f" 
+# Start time: 17:35:11 on Jul 30,2026
+# ** Note: (vsim-3812) Design is being optimized...
+# //  Questa Sim-64
+# //  Version 2021.1 win64 Jan 19 2021
+# //
+# //  Copyright 1991-2021 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  QuestaSim and its associated documentation contain trade
+# //  secrets and commercial or financial information that are the property of
+# //  Mentor Graphics Corporation and are privileged, confidential,
+# //  and exempt from disclosure under the Freedom of Information Act,
+# //  5 U.S.C. Section 552. Furthermore, this information
+# //  is prohibited from disclosure under the Trade Secrets Act,
+# //  18 U.S.C. Section 1905.
+# //
+# Loading sv_std.std
+# Loading work.tb_a_mem(fast)
+# run -all
+# =====================================================================
+#  tb_a_mem  --  unit test for a_mem.sv (activation SRAM)
+# =====================================================================
+#  Geometry      : 256 words x 32 bits  (ADDR_W=8)
+#  Word format   : 4 x int8, lane r = activation for array ROW r
+#  Primitive     : single-port sync RAM, 1-clock read latency,
+#                  read-before-write on a same-address collision
+#  Convention    : A - drive, next posedge consumes, then sample
+# 
+#  TEST PLAN
+#    T1  write every location with random data, read it all back
+#    T2  read latency is exactly one clock
+#    T3  we=0 leaves memory untouched
+#    T4  read-during-write returns pre-write data
+#    T5  address independence
+#    T6  data patterns: zeros, ones, walking one, walking zero
+#    T7  400 randomly interleaved reads and writes
+# 
+#  NOTE: bulk sweeps print the first 8, every 32th, and the last 2
+#        transactions.  Every transaction is checked regardless.
+# =====================================================================
+# 
+#   -----------------------------------------------------------------
+#   T1 : full-array write then read back
+#   -----------------------------------------------------------------
+#     writing all 256 locations with random data...
+#       addr | wdata     
+#     -------+-----------
+#          0 | 0x12f837e7
+#          1 | 0x8eb74a7c
+#          2 | 0x4682679c
+#          3 | 0x3030ba1c
+#          4 | 0x519afde8
+#          5 | 0xc73523a7
+#          6 | 0x61604716
+#          7 | 0x456ee1c4
+#         32 | 0x997a812c
+#         64 | 0x24a1af15
+#         96 | 0x3ccefa2a
+#        128 | 0x1ffe1da8
+#        160 | 0x57ab95b2
+#        192 | 0xcf453bcb
+#        224 | 0xd30b9bf1
+#        254 | 0xa633f3bb
+#        255 | 0x12f3cefc
+#     ... 256 writes issued
+# 
+#     reading all 256 locations back...
+#       addr | rdata      | expected   | 
+#     -------+------------+------------+------
+#          0 | 0x12f837e7 | 0x12f837e7 |       ok
+#          1 | 0x8eb74a7c | 0x8eb74a7c |       ok
+#          2 | 0x4682679c | 0x4682679c |       ok
+#          3 | 0x3030ba1c | 0x3030ba1c |       ok
+#          4 | 0x519afde8 | 0x519afde8 |       ok
+#          5 | 0xc73523a7 | 0xc73523a7 |       ok
+#          6 | 0x61604716 | 0x61604716 |       ok
+#          7 | 0x456ee1c4 | 0x456ee1c4 |       ok
+#         32 | 0x997a812c | 0x997a812c |       ok
+#         64 | 0x24a1af15 | 0x24a1af15 |       ok
+#         96 | 0x3ccefa2a | 0x3ccefa2a |       ok
+#        128 | 0x1ffe1da8 | 0x1ffe1da8 |       ok
+#        160 | 0x57ab95b2 | 0x57ab95b2 |       ok
+#        192 | 0xcf453bcb | 0xcf453bcb |       ok
+#        224 | 0xd30b9bf1 | 0xd30b9bf1 |       ok
+#        254 | 0xa633f3bb | 0xa633f3bb |       ok
+#        255 | 0x12f3cefc | 0x12f3cefc |       ok
+#     all 256 locations verified against the reference array
+#     T1 ends: 256 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T2 : read latency is exactly one clock
+#   -----------------------------------------------------------------
+#     wrote  addr 10 <- 0xAAAA5555,  addr 11 <- 0x12345678
+#     read   addr 10 -> 0xaaaa5555  (one clock after the address)
+#     read   addr 11 -> 0x12345678
+#     T2 ends: 2 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T3 : we=0 must not modify memory
+#   -----------------------------------------------------------------
+#     driving addr=10, wdata=0xDEADBEEF, we=0 for one clock
+#     addr 10 still reads 0xaaaa5555  (0xDEADBEEF was NOT stored)
+#     T3 ends: 1 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T4 : read-during-write returns pre-write data
+#   -----------------------------------------------------------------
+#     addr 10 currently holds 0xaaaa5555
+#     now driving we=1, addr=10, wdata=0xFACE0FF1 on the same cycle
+#     rdata during that cycle = 0xaaaa5555  (the OLD value, as expected)
+#     the next read returns 0xface0ff1  (the new value)
+#     T4 ends: 2 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T5 : address independence
+#   -----------------------------------------------------------------
+#     addr 200 -> 0x00000001  (unaffected by the write to 201)
+#     addr 201 -> 0xfffffffe
+#     T5 ends: 2 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T6 : data patterns on one address
+#   -----------------------------------------------------------------
+#     all zeros -> 0x00000000
+#     all ones  -> 0xffffffff
+#     walking one across all 32 bits:
+#       bit  0 -> 0x00000001
+#       bit  1 -> 0x00000002
+#       bit  2 -> 0x00000004
+#       bit  3 -> 0x00000008
+#       bit  8 -> 0x00000100
+#       bit 16 -> 0x00010000
+#       bit 24 -> 0x01000000
+#       bit 30 -> 0x40000000
+#       bit 31 -> 0x80000000
+#     walking zero across all 32 bits:
+#       bit  0 -> 0xfffffffe
+#       bit  1 -> 0xfffffffd
+#       bit  2 -> 0xfffffffb
+#       bit  3 -> 0xfffffff7
+#       bit  8 -> 0xfffffeff
+#       bit 16 -> 0xfffeffff
+#       bit 24 -> 0xfeffffff
+#       bit 30 -> 0xbfffffff
+#       bit 31 -> 0x7fffffff
+#     T6 ends: 66 checks, 0 errors  [PASS]
+# 
+#   -----------------------------------------------------------------
+#   T7 : random interleaved read/write traffic
+#   -----------------------------------------------------------------
+#       op# | op    |   addr | data       | result
+#     ------+-------+--------+------------+-------
+#         0 | write |    131 | 0xf337dc02 |
+#         1 | write |      2 | 0x41e6903a |
+#         2 | write |     71 | 0x2c5d3ed3 |
+#         3 | read  |    117 | 0x4e449f82 |       ok
+#         4 | read  |    125 | 0xdb7d71a8 |       ok
+#         5 | write |    239 | 0x3be9f4f7 |
+#         6 | read  |    116 | 0xae8fcdbd |       ok
+#         7 | write |    137 | 0x1815af29 |
+#        32 | write |      4 | 0x6b9fbc5b |
+#        64 | write |    188 | 0xea1b3ded |
+#        96 | read  |     19 | 0x6bf09d17 |       ok
+#       128 | read  |    201 | 0xfffffffe |       ok
+#       160 | read  |     70 | 0x2c87e4e5 |       ok
+#       192 | read  |     35 | 0x4dc41f85 |       ok
+#       224 | read  |     39 | 0xb4e758ad |       ok
+#       256 | write |    125 | 0x4222160e |
+#       288 | read  |    170 | 0xec0537b0 |       ok
+#       320 | read  |     28 | 0x08d799dc |       ok
+#       352 | read  |    231 | 0xbe3f3d22 |       ok
+#       384 | write |     66 | 0xd36942e8 |
+#       398 | write |    172 | 0x9fccbc91 |
+#       399 | write |    252 | 0xe88cfb31 |
+#     ---- T7 statistics ----------------------------------------
+#       random writes : 191
+#       random reads  : 209  (each compared against the model)
+# 
+#     total DUT transactions this run: 518 writes, 537 reads
+#     T7 ends: 209 checks, 0 errors  [PASS]
+# 
+#   =================================================================
+#    SECTION SUMMARY : tb_a_mem
+#   =================================================================
+#    SEC    DESCRIPTION                                     CHECKS  ERRORS  STATUS
+#    ------ ---------------------------------------------- ------- -------  ------
+#    T1     full-array write then read back                    256       0  PASS
+#    T2     read latency is exactly one clock                    2       0  PASS
+#    T3     we=0 must not modify memory                          1       0  PASS
+#    T4     read-during-write returns pre-write data             2       0  PASS
+#    T5     address independence                                 2       0  PASS
+#    T6     data patterns on one address                        66       0  PASS
+#    T7     random interleaved read/write traffic              209       0  PASS
+#    ------ ---------------------------------------------- ------- -------
+#    TOTAL                                                     538       0
+#   =================================================================
+#    TOTALS: 538 checks, 0 errors
+#    simulated time : 10566 ns
+#    RESULT: PASS - tb_a_mem
+#   =================================================================
+# ** Note: $finish    : C:/Users/nanda/Desktop/verification_individual/test_benches/tb_a_mem.sv(308)
+#    Time: 10566 ns  Iteration: 0  Instance: /tb_a_mem
+# End time: 17:35:17 on Jul 30,2026, Elapsed time: 0:00:06
+# Errors: 0, Warnings: 0
